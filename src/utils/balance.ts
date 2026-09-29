@@ -25,11 +25,16 @@ export function balanceTeams(players: Player[], numTeams: number): Team[] {
     return teams;
   }
 
-  // Sort players descending by rating (default rating 0 if undefined)
+  // Sort players descending by rating (default rating 0 if undefined).
+  // When ratings are equal, preserve the relative order from the input array
+  // (which is pre-shuffled) so that identical ratings yield varied distributions.
   const sortedPlayers = [...players].sort((a, b) => {
     const ratingA = a.rating ?? 0;
     const ratingB = b.rating ?? 0;
-    return ratingB - ratingA;
+    if (ratingB !== ratingA) {
+      return ratingB - ratingA;
+    }
+    return 0;
   });
 
   // Distribute players greedily to the team with lowest total rating,

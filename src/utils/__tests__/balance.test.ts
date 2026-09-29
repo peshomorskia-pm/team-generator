@@ -74,4 +74,23 @@ describe('balanceTeams', () => {
     expect(allAssigned).toHaveLength(3);
     expect(new Set(allAssigned.map((p) => p.id)).size).toBe(3);
   });
+
+  it('preserves input order among players with equal ratings to vary assignments with pre-shuffle', () => {
+    // 4 players with the same rating: order in input dictates team assignments
+    const p1 = { id: '1', name: 'Alice', rating: 5 };
+    const p2 = { id: '2', name: 'Bob', rating: 5 };
+    const p3 = { id: '3', name: 'Charlie', rating: 5 };
+    const p4 = { id: '4', name: 'Diana', rating: 5 };
+
+    const teamsOrder1 = balanceTeams([p1, p2, p3, p4], 2);
+    // Team 1 gets p1 and p3, Team 2 gets p2 and p4
+    expect(teamsOrder1[0].players.map((p) => p.name)).toEqual(['Alice', 'Charlie']);
+    expect(teamsOrder1[1].players.map((p) => p.name)).toEqual(['Bob', 'Diana']);
+
+    // Changing input order changes team composition
+    const teamsOrder2 = balanceTeams([p1, p3, p2, p4], 2);
+    // Team 1 gets p1 and p2, Team 2 gets p3 and p4
+    expect(teamsOrder2[0].players.map((p) => p.name)).toEqual(['Alice', 'Bob']);
+    expect(teamsOrder2[1].players.map((p) => p.name)).toEqual(['Charlie', 'Diana']);
+  });
 });
