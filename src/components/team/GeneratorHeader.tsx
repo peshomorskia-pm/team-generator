@@ -1,11 +1,11 @@
 import React from 'react';
 
-interface HeaderProps {
+interface GeneratorHeaderProps {
   title?: string;
   subtitle?: string;
 }
 
-export const Header: React.FC<HeaderProps> = ({
+export const GeneratorHeader: React.FC<GeneratorHeaderProps> = ({
   title = 'Генератор на Отбори 🎲',
   subtitle = 'Въведете списък с играчи и ги разпределете на случаен принцип.',
 }) => {

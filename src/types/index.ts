@@ -22,8 +22,6 @@ export interface TeamSettingsProps {
   onGenerate: () => void;
   playersPerTeam?: number | '';
   onPlayersPerTeamChange?: (count: number | '') => void;
-  mode?: 'teams' | 'playersPerTeam';
-  onModeChange?: (mode: 'teams' | 'playersPerTeam') => void;
 }
 
 export interface TeamListProps {

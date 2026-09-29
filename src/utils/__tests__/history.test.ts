@@ -1,18 +1,12 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   generateTeamsFingerprint,
-  isDuplicateMatchup,
   saveMatchup,
   getPreviousMatchups,
-  clearMatchupHistory,
 } from '../history';
 import { Team } from '../../types';
 
 describe('history and fingerprint utilities', () => {
-  beforeEach(() => {
-    clearMatchupHistory();
-  });
-
   const teamA: Team = {
     id: 'team-1',
     name: 'Team 1',
@@ -55,35 +49,6 @@ describe('history and fingerprint utilities', () => {
     expect(generateTeamsFingerprint(teams1)).toBe(generateTeamsFingerprint(teams2));
   });
 
-  it('detects duplicate matchups accurately', () => {
-    const history = new Set<string>();
-    const fingerprint = generateTeamsFingerprint([teamA, teamB]);
-    history.add(fingerprint);
-
-    expect(isDuplicateMatchup([teamA, teamB], history)).toBe(true);
-
-    const differentTeams: Team[] = [
-      {
-        id: 'team-1',
-        name: 'Team 1',
-        players: [
-          { id: '1', name: 'Alice' },
-          { id: '3', name: 'Charlie' },
-        ],
-      },
-      {
-        id: 'team-2',
-        name: 'Team 2',
-        players: [
-          { id: '2', name: 'Bob' },
-          { id: '4', name: 'David' },
-        ],
-      },
-    ];
-
-    expect(isDuplicateMatchup(differentTeams, history)).toBe(false);
-  });
-
   it('saves and retrieves matchups from history', () => {
     expect(getPreviousMatchups().size).toBe(0);
 
@@ -91,7 +56,7 @@ describe('history and fingerprint utilities', () => {
 
     const matchups = getPreviousMatchups();
     expect(matchups.size).toBe(1);
-    expect(isDuplicateMatchup([teamA, teamB], matchups)).toBe(true);
+    expect(matchups.has(generateTeamsFingerprint([teamA, teamB]))).toBe(true);
   });
 
   describe('consecutive anti-repetition logic', () => {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { AlertCircle, CheckCircle } from 'lucide-react';
-import { Header } from '../components/layout/Header';
+import { GeneratorHeader } from '../components/team/GeneratorHeader';
 import { Card } from '../components/ui/Card';
 import { PlayerInput } from '../components/player/PlayerInput';
 import { PlayerList } from '../components/player/PlayerList';
@@ -35,7 +35,7 @@ export const GeneratorPage: React.FC = () => {
     <div className="w-full max-w-3xl mx-auto px-4 py-6 sm:py-8 flex flex-col items-center">
       <div className="w-full">
         <Card>
-          <Header />
+          <GeneratorHeader />
 
           <div className="px-6 py-8 sm:p-10">
             {/* Custom Message Box */}
