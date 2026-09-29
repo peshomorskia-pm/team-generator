@@ -2,7 +2,7 @@
 
 A scalable Single Page Application (SPA) for Team Generation and Match Tracking. The project is organized around a modular architecture with a local Supabase backend (requires Docker).
 
-This repository utilizes a modular, multi-agent engineering workflow. Root `GEMINI.md` serves as the centralized entry point and policy hub. Detailed specifications for protocols and specialist agent roles reside in `.agents/`.
+This repository utilizes a modular, multi-agent engineering workflow. Root `GEMINI.md` serves as the centralized entry point and policy hub. Detailed specifications for protocols, skills, and specialist agent roles reside in `.agents/`.
 
 ---
 
@@ -25,17 +25,19 @@ All agents, workflows, and tools must strictly adhere to the following core prot
   - Parallel work must use `git worktree add <path> <branch>`.
   - Detailed Specification: [.agents/protocols/git-workflow.md](file:///D:/Projects/team-generator/.agents/protocols/git-workflow.md)
 
-* **Sequential Handoff Protocol:**
-  To eliminate context bleed and preserve an immutable audit trail, roles communicate strictly via written artifacts saved in `.agent_handoffs/<branch_name>/`.
-  - Each role reads the artifact of the previous role, produces its designated artifact, and passes control.
-  - Handoff folders are retained for history until the user explicitly commands their deletion after a successful merge.
+* **Sequential Handoff & Token Optimization Protocol:**
+  To eliminate context bleed, optimize token expenditure, and preserve an immutable audit trail, roles communicate strictly via written artifacts saved in `.agent_handoffs/<branch_name>/`.
+  - **Single-Hop Delta Handoff:** Agents strictly ingest only the immediate predecessor's artifact, never the entire historical chain.
+  - **Artifact Size Ceilings:** Strict token limits (1,500 to 3,000 tokens) are enforced per artifact stage (`0_context.md` through `5_documentation.md`).
+  - **Diff-Based Auditing:** Code reviews operate on `git diff` with localized window fallbacks (<= 20 lines) to prevent loading massive source files.
+  - **Progressive Disclosure Skills:** Operational runbooks are decoupled into `.agents/skills/` and loaded on demand rather than upfront.
   - Detailed Specification: [.agents/protocols/handoff-protocol.md](file:///D:/Projects/team-generator/.agents/protocols/handoff-protocol.md)
 
 ---
 
-## 2. Agentic Lifecycle & Roles Directory
+## 2. Agentic Lifecycle, Model Tiering & Roles Directory
 
-The engineering lifecycle follows a sequential chain of specialized roles:
+The engineering lifecycle follows a sequential chain of specialized roles optimized by compute tiers:
 
 ```mermaid
 flowchart LR
@@ -49,24 +51,24 @@ flowchart LR
     Doc --> OrchFinal["Orchestrator<br/>(PR & User Consent)"]
 ```
 
-### Roles Directory
-| Role | Responsibility | Specification Link | Output Artifact |
-|---|---|---|---|
-| **Orchestrator** | Coordination, Git branch setup, handoff initiation, final review | [.agents/roles/orchestrator.md](file:///D:/Projects/team-generator/.agents/roles/orchestrator.md) | `0_context.md` |
-| **Planner** | Strategic analysis, repo inspection, numbered milestone plan | [.agents/roles/planner.md](file:///D:/Projects/team-generator/.agents/roles/planner.md) | `1_plan.md` |
-| **Architect** | Technical specifications, schemas, interfaces, file tree blueprint | [.agents/roles/architect.md](file:///D:/Projects/team-generator/.agents/roles/architect.md) | `2_architecture.md` |
-| **Senior Dev** | Code implementation, test/lint execution, architecture compliance | [.agents/roles/senior-dev.md](file:///D:/Projects/team-generator/.agents/roles/senior-dev.md) | `3_implementation.md` |
-| **Code Reviewer** | Independent audit, compliance checks, defect detection, verdict | [.agents/roles/code-reviewer.md](file:///D:/Projects/team-generator/.agents/roles/code-reviewer.md) | `4_review.md` |
-| **Document Writer** | Docs management, ADRs (`docs/adr/`), README updates, PR creation targeting `dev` | [.agents/roles/document-writer.md](file:///D:/Projects/team-generator/.agents/roles/document-writer.md) | `5_documentation.md` |
+### Model Tiering Policy & Roles Directory
+| Role | Model Tier | Responsibility | Specification Link | Output Artifact |
+|---|---|---|---|---|
+| **Orchestrator** | `pro` / `flash` | Coordination, Git branch setup, handoff initiation, final review | [.agents/roles/orchestrator.md](file:///D:/Projects/team-generator/.agents/roles/orchestrator.md) | `0_context.md` |
+| **Planner** | `flash` | Strategic analysis, repo inspection, numbered milestone plan | [.agents/roles/planner.md](file:///D:/Projects/team-generator/.agents/roles/planner.md) | `1_plan.md` |
+| **Architect** | `pro` | Technical specifications, schemas, interfaces, file tree blueprint | [.agents/roles/architect.md](file:///D:/Projects/team-generator/.agents/roles/architect.md) | `2_architecture.md` |
+| **Senior Dev** | `inherit` / `flash` | Code implementation, test/lint execution, architecture compliance | [.agents/roles/senior-dev.md](file:///D:/Projects/team-generator/.agents/roles/senior-dev.md) | `3_implementation.md` |
+| **Code Reviewer** | `flash` | Diff-based audit, compliance checks, defect detection, verdict | [.agents/roles/code-reviewer.md](file:///D:/Projects/team-generator/.agents/roles/code-reviewer.md) | `4_review.md` |
+| **Document Writer** | `flash_lite` | Docs management, ADRs (`docs/adr/`), README updates, PR creation targeting `dev` | [.agents/roles/document-writer.md](file:///D:/Projects/team-generator/.agents/roles/document-writer.md) | `5_documentation.md` |
 
 ---
 
 ## 3. Execution Protocol & User Interaction Guardrails
 
-1. **Initiation:** The **Orchestrator** intercepts the user prompt, verifies environment cleanliness, creates the feature/fix branch from `dev`, initializes `.agent_handoffs/<branch_name>/`, and writes `0_context.md`.
-2. **Planning:** The Orchestrator summons the **Planner**, who creates `1_plan.md`.
-3. **Architecture:** The **Architect** designs the technical contracts in `2_architecture.md`.
-4. **Implementation:** The **Senior Dev** delivers code conforming 100% to specifications and logs output in `3_implementation.md`.
-5. **Review:** The **Code Reviewer** validates the changes against the architecture and protocols, outputting `4_review.md`. If fixes are requested, control returns to Senior Dev.
-6. **Documentation & PR:** Upon approval, the **Document Writer** drafts docs/ADRs, creates `5_documentation.md`, and opens a PR targeting `dev`.
+1. **Initiation:** The **Orchestrator** intercepts the user prompt, verifies environment cleanliness, creates the feature/fix branch from `dev`, initializes `.agent_handoffs/<branch_name>/`, and writes `0_context.md` (ceiling: 1,500 tokens).
+2. **Planning:** The Orchestrator summons the **Planner** (`flash`), who consumes `0_context.md` and generates `1_plan.md` (ceiling: 2,000 tokens).
+3. **Architecture:** The **Architect** (`pro`) consumes `1_plan.md` and designs technical contracts in `2_architecture.md` (ceiling: 3,000 tokens).
+4. **Implementation:** The **Senior Dev** (`inherit`/`flash`) consumes `2_architecture.md`, delivers conforming code, runs verification, and logs changes in `3_implementation.md` (ceiling: 2,500 tokens).
+5. **Review:** The **Code Reviewer** (`flash`) consumes `3_implementation.md`, conducts a diff-based audit (`git diff`), and outputs `4_review.md` (ceiling: 1,500 tokens). If fixes are requested, control returns to Senior Dev.
+6. **Documentation & PR:** Upon approval, the **Document Writer** (`flash_lite`) consumes `4_review.md`, drafts docs/ADRs, creates `5_documentation.md` (ceiling: 2,000 tokens), and opens a PR targeting `dev`.
 7. **Hard Stop for Consent:** The Orchestrator presents the completed PR and execution summary to the user. The Orchestrator **MUST halt execution and request explicit user permission before merging** or proceeding if a critical blocker is found.
