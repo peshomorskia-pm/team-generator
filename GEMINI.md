@@ -87,7 +87,7 @@ flowchart LR
 | **Senior Dev** | `inherit` / `flash` | Code implementation, test/lint execution, architecture compliance | [.agents/roles/senior-dev.md](file:///D:/Projects/team-generator/.agents/roles/senior-dev.md) | `3_implementation.md` |
 | **Code Reviewer** | `flash` | Diff-based audit, compliance checks, defect detection, verdict | [.agents/roles/code-reviewer.md](file:///D:/Projects/team-generator/.agents/roles/code-reviewer.md) | `4_review.md` |
 | **Document Writer** | `flash_lite` | Docs management, ADRs (`docs/adr/`), README updates, PR creation targeting `dev` | [.agents/roles/document-writer.md](file:///D:/Projects/team-generator/.agents/roles/document-writer.md) | `5_documentation.md` |
-| **Code Health Auditor** | `flash` | Read-only static analysis, technical debt detection, proposal generation (Zero prod edits) | [.agents/roles/code-health-auditor.md](file:///D:/Projects/team-generator/.agents/roles/code-health-auditor.md) | `docs/proposals/code-health-YYYY-MM-DD.md` |
+| **Code Health Auditor** | `flash` | Read-only static analysis, debt & test coverage inspection, proposal generation (Zero prod edits) | [.agents/roles/code-health-auditor.md](file:///D:/Projects/team-generator/.agents/roles/code-health-auditor.md) | `docs/proposals/code-health-YYYY-MM-DD.md` |
 
 ---
 

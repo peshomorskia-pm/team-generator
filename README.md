@@ -122,7 +122,7 @@ This repository employs a modular, multi-agent engineering lifecycle managed by 
 4. **[Senior Dev](.agents/roles/senior-dev.md) (`inherit`/`flash`):** Implements code conforming strictly to architectural specifications (`3_implementation.md`).
 5. **[Code Reviewer](.agents/roles/code-reviewer.md) (`flash`):** Independently audits changes via diff analysis and renders approval verdicts (`4_review.md`).
 6. **[Document Writer](.agents/roles/document-writer.md) (`flash_lite`):** Drafts documentation, updates ADRs, and opens Pull Requests targeting `dev` (`5_documentation.md`).
-7. **[Code Health Auditor](.agents/roles/code-health-auditor.md) (`flash`):** Performs read-only static analysis to identify technical debt, dead code, weak typings, and UI componentization candidates (`docs/proposals/`).
+7. **[Code Health Auditor](.agents/roles/code-health-auditor.md) (`flash`):** Performs read-only static analysis to identify technical debt, test coverage gaps, dead code, weak typings, and UI componentization candidates (`docs/proposals/`).
 
 For full details, refer to [GEMINI.md](GEMINI.md), [ADR 0001](docs/adr/0001-modular-agent-roles.md), [ADR 0002](docs/adr/0002-token-optimization-strategy.md), [ADR 0003](docs/adr/0003-tech-stack-selection.md), [ADR 0004](docs/adr/0004-localization-and-language-boundary.md), [ADR 0005](docs/adr/0005-app-shell-routing-and-theming.md), [ADR 0006](docs/adr/0006-mandatory-automated-testing-protocol.md), and [ADR 0007](docs/adr/0007-strict-scoping-and-code-health-auditor.md).
 

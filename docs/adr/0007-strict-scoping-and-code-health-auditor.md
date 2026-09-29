@@ -35,11 +35,12 @@ At the same time, codebases accumulate technical debt—such as duplicate Tailwi
 2. **Introduce Dedicated Read-Only Code Health Auditor:**
    - A specialized agent role (`code-health-auditor`, Tier: `flash`) that conducts read-only static analysis scans.
    - Strictly prohibited from directly modifying, creating, or deleting application production code (ZERO production edits).
-   - Scans 4 key focus areas:
+   - Scans 5 key focus areas:
      1. Duplicate Tailwind class clusters / UI componentization candidates.
      2. Performance bottlenecks (missing memoization, expensive loops).
      3. Dead code / unreachable code.
      4. Weak TypeScript typings (`any` types, missing interfaces).
+     5. Test suite health, quality, and coverage gaps (untested modules, skipped tests, missing boundary assertions).
 3. **Manual Trigger & Proposal-to-Ticket Workflow:**
    - The Code Health Auditor is triggered manually by user prompt (`@code-health-auditor Run a code health audit...`).
    - Audit findings are compiled into `docs/proposals/code-health-YYYY-MM-DD.md`.
