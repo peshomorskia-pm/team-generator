@@ -9,6 +9,7 @@ A scalable Single Page Application (SPA) for randomly assigning and balancing pl
 * **Advanced Shuffling:** Fisher-Yates shuffle algorithm for fair, randomized distribution ([`shuffle.ts`](file:///D:/Projects/team-generator/src/utils/shuffle.ts)).
 * **LPT Greedy Balancing:** Optimizes team rating balance across player skill inputs ([`balance.ts`](file:///D:/Projects/team-generator/src/utils/balance.ts)).
 * **Anti-Repetition Cache:** Canonical history fingerprinting prevents generating consecutive identical team configurations ([`history.ts`](file:///D:/Projects/team-generator/src/utils/history.ts)).
+* **Localized User Interface:** The application UI is localized in Bulgarian for the primary user base, while development and engineering adhere to strict English standards.
 * **Type-Safe Component Hierarchy:** Built with React 19 functional components and strict TypeScript contracts.
 * **Persistent Backend Ready:** Structured for local Supabase (PostgreSQL) stack integration to track match history, player ELO ratings, and performance stats.
 
@@ -45,7 +46,8 @@ team-generator/
 │   └── adr/
 │       ├── 0001-modular-agent-roles.md
 │       ├── 0002-token-optimization-strategy.md
-│       └── 0003-tech-stack-selection.md
+│       ├── 0003-tech-stack-selection.md
+│       └── 0004-localization-and-language-boundary.md
 ├── src/                    # React application source code
 │   ├── assets/styles/      # Tailwind CSS entry points
 │   ├── components/         # Modular UI components (PlayerInput, TeamCard, TeamSettings, etc.)
@@ -75,7 +77,7 @@ This repository employs a modular, multi-agent engineering lifecycle managed by 
 5. **[Code Reviewer](.agents/roles/code-reviewer.md) (`flash`):** Independently audits changes via diff analysis and renders approval verdicts (`4_review.md`).
 6. **[Document Writer](.agents/roles/document-writer.md) (`flash_lite`):** Drafts documentation, updates ADRs, and opens Pull Requests targeting `dev` (`5_documentation.md`).
 
-For full details, refer to [GEMINI.md](GEMINI.md), [ADR 0001](docs/adr/0001-modular-agent-roles.md), [ADR 0002](docs/adr/0002-token-optimization-strategy.md), and [ADR 0003](docs/adr/0003-tech-stack-selection.md).
+For full details, refer to [GEMINI.md](GEMINI.md), [ADR 0001](docs/adr/0001-modular-agent-roles.md), [ADR 0002](docs/adr/0002-token-optimization-strategy.md), [ADR 0003](docs/adr/0003-tech-stack-selection.md), and [ADR 0004](docs/adr/0004-localization-and-language-boundary.md).
 
 ---
 
@@ -85,4 +87,4 @@ For full details, refer to [GEMINI.md](GEMINI.md), [ADR 0001](docs/adr/0001-modu
 * **Integration Branch:** `dev` (Agent Development target)
 * **Working Branches:** `feature/<name>` or `fix/<name>` branched from `dev`
 * **Pull Requests:** All PRs must target `dev`. Direct merges to `main` are restricted.
-* **Language Requirement:** All communications, reasoning, documentation, and code comments must strictly be in English.
+* **Dual-Language Boundary:** All communications, reasoning, documentation, automated tests, and code comments must strictly be in English ([`language.md`](file:///D:/Projects/team-generator/.agents/protocols/language.md)). The application UI is presented in Bulgarian. Premature i18n abstractions are strictly avoided.
