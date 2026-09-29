@@ -10,8 +10,8 @@ This repository utilizes a modular, multi-agent engineering workflow. Root `GEMI
 
 All agents, workflows, and tools must strictly adhere to the following core protocols:
 
-* **Universal English Language Rule:**
-  ALL communication, internal reasoning, terminal commands, code comments, documentation, and user-agent interactions MUST strictly be in English. The agent must never use Bulgarian or any other language, even when prompted by the user.
+* **Dual-Language Boundary Protocol:**
+  Engineering communication in English; UI in Bulgarian. ALL internal communication, reasoning, terminal commands, code comments, tests, identifiers, and documentation MUST strictly be in English. The application user interface is localized in Bulgarian for end-users. Premature i18n abstractions are strictly prohibited.
   - Detailed Specification: [.agents/protocols/language.md](file:///D:/Projects/team-generator/.agents/protocols/language.md)
 
 * **Git Workflow & Branching Strategy:**
