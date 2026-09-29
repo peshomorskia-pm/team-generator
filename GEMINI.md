@@ -1,6 +1,6 @@
 # Project Overview & Central Orchestration Hub
 
-A scalable Single Page Application (SPA) for Team Generation and Match Tracking. The project is organized around a modular architecture with a local Supabase backend (requires Docker).
+A scalable Single Page Application (SPA) for Team Generation and Match Tracking, built with **React 19**, **TypeScript**, **Vite**, **Tailwind CSS**, and **Vitest**, alongside a local Supabase backend integration.
 
 This repository utilizes a modular, multi-agent engineering workflow. Root `GEMINI.md` serves as the centralized entry point and policy hub. Detailed specifications for protocols, skills, and specialist agent roles reside in `.agents/`.
 
@@ -35,7 +35,27 @@ All agents, workflows, and tools must strictly adhere to the following core prot
 
 ---
 
-## 2. Agentic Lifecycle, Model Tiering & Roles Directory
+## 2. Tech Stack, Architecture & NPM Scripts
+
+* **Frontend Framework:** React 19 (`react`, `react-dom`)
+* **Language:** TypeScript (`tsc --noEmit`)
+* **Build & Bundling:** Vite (`npm run dev`, `npm run build`, `npm run preview`)
+* **Styling:** Tailwind CSS & PostCSS
+* **Testing:** Vitest (`npm test`, 100% test pass rate across shuffle, balance, and history suites)
+* **Linting:** ESLint (`npm run lint`)
+* **Backend:** Supabase
+
+### Summary of NPM Scripts
+* `npm run dev` - Start Vite dev server
+* `npm run build` - Build production bundle (`tsc -b && vite build`)
+* `npm run preview` - Preview production build locally
+* `npm run typecheck` - Run TypeScript type checking (`tsc --noEmit`)
+* `npm test` - Run Vitest test suites (`vitest run`)
+* `npm run lint` - Run ESLint (`eslint src`)
+
+---
+
+## 3. Agentic Lifecycle, Model Tiering & Roles Directory
 
 The engineering lifecycle follows a sequential chain of specialized roles optimized by compute tiers:
 
@@ -63,12 +83,12 @@ flowchart LR
 
 ---
 
-## 3. Execution Protocol & User Interaction Guardrails
+## 4. Execution Protocol & User Interaction Guardrails
 
 1. **Initiation:** The **Orchestrator** intercepts the user prompt, verifies environment cleanliness, creates the feature/fix branch from `dev`, initializes `.agent_handoffs/<branch_name>/`, and writes `0_context.md` (ceiling: 1,500 tokens).
 2. **Planning:** The Orchestrator summons the **Planner** (`flash`), who consumes `0_context.md` and generates `1_plan.md` (ceiling: 2,000 tokens).
 3. **Architecture:** The **Architect** (`pro`) consumes `1_plan.md` and designs technical contracts in `2_architecture.md` (ceiling: 3,000 tokens).
 4. **Implementation:** The **Senior Dev** (`inherit`/`flash`) consumes `2_architecture.md`, delivers conforming code, runs verification, and logs changes in `3_implementation.md` (ceiling: 2,500 tokens).
 5. **Review:** The **Code Reviewer** (`flash`) consumes `3_implementation.md`, conducts a diff-based audit (`git diff`), and outputs `4_review.md` (ceiling: 1,500 tokens). If fixes are requested, control returns to Senior Dev.
-6. **Documentation & PR:** Upon approval, the **Document Writer** (`flash_lite`) consumes `4_review.md`, drafts docs/ADRs, creates `5_documentation.md` (ceiling: 2,000 tokens), and opens a PR targeting `dev`.
+6. **Documentation & PR:** Upon approval, the **Document Writer** (`flash_lite`) consumes `4_review.md`, drafts docs/ADRs (`docs/adr/0003-tech-stack-selection.md`), creates `5_documentation.md` (ceiling: 2,000 tokens), and opens a PR targeting `dev`.
 7. **Hard Stop for Consent:** The Orchestrator presents the completed PR and execution summary to the user. The Orchestrator **MUST halt execution and request explicit user permission before merging** or proceeding if a critical blocker is found.
