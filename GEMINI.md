@@ -37,6 +37,9 @@ All agents, workflows, and tools must strictly adhere to the following core prot
   Governs test-driven and test-accompanied development for React/TypeScript to prevent regressions, enforcing the testing pyramid, quality gates, and 100% pass thresholds before merging.
   - Detailed Specification: [.agents/protocols/testing-protocol.md](file:///D:/Projects/team-generator/.agents/protocols/testing-protocol.md)
 
+* **Strict Scoping Rule:**
+  No opportunistic refactoring during feature/fix cycles. All PRs must have clean, scoped diffs. Roles must only modify files explicitly required for the current ticket's requirements. Unrelated cleanups, reformatting, or cross-feature refactoring are strictly banned during feature cycles and must be captured as separate tickets.
+
 ---
 
 ## 2. Tech Stack, Architecture & NPM Scripts
@@ -84,6 +87,7 @@ flowchart LR
 | **Senior Dev** | `inherit` / `flash` | Code implementation, test/lint execution, architecture compliance | [.agents/roles/senior-dev.md](file:///D:/Projects/team-generator/.agents/roles/senior-dev.md) | `3_implementation.md` |
 | **Code Reviewer** | `flash` | Diff-based audit, compliance checks, defect detection, verdict | [.agents/roles/code-reviewer.md](file:///D:/Projects/team-generator/.agents/roles/code-reviewer.md) | `4_review.md` |
 | **Document Writer** | `flash_lite` | Docs management, ADRs (`docs/adr/`), README updates, PR creation targeting `dev` | [.agents/roles/document-writer.md](file:///D:/Projects/team-generator/.agents/roles/document-writer.md) | `5_documentation.md` |
+| **Code Health Auditor** | `flash` | Read-only static analysis, debt & test coverage inspection, proposal generation (Zero prod edits) | [.agents/roles/code-health-auditor.md](file:///D:/Projects/team-generator/.agents/roles/code-health-auditor.md) | `docs/proposals/code-health-YYYY-MM-DD.md` |
 
 ---
 
@@ -96,3 +100,15 @@ flowchart LR
 5. **Review:** The **Code Reviewer** (`flash`) consumes `3_implementation.md`, conducts a diff-based audit (`git diff`), and outputs `4_review.md` (ceiling: 1,500 tokens). If fixes are requested, control returns to Senior Dev.
 6. **Documentation & PR:** Upon approval, the **Document Writer** (`flash_lite`) consumes `4_review.md`, drafts docs/ADRs (`docs/adr/0003-tech-stack-selection.md`), creates `5_documentation.md` (ceiling: 2,000 tokens), and opens a PR targeting `dev`.
 7. **Hard Stop for Consent:** The Orchestrator presents the completed PR and execution summary to the user. The Orchestrator **MUST halt execution and request explicit user permission before merging** or proceeding if a critical blocker is found.
+
+### On-Demand Code Health Audit Workflow
+- **Manual Trigger Only:** The `code-health-auditor` operates independently outside the standard linear feature lifecycle. It must never be triggered automatically during feature runs.
+- **Invocation Pattern:**
+  ```text
+  @code-health-auditor Run a code health audit on the [directory/module/project] focusing on [all/specific focus area]. Generate a proposal in docs/proposals/.
+  ```
+- **Proposal-to-Ticket Conversion:**
+  1. User reviews `docs/proposals/code-health-YYYY-MM-DD.md`.
+  2. User selects desired refactoring/cleanup actions.
+  3. User/Orchestrator creates dedicated `refactor/<name>` or `chore/<name>` branches/tickets.
+  4. Senior Dev executes the isolated ticket with standard test suites and scoping.
