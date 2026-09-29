@@ -1,9 +1,9 @@
-import React from 'react';
+import { memo } from 'react';
 import { Shuffle, Sliders } from 'lucide-react';
 import { TeamSettingsProps } from '../../types';
 import { Button, Input } from '../ui';
 
-export const TeamSettings: React.FC<TeamSettingsProps> = ({
+export const TeamSettings = memo(function TeamSettings({
   numberOfTeams,
   onSettingsChange,
   onGenerate,
@@ -12,7 +12,7 @@ export const TeamSettings: React.FC<TeamSettingsProps> = ({
   balanceByRating = false,
   onBalanceToggle,
   hasRatings = false,
-}) => {
+}: TeamSettingsProps) {
   return (
     <div className="space-y-6">
       {/* Settings Inputs */}
@@ -79,4 +79,4 @@ export const TeamSettings: React.FC<TeamSettingsProps> = ({
       </Button>
     </div>
   );
-};
+});
