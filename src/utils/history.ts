@@ -62,28 +62,3 @@ export function saveMatchup(teams: Team[]): void {
     }
   }
 }
-
-/**
- * Checks whether a given team lineup has already been generated in the provided history.
- */
-export function isDuplicateMatchup(teams: Team[], history: Set<string>): boolean {
-  if (history.size === 0 || teams.length === 0) {
-    return false;
-  }
-  const fingerprint = generateTeamsFingerprint(teams);
-  return history.has(fingerprint);
-}
-
-/**
- * Clears cached matchup history (useful for tests or reset actions).
- */
-export function clearMatchupHistory(): void {
-  memoryHistory.clear();
-  if (typeof window !== 'undefined' && window.localStorage) {
-    try {
-      window.localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // Ignore
-    }
-  }
-}
