@@ -1,0 +1,8 @@
+# Architecture Decision Records (ADRs)
+This directory stores Architectural Decision Records for team-generator.
+ADRs should follow the standard format:
+- Title / Number
+- Status (Proposed, Accepted, Rejected, Deprecated, Superseded)
+- Context
+- Decision
+- Consequences
