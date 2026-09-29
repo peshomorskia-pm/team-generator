@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { GeneratorHeader } from '../components/team/GeneratorHeader';
 import { Card } from '../components/ui/Card';
 import { Alert } from '../components/ui/Alert';
@@ -28,6 +28,20 @@ export const GeneratorPage: React.FC = () => {
     shuffleSingleTeam,
     copyResults,
   } = useTeamGenerator();
+
+  const handleNumberOfTeamsChange = useCallback(
+    (val: number) => {
+      setNumberOfTeams(val > 0 ? val : null);
+    },
+    [setNumberOfTeams]
+  );
+
+  const handlePlayersPerTeamChange = useCallback(
+    (val: number | null) => {
+      setPlayersPerTeam(val);
+    },
+    [setPlayersPerTeam]
+  );
 
   const hasRatings = players.some((p) => p.rating !== undefined);
 
@@ -61,9 +75,9 @@ export const GeneratorPage: React.FC = () => {
 
               <TeamSettings
                 numberOfTeams={numberOfTeams ?? 0}
-                onSettingsChange={(val) => setNumberOfTeams(val > 0 ? val : null)}
+                onSettingsChange={handleNumberOfTeamsChange}
                 playersPerTeam={playersPerTeam}
-                onPlayersPerTeamChange={setPlayersPerTeam}
+                onPlayersPerTeamChange={handlePlayersPerTeamChange}
                 onGenerate={generateTeams}
                 balanceByRating={balanceByRating}
                 onBalanceToggle={setBalanceByRating}

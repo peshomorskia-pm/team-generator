@@ -1,4 +1,4 @@
-import React from 'react';
+import { memo } from 'react';
 import { User, X, Star } from 'lucide-react';
 import { Player } from '../../types';
 import { Badge } from '../ui/Badge';
@@ -8,7 +8,7 @@ interface PlayerListProps {
   onRemovePlayer?: (id: string) => void;
 }
 
-export const PlayerList: React.FC<PlayerListProps> = ({ players, onRemovePlayer }) => {
+export const PlayerList = memo(function PlayerList({ players, onRemovePlayer }: PlayerListProps) {
   if (players.length === 0) {
     return null;
   }
@@ -46,4 +46,4 @@ export const PlayerList: React.FC<PlayerListProps> = ({ players, onRemovePlayer 
       </div>
     </div>
   );
-};
+});

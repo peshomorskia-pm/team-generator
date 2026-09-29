@@ -1,14 +1,14 @@
-import React from 'react';
+import { memo } from 'react';
 import { Copy, Check } from 'lucide-react';
 import { TeamListProps } from '../../types';
 import { TeamCard } from './TeamCard';
 
-export const TeamList: React.FC<TeamListProps> = ({
+export const TeamList = memo(function TeamList({
   teams,
   onShuffleTeam,
   onCopy,
   isCopied = false,
-}) => {
+}: TeamListProps) {
   if (teams.length === 0) {
     return null;
   }
@@ -51,4 +51,4 @@ export const TeamList: React.FC<TeamListProps> = ({
       </div>
     </div>
   );
-};
+});

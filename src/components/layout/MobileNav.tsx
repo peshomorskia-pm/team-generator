@@ -1,25 +1,16 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Dices, Home, Trophy, Users, Swords } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { NavItem } from '../../types';
+import { NAV_ITEMS } from '../../constants/navigation';
 
 export const MobileNav: React.FC = () => {
-  const navItems: NavItem[] = [
-    { href: '/', name: 'Начало', icon: Home, end: true },
-    { href: '/generator', name: 'Генератор', icon: Dices },
-    { href: '/players', name: 'Играчи', icon: Users },
-    { href: '/matches', name: 'Мачове', icon: Swords },
-    { href: '/rankings', name: 'Класиране', icon: Trophy },
-  ];
-
   return (
     <nav
       className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-gray-200 dark:border-slate-800 transition-colors safe-area-bottom"
       aria-label="Мобилна навигация"
     >
       <div className="flex items-center justify-around h-16 px-1 max-w-lg mx-auto">
-        {navItems.map((item) => {
+        {NAV_ITEMS.map((item) => {
           const Icon: LucideIcon = item.icon;
           return (
             <NavLink
