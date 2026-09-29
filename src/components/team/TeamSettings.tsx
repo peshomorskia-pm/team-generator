@@ -1,6 +1,7 @@
 import React from 'react';
 import { Shuffle, Sliders } from 'lucide-react';
 import { TeamSettingsProps } from '../../types';
+import { Button, Input } from '../ui';
 
 export const TeamSettings: React.FC<TeamSettingsProps> = ({
   numberOfTeams,
@@ -16,44 +17,35 @@ export const TeamSettings: React.FC<TeamSettingsProps> = ({
     <div className="space-y-6">
       {/* Settings Inputs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="numTeams" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            Брой отбори
-          </label>
-          <input
-            type="number"
-            id="numTeams"
-            min="1"
-            value={numberOfTeams || ''}
-            onChange={(e) => {
-              const val = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
-              onSettingsChange(Number.isNaN(val) ? 0 : val);
-            }}
-            className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-            placeholder="Напр. 2"
-          />
-        </div>
+        <Input
+          type="number"
+          id="numTeams"
+          label="Брой отбори"
+          min="1"
+          value={numberOfTeams || ''}
+          onChange={(e) => {
+            const val = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
+            onSettingsChange(Number.isNaN(val) ? 0 : val);
+          }}
+          placeholder="Напр. 2"
+        />
 
-        <div>
-          <label
-            htmlFor="playersPerTeam"
-            className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2"
-          >
-            <span className="opacity-80 font-normal mr-1">(или)</span> Брой играчи в отбор
-          </label>
-          <input
-            type="number"
-            id="playersPerTeam"
-            min="1"
-            value={playersPerTeam ?? ''}
-            onChange={(e) => {
-              const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-              onPlayersPerTeamChange?.(val !== null && Number.isNaN(val) ? null : val);
-            }}
-            className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-            placeholder="Напр. 5"
-          />
-        </div>
+        <Input
+          type="number"
+          id="playersPerTeam"
+          label={
+            <>
+              <span className="opacity-80 font-normal mr-1">(или)</span> Брой играчи в отбор
+            </>
+          }
+          min="1"
+          value={playersPerTeam ?? ''}
+          onChange={(e) => {
+            const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+            onPlayersPerTeamChange?.(val !== null && Number.isNaN(val) ? null : val);
+          }}
+          placeholder="Напр. 5"
+        />
       </div>
 
       {hasRatings && onBalanceToggle && (
@@ -75,15 +67,16 @@ export const TeamSettings: React.FC<TeamSettingsProps> = ({
       )}
 
       {/* Generate Button */}
-      <button
+      <Button
         type="button"
         id="generateBtn"
+        size="lg"
         onClick={onGenerate}
-        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-xl shadow-md hover:shadow-lg transform transition-all active:scale-95 flex items-center justify-center space-x-2 cursor-pointer"
+        className="w-full flex items-center justify-center space-x-2 cursor-pointer py-4"
       >
         <Shuffle className="w-5 h-5" />
         <span>Разпредели в отбори</span>
-      </button>
+      </Button>
     </div>
   );
 };

@@ -1,14 +1,15 @@
 import React from 'react';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
+  label?: React.ReactNode;
   error?: string;
+  containerClassName?: string;
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, id, className = '', ...props }, ref) => {
+  ({ label, error, id, className = '', containerClassName = 'w-full', ...props }, ref) => {
     return (
-      <div className="w-full">
+      <div className={containerClassName}>
         {label && (
           <label htmlFor={id} className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
             {label}

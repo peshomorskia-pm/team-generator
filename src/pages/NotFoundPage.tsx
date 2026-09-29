@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FileQuestion, Home, ArrowLeft } from 'lucide-react';
+import { Button } from '../components/ui';
 
 export const NotFoundPage: React.FC = () => {
   return (
@@ -29,14 +30,15 @@ export const NotFoundPage: React.FC = () => {
           <Home className="w-4 h-4" />
           <span>Към началната страница</span>
         </Link>
-        <button
+        <Button
           type="button"
+          variant="outline"
           onClick={() => window.history.back()}
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700/80 font-medium transition-all cursor-pointer"
+          className="w-full sm:w-auto gap-2 py-3 px-5 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Назад</span>
-        </button>
+        </Button>
       </div>
     </div>
   );

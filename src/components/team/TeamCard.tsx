@@ -1,6 +1,7 @@
 import React from 'react';
 import { User, Shuffle, Star } from 'lucide-react';
 import { TeamCardProps } from '../../types';
+import { Badge } from '../ui/Badge';
 
 export const TeamCard: React.FC<TeamCardProps> = ({ team, index = 0, onShuffleTeam }) => {
   return (
@@ -15,14 +16,13 @@ export const TeamCard: React.FC<TeamCardProps> = ({ team, index = 0, onShuffleTe
         </h3>
         <div className="flex items-center space-x-2">
           {team.totalRating !== undefined && team.totalRating > 0 && (
-            <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800 flex items-center">
-              <Star className="w-3 h-3 fill-current mr-1" />
+            <Badge variant="amber" size="sm" icon={Star}>
               {team.totalRating}
-            </span>
+            </Badge>
           )}
-          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 bg-white dark:bg-slate-800 px-2 py-1 rounded-full border border-gray-200 dark:border-slate-600">
+          <Badge variant="slate" size="sm">
             {team.players.length} играчи
-          </span>
+          </Badge>
           {onShuffleTeam && (
             <button
               type="button"

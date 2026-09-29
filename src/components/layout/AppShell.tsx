@@ -1,17 +1,15 @@
 import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
-import { Dices, Moon, Sun } from 'lucide-react';
+import { Dices } from 'lucide-react';
 import { Navbar } from './Navbar';
 import { MobileNav } from './MobileNav';
-import { useTheme } from '../../hooks/useTheme';
+import { ThemeToggle } from '../ui/ThemeToggle';
 
 interface AppShellProps {
   children?: React.ReactNode;
 }
 
 export const AppShell: React.FC<AppShellProps> = ({ children }) => {
-  const { theme, toggleTheme } = useTheme();
-
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-gray-800 dark:text-gray-100 transition-colors">
       {/* Mobile Top Header */}
@@ -24,18 +22,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             Team Generator
           </span>
         </Link>
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="p-2 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-          aria-label={theme === 'dark' ? 'Превключи към светла тема' : 'Превключи към тъмна тема'}
-        >
-          {theme === 'dark' ? (
-            <Sun className="w-4 h-4 text-amber-400" />
-          ) : (
-            <Moon className="w-4 h-4 text-slate-600" />
-          )}
-        </button>
+        <ThemeToggle />
       </header>
 
       {/* Desktop Top Navbar */}

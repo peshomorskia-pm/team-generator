@@ -1,12 +1,11 @@
 import React from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { Dices, Moon, Sun, Home, Users, Swords, Trophy } from 'lucide-react';
+import { Dices, Home, Users, Swords, Trophy } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useTheme } from '../../hooks/useTheme';
+import { ThemeToggle } from '../ui/ThemeToggle';
 import { NavItem } from '../../types';
 
 export const Navbar: React.FC = () => {
-  const { theme, toggleTheme } = useTheme();
 
   const navItems: (NavItem & { icon: LucideIcon })[] = [
     { href: '/', name: 'Начало', icon: Home, end: true },
@@ -57,24 +56,7 @@ export const Navbar: React.FC = () => {
 
           {/* Theme Toggle Button */}
           <div className="flex items-center">
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 flex items-center space-x-2 text-xs font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700/80 transition-colors cursor-pointer"
-              aria-label={theme === 'dark' ? 'Превключи към светла тема' : 'Превключи към тъмна тема'}
-            >
-              {theme === 'dark' ? (
-                <>
-                  <Sun className="w-4 h-4 text-amber-400" />
-                  <span className="hidden lg:inline">Светла тема</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="w-4 h-4 text-slate-600" />
-                  <span className="hidden lg:inline">Тъмна тема</span>
-                </>
-              )}
-            </button>
+            <ThemeToggle showLabel />
           </div>
         </div>
       </div>
