@@ -44,8 +44,33 @@ npm install
 * **`npm run build`**: Type-check (`tsc -b`) and bundle the application for production into `dist/`.
 * **`npm run preview`**: Locally preview the production build.
 * **`npm run typecheck`**: Run TypeScript static type checking without emitting files (`tsc --noEmit`).
-* **`npm test`**: Run the Vitest unit test suite across core algorithm modules.
+* **`npm test`**: Run the Vitest automated test suite (`vitest run`).
 * **`npm run lint`**: Run ESLint across `src/` to enforce code quality standards.
+
+---
+
+## Automated Testing & Quality Gates
+
+This project enforces a strict [Mandatory Automated Testing Protocol](.agents/protocols/testing-protocol.md) using **Vitest** and **React Testing Library**. All new features and bug fixes must be accompanied by comprehensive tests across the testing pyramid (unit, hook, component, and integration).
+
+### Running Tests
+```bash
+# Run all automated test suites
+npm test
+
+# Run tests in watch mode during development
+npx vitest
+
+# Run tests with UI interface
+npx vitest --ui
+```
+
+### Mandatory Quality Gates
+Before any pull request can be approved and merged into `dev`:
+1. **`npm test`**: 100% test pass rate across all suites (zero failing tests, zero skipped assertions).
+2. **`npm run typecheck`**: Zero TypeScript static compilation errors (`tsc --noEmit`).
+3. **`npm run lint`**: Zero ESLint warnings or errors (`eslint src`).
+4. **`npm run build`**: Clean production build compilation without warnings.
 
 ---
 
@@ -55,13 +80,16 @@ npm install
 team-generator/
 ├── .agent_handoffs/        # Multi-agent sequential handoff artifacts
 ├── .agents/                # Modular agent roles, protocols, and execution skills
+│   ├── protocols/          # Global system protocols (testing, language, git, handoffs)
+│   └── roles/              # Specialist agent role definitions
 ├── docs/                   # Documentation and Architecture Decision Records (ADRs)
 │   └── adr/
 │       ├── 0001-modular-agent-roles.md
 │       ├── 0002-token-optimization-strategy.md
 │       ├── 0003-tech-stack-selection.md
 │       ├── 0004-localization-and-language-boundary.md
-│       └── 0005-app-shell-routing-and-theming.md
+│       ├── 0005-app-shell-routing-and-theming.md
+│       └── 0006-mandatory-automated-testing-protocol.md
 ├── src/                    # React application source code
 │   ├── assets/styles/      # Tailwind CSS entry points
 │   ├── components/         # Modular UI components
@@ -95,7 +123,7 @@ This repository employs a modular, multi-agent engineering lifecycle managed by 
 5. **[Code Reviewer](.agents/roles/code-reviewer.md) (`flash`):** Independently audits changes via diff analysis and renders approval verdicts (`4_review.md`).
 6. **[Document Writer](.agents/roles/document-writer.md) (`flash_lite`):** Drafts documentation, updates ADRs, and opens Pull Requests targeting `dev` (`5_documentation.md`).
 
-For full details, refer to [GEMINI.md](GEMINI.md), [ADR 0001](docs/adr/0001-modular-agent-roles.md), [ADR 0002](docs/adr/0002-token-optimization-strategy.md), [ADR 0003](docs/adr/0003-tech-stack-selection.md), [ADR 0004](docs/adr/0004-localization-and-language-boundary.md), and [ADR 0005](docs/adr/0005-app-shell-routing-and-theming.md).
+For full details, refer to [GEMINI.md](GEMINI.md), [ADR 0001](docs/adr/0001-modular-agent-roles.md), [ADR 0002](docs/adr/0002-token-optimization-strategy.md), [ADR 0003](docs/adr/0003-tech-stack-selection.md), [ADR 0004](docs/adr/0004-localization-and-language-boundary.md), [ADR 0005](docs/adr/0005-app-shell-routing-and-theming.md), and [ADR 0006](docs/adr/0006-mandatory-automated-testing-protocol.md).
 
 ---
 
