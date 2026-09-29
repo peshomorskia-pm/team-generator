@@ -1,7 +1,7 @@
 import React from 'react';
-import { AlertCircle, CheckCircle } from 'lucide-react';
 import { GeneratorHeader } from '../components/team/GeneratorHeader';
 import { Card } from '../components/ui/Card';
+import { Alert } from '../components/ui/Alert';
 import { PlayerInput } from '../components/player/PlayerInput';
 import { PlayerList } from '../components/player/PlayerList';
 import { TeamSettings } from '../components/team/TeamSettings';
@@ -40,24 +40,11 @@ export const GeneratorPage: React.FC = () => {
           <div className="px-6 py-8 sm:p-10">
             {/* Custom Message Box */}
             {alert && (
-              <div
-                id="messageBox"
-                role="alert"
-                className={`mb-6 p-4 rounded-xl flex items-center border transition-all ${
-                  alert.type === 'error'
-                    ? 'bg-red-50 text-red-800 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900/60'
-                    : 'bg-green-50 text-green-800 border-green-200 dark:bg-green-950/40 dark:text-green-300 dark:border-green-900/60'
-                }`}
-              >
-                {alert.type === 'error' ? (
-                  <AlertCircle className="w-5 h-5 mr-3 shrink-0 text-red-500" />
-                ) : (
-                  <CheckCircle className="w-5 h-5 mr-3 shrink-0 text-green-500" />
-                )}
-                <span id="messageText" className="text-sm font-medium">
-                  {alert.message}
-                </span>
-              </div>
+              <Alert
+                type={alert.type}
+                message={alert.message}
+                className="mb-6"
+              />
             )}
 
             <div className="space-y-6">

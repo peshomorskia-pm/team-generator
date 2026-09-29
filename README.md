@@ -93,7 +93,8 @@ team-generator/
 ├── src/                    # React application source code
 │   ├── assets/styles/      # Tailwind CSS entry points
 │   ├── components/         # Modular UI components
-│   │   ├── layout/         # AppShell, Navbar, MobileNav
+│   │   ├── layout/         # AppShell, Navbar, MobileNav, PlaceholderPage
+│   │   ├── ui/             # Reusable UI primitives (Badge, Alert, ThemeToggle, Button, Input, index.ts)
 │   │   └── ...             # PlayerInput, TeamCard, TeamSettings, etc.
 │   ├── context/            # React Context providers (ThemeContext)
 │   ├── hooks/              # Custom business logic hooks (useTeamGenerator, useTheme)

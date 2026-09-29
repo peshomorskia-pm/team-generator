@@ -9,6 +9,7 @@ import {
   Users,
   Zap,
 } from 'lucide-react';
+import { Badge } from '../components/ui/Badge';
 
 export const LandingPage: React.FC = () => {
   return (
@@ -17,10 +18,9 @@ export const LandingPage: React.FC = () => {
       <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-16 md:pt-16 md:pb-24 flex flex-col lg:flex-row items-center justify-between gap-12">
         <div className="flex-1 text-center lg:text-left">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 mb-6">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Интелигентно разпределяне на играчи</span>
-          </div>
+          <Badge variant="indigo" size="md" icon={Sparkles} className="mb-6">
+            Интелигентно разпределяне на играчи
+          </Badge>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-tight">
             Генерирай{' '}
@@ -63,9 +63,9 @@ export const LandingPage: React.FC = () => {
               <span className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                 Визуализация на разпределението
               </span>
-              <span className="inline-flex items-center text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
+              <Badge variant="emerald" size="sm">
                 Равновесен баланс
-              </span>
+              </Badge>
             </div>
 
             {/* Simulated Teams Visual */}
@@ -74,9 +74,9 @@ export const LandingPage: React.FC = () => {
               <div className="p-4 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60">
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-bold text-sm text-indigo-900 dark:text-indigo-200">Отбор 1</span>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-indigo-200/80 dark:bg-indigo-800/80 text-indigo-800 dark:text-indigo-200">
+                  <Badge variant="indigo" size="sm">
                     Рейтинг: 14.5
-                  </span>
+                  </Badge>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 p-1.5 rounded-lg bg-white dark:bg-slate-800 shadow-xs text-xs font-medium">
@@ -98,9 +98,9 @@ export const LandingPage: React.FC = () => {
               <div className="p-4 rounded-xl bg-purple-50/70 dark:bg-purple-950/40 border border-purple-100 dark:border-purple-900/60">
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-bold text-sm text-purple-900 dark:text-purple-200">Отбор 2</span>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded bg-purple-200/80 dark:bg-purple-800/80 text-purple-800 dark:text-purple-200">
+                  <Badge variant="purple" size="sm">
                     Рейтинг: 14.5
-                  </span>
+                  </Badge>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 p-1.5 rounded-lg bg-white dark:bg-slate-800 shadow-xs text-xs font-medium">

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, UserPlus } from 'lucide-react';
 import { PlayerInputProps } from '../../types';
+import { Button, Input } from '../ui';
 
 export const PlayerInput: React.FC<PlayerInputProps> = ({
   onAddPlayer,
@@ -42,32 +43,35 @@ export const PlayerInput: React.FC<PlayerInputProps> = ({
       {showSingleInput && (
         <form
           onSubmit={handleSingleAdd}
-          className="flex flex-col sm:flex-row gap-2 p-3 bg-indigo-50/60 dark:bg-slate-700/40 rounded-xl border border-indigo-100 dark:border-slate-600"
+          className="flex flex-col sm:flex-row gap-2 p-3 bg-indigo-50/60 dark:bg-slate-700/40 rounded-xl border border-indigo-100 dark:border-slate-600 sm:items-center"
         >
-          <input
+          <Input
             type="text"
             placeholder="Име на играч..."
             value={singleName}
             onChange={(e) => setSingleName(e.target.value)}
             disabled={isLoading}
-            className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500"
+            containerClassName="flex-1"
+            className="!py-1.5 !px-3 text-sm !rounded-lg"
           />
-          <input
+          <Input
             type="number"
             placeholder="Рейтинг (напр. 7)"
             value={singleRating}
             onChange={(e) => setSingleRating(e.target.value)}
             disabled={isLoading}
-            className="w-full sm:w-36 px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500"
+            containerClassName="w-full sm:w-36"
+            className="!py-1.5 !px-3 text-sm !rounded-lg"
           />
-          <button
+          <Button
             type="submit"
+            size="sm"
             disabled={isLoading || !singleName.trim()}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 text-sm rounded-lg font-medium flex items-center justify-center transition-colors disabled:opacity-50"
+            className="!rounded-lg !text-sm shrink-0"
           >
             <Plus className="w-4 h-4 mr-1" />
             Добави
-          </button>
+          </Button>
         </form>
       )}
 
