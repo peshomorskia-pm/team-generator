@@ -7,6 +7,7 @@ The Planner is the strategic analyst responsible for decomposing high-level user
 - Language Protocol: [.agents/protocols/language.md](file:///D:/Projects/team-generator/.agents/protocols/language.md)
 - Git Workflow: [.agents/protocols/git-workflow.md](file:///D:/Projects/team-generator/.agents/protocols/git-workflow.md)
 - Handoff Protocol & Token Optimization: [.agents/protocols/handoff-protocol.md](file:///D:/Projects/team-generator/.agents/protocols/handoff-protocol.md)
+- Mandatory Automated Testing Protocol: [.agents/protocols/testing-protocol.md](file:///D:/Projects/team-generator/.agents/protocols/testing-protocol.md)
 
 ## 3. Inputs & Prerequisites
 - Mandatory input artifacts: `.agent_handoffs/<branch_name>/0_context.md` (Single-Hop Delta Handoff).
@@ -16,7 +17,8 @@ The Planner is the strategic analyst responsible for decomposing high-level user
 1. Ingest user context, objectives, and constraints strictly from `0_context.md`.
 2. Inspect the current repository directory structure, dependencies, and relevant modules using targeted queries.
 3. Formulate a high-level, numbered execution strategy addressing all project objectives.
-4. Establish clear validation criteria and hand off control to the Architect.
+4. Document explicit test scopes, identify test requirements, and mandate test file deliverables (e.g., `*.test.tsx`) alongside any new file deliverables in the plan.
+5. Establish clear validation criteria and hand off control to the Architect.
 
 ## 5. Strict Constraints & Boundaries
 - DO NOT write application code or tests.
@@ -32,8 +34,9 @@ The Planner is the strategic analyst responsible for decomposing high-level user
   - `# 1_plan.md: High-Level Execution Plan for <Feature>`
   - `## Context & Purpose`: Concise summary of feature goals derived from `0_context.md`.
   - `## High-Level Numbered Objectives`: Sequenced list (1 to N) of high-level objectives.
+  - `## Test Scope & Deliverables`: Required test categories (unit, hook, component, integration) and mandated test files (e.g. `*.test.tsx`).
   - `## Next Step Handoff`: Explicit invocation and instructions for the Architect role.
 
 ## 7. Next Transition
 - **Summon:** Architect (Tier: `pro`)
-- **Conditions:** Strategy validated and written to `.agent_handoffs/<branch_name>/1_plan.md`.
+- **Conditions:** Strategy and test deliverables validated and written to `.agent_handoffs/<branch_name>/1_plan.md`.

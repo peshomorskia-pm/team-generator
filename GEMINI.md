@@ -33,6 +33,10 @@ All agents, workflows, and tools must strictly adhere to the following core prot
   - **Progressive Disclosure Skills:** Operational runbooks are decoupled into `.agents/skills/` and loaded on demand rather than upfront.
   - Detailed Specification: [.agents/protocols/handoff-protocol.md](file:///D:/Projects/team-generator/.agents/protocols/handoff-protocol.md)
 
+* **Mandatory Automated Testing Protocol:**
+  Governs test-driven and test-accompanied development for React/TypeScript to prevent regressions, enforcing the testing pyramid, quality gates, and 100% pass thresholds before merging.
+  - Detailed Specification: [.agents/protocols/testing-protocol.md](file:///D:/Projects/team-generator/.agents/protocols/testing-protocol.md)
+
 ---
 
 ## 2. Tech Stack, Architecture & NPM Scripts
