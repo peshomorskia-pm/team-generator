@@ -6,8 +6,8 @@ import { saveMatchup, generateTeamsFingerprint } from '../utils/history';
 
 export function useTeamGenerator() {
   const [rawText, setRawText] = useState<string>('');
-  const [numberOfTeams, setNumberOfTeams] = useState<number | ''>('');
-  const [playersPerTeam, setPlayersPerTeam] = useState<number | ''>('');
+  const [numberOfTeams, setNumberOfTeams] = useState<number | null>(null);
+  const [playersPerTeam, setPlayersPerTeam] = useState<number | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [alert, setAlert] = useState<AlertNotification | null>(null);
   const [isCopied, setIsCopied] = useState<boolean>(false);
@@ -24,10 +24,11 @@ export function useTeamGenerator() {
         // Support optional rating in formats: "Name (5)" or "Name [5]" or "Name: 5"
         const match = line.match(/^(.+?)(?:\s*[([:]\s*(\d+(?:\.\d+)?)\s*[)\]]?)?$/);
         if (match && match[2] !== undefined) {
+          const parsedRating = parseFloat(match[2]);
           return {
             id: `p-${index + 1}`,
             name: match[1].trim(),
-            rating: parseFloat(match[2]),
+            rating: !Number.isNaN(parsedRating) ? parsedRating : undefined,
           };
         }
         return {
@@ -52,25 +53,30 @@ export function useTeamGenerator() {
 
   const removePlayer = useCallback((id: string) => {
     // Find player index and remove that line
-    const index = parseInt(id.replace('p-', ''), 10) - 1;
+    const parsed = parseInt(id.replace('p-', ''), 10);
+    if (Number.isNaN(parsed)) return;
+    const index = parsed - 1;
     setRawText((prev) => {
       const lines = prev.split('\n');
-      lines.splice(index, 1);
-      return lines.join('\n');
+      if (index >= 0 && index < lines.length) {
+        lines.splice(index, 1);
+        return lines.join('\n');
+      }
+      return prev;
     });
   }, []);
 
-  const handleNumTeamsChange = useCallback((val: number | '') => {
+  const handleNumTeamsChange = useCallback((val: number | null) => {
     setNumberOfTeams(val);
-    if (val !== '') {
-      setPlayersPerTeam('');
+    if (val !== null) {
+      setPlayersPerTeam(null);
     }
   }, []);
 
-  const handlePlayersPerTeamChange = useCallback((val: number | '') => {
+  const handlePlayersPerTeamChange = useCallback((val: number | null) => {
     setPlayersPerTeam(val);
-    if (val !== '') {
-      setNumberOfTeams('');
+    if (val !== null) {
+      setNumberOfTeams(null);
     }
   }, []);
 
@@ -84,11 +90,11 @@ export function useTeamGenerator() {
       return;
     }
 
-    const numTeamsInt = typeof numberOfTeams === 'number' ? numberOfTeams : parseInt(String(numberOfTeams), 10);
-    const pptInt = typeof playersPerTeam === 'number' ? playersPerTeam : parseInt(String(playersPerTeam), 10);
+    const numTeamsInt = numberOfTeams !== null && !Number.isNaN(numberOfTeams) ? numberOfTeams : null;
+    const pptInt = playersPerTeam !== null && !Number.isNaN(playersPerTeam) ? playersPerTeam : null;
 
-    const hasNumTeams = !isNaN(numTeamsInt) && numTeamsInt > 0;
-    const hasPpt = !isNaN(pptInt) && pptInt > 0;
+    const hasNumTeams = numTeamsInt !== null && numTeamsInt > 0;
+    const hasPpt = pptInt !== null && pptInt > 0;
 
     if (!hasNumTeams && !hasPpt) {
       showAlert("Моля, въведете 'Брой отбори' или 'Брой играчи в отбор'.", 'error');

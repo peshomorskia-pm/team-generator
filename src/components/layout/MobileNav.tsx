@@ -1,21 +1,16 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Dices, Home, Trophy, Users, Swords } from 'lucide-react';
-
-interface MobileNavItem {
-  to: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  end?: boolean;
-}
+import type { LucideIcon } from 'lucide-react';
+import { NavItem } from '../../types';
 
 export const MobileNav: React.FC = () => {
-  const navItems: MobileNavItem[] = [
-    { to: '/', label: 'Начало', icon: Home, end: true },
-    { to: '/generator', label: 'Генератор', icon: Dices },
-    { to: '/players', label: 'Играчи', icon: Users },
-    { to: '/matches', label: 'Мачове', icon: Swords },
-    { to: '/rankings', label: 'Класиране', icon: Trophy },
+  const navItems: NavItem[] = [
+    { href: '/', name: 'Начало', icon: Home, end: true },
+    { href: '/generator', name: 'Генератор', icon: Dices },
+    { href: '/players', name: 'Играчи', icon: Users },
+    { href: '/matches', name: 'Мачове', icon: Swords },
+    { href: '/rankings', name: 'Класиране', icon: Trophy },
   ];
 
   return (
@@ -25,11 +20,11 @@ export const MobileNav: React.FC = () => {
     >
       <div className="flex items-center justify-around h-16 px-1 max-w-lg mx-auto">
         {navItems.map((item) => {
-          const Icon = item.icon;
+          const Icon: LucideIcon = item.icon;
           return (
             <NavLink
-              key={item.to}
-              to={item.to}
+              key={item.href}
+              to={item.href}
               end={item.end}
               className={({ isActive }) =>
                 `flex flex-col items-center justify-center flex-1 h-full py-1 text-center transition-colors ${
@@ -47,7 +42,7 @@ export const MobileNav: React.FC = () => {
                     }`}
                   />
                   <span className="text-[10px] leading-tight font-medium tracking-tight">
-                    {item.label}
+                    {item.name}
                   </span>
                 </>
               )}

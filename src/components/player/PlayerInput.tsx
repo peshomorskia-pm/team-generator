@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, UserPlus } from 'lucide-react';
-import { PlayerInputProps as BasePlayerInputProps } from '../../types';
-
-export interface PlayerInputProps extends BasePlayerInputProps {
-  value?: string;
-  onChange?: (val: string) => void;
-  playerCount?: number;
-}
+import { PlayerInputProps } from '../../types';
 
 export const PlayerInput: React.FC<PlayerInputProps> = ({
   onAddPlayer,
@@ -22,7 +16,8 @@ export const PlayerInput: React.FC<PlayerInputProps> = ({
   const handleSingleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!singleName.trim()) return;
-    const ratingNum = singleRating.trim() !== '' ? parseFloat(singleRating) : undefined;
+    const parsedRating = parseFloat(singleRating);
+    const ratingNum = singleRating.trim() !== '' && !Number.isNaN(parsedRating) ? parsedRating : undefined;
     onAddPlayer(singleName.trim(), ratingNum);
     setSingleName('');
     setSingleRating('');

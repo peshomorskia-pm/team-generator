@@ -1,20 +1,12 @@
 import React from 'react';
 import { Shuffle, Sliders } from 'lucide-react';
-import { TeamSettingsProps as BaseTeamSettingsProps } from '../../types';
-
-export interface TeamSettingsProps extends BaseTeamSettingsProps {
-  playersPerTeam?: number | '';
-  onPlayersPerTeamChange?: (count: number | '') => void;
-  balanceByRating?: boolean;
-  onBalanceToggle?: (checked: boolean) => void;
-  hasRatings?: boolean;
-}
+import { TeamSettingsProps } from '../../types';
 
 export const TeamSettings: React.FC<TeamSettingsProps> = ({
   numberOfTeams,
   onSettingsChange,
   onGenerate,
-  playersPerTeam = '',
+  playersPerTeam = null,
   onPlayersPerTeamChange,
   balanceByRating = false,
   onBalanceToggle,
@@ -35,7 +27,7 @@ export const TeamSettings: React.FC<TeamSettingsProps> = ({
             value={numberOfTeams || ''}
             onChange={(e) => {
               const val = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
-              onSettingsChange(val);
+              onSettingsChange(Number.isNaN(val) ? 0 : val);
             }}
             className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
             placeholder="Напр. 2"
@@ -53,10 +45,10 @@ export const TeamSettings: React.FC<TeamSettingsProps> = ({
             type="number"
             id="playersPerTeam"
             min="1"
-            value={playersPerTeam || ''}
+            value={playersPerTeam ?? ''}
             onChange={(e) => {
-              const val = e.target.value === '' ? '' : parseInt(e.target.value, 10);
-              onPlayersPerTeamChange?.(val);
+              const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+              onPlayersPerTeamChange?.(val !== null && Number.isNaN(val) ? null : val);
             }}
             className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
             placeholder="Напр. 5"
