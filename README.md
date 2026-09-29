@@ -122,8 +122,9 @@ This repository employs a modular, multi-agent engineering lifecycle managed by 
 4. **[Senior Dev](.agents/roles/senior-dev.md) (`inherit`/`flash`):** Implements code conforming strictly to architectural specifications (`3_implementation.md`).
 5. **[Code Reviewer](.agents/roles/code-reviewer.md) (`flash`):** Independently audits changes via diff analysis and renders approval verdicts (`4_review.md`).
 6. **[Document Writer](.agents/roles/document-writer.md) (`flash_lite`):** Drafts documentation, updates ADRs, and opens Pull Requests targeting `dev` (`5_documentation.md`).
+7. **[Code Health Auditor](.agents/roles/code-health-auditor.md) (`flash`):** Performs read-only static analysis to identify technical debt, dead code, weak typings, and UI componentization candidates (`docs/proposals/`).
 
-For full details, refer to [GEMINI.md](GEMINI.md), [ADR 0001](docs/adr/0001-modular-agent-roles.md), [ADR 0002](docs/adr/0002-token-optimization-strategy.md), [ADR 0003](docs/adr/0003-tech-stack-selection.md), [ADR 0004](docs/adr/0004-localization-and-language-boundary.md), [ADR 0005](docs/adr/0005-app-shell-routing-and-theming.md), and [ADR 0006](docs/adr/0006-mandatory-automated-testing-protocol.md).
+For full details, refer to [GEMINI.md](GEMINI.md), [ADR 0001](docs/adr/0001-modular-agent-roles.md), [ADR 0002](docs/adr/0002-token-optimization-strategy.md), [ADR 0003](docs/adr/0003-tech-stack-selection.md), [ADR 0004](docs/adr/0004-localization-and-language-boundary.md), [ADR 0005](docs/adr/0005-app-shell-routing-and-theming.md), [ADR 0006](docs/adr/0006-mandatory-automated-testing-protocol.md), and [ADR 0007](docs/adr/0007-strict-scoping-and-code-health-auditor.md).
 
 ---
 
@@ -133,4 +134,17 @@ For full details, refer to [GEMINI.md](GEMINI.md), [ADR 0001](docs/adr/0001-modu
 * **Integration Branch:** `dev` (Agent Development target)
 * **Working Branches:** `feature/<name>` or `fix/<name>` branched from `dev`
 * **Pull Requests:** All PRs must target `dev`. Direct merges to `main` are restricted.
+* **Strict Feature Scoping:** All feature and bugfix PRs must strictly modify only files required for the ticket objective. Opportunistic cleanups, reformatting, or out-of-scope refactoring are prohibited on feature branches.
 * **Dual-Language Boundary:** All communications, reasoning, documentation, automated tests, and code comments must strictly be in English ([`language.md`](file:///D:/Projects/team-generator/.agents/protocols/language.md)). The application UI is presented in Bulgarian. Premature i18n abstractions are strictly avoided.
+
+---
+
+## Maintenance & Code Health Inspections
+
+To maintain codebase health and proactively resolve technical debt without polluting feature diffs:
+* **On-Demand Inspections:** Manually invoke the `code-health-auditor` on demand:
+  ```text
+  @code-health-auditor Run a code health audit on the [directory/module/project] focusing on [all/specific focus area]. Generate a proposal in docs/proposals/.
+  ```
+* **Proposal Review:** The auditor performs a read-only scan (zero production edits) and generates a report in `docs/proposals/code-health-YYYY-MM-DD.md`.
+* **Isolated Refactoring:** Users review proposals and create isolated `refactor/` or `chore/` tickets for execution in a clean, dedicated cycle.
