@@ -1,11 +1,6 @@
 import React from 'react';
 import { User, Shuffle, Star } from 'lucide-react';
-import { TeamCardProps as BaseTeamCardProps } from '../../types';
-
-export interface TeamCardProps extends BaseTeamCardProps {
-  index?: number;
-  onShuffleTeam?: (teamId: string) => void;
-}
+import { TeamCardProps } from '../../types';
 
 export const TeamCard: React.FC<TeamCardProps> = ({ team, index = 0, onShuffleTeam }) => {
   return (

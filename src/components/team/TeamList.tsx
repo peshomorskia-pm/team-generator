@@ -1,12 +1,7 @@
 import React from 'react';
 import { Copy, Check } from 'lucide-react';
-import { TeamListProps as BaseTeamListProps } from '../../types';
+import { TeamListProps } from '../../types';
 import { TeamCard } from './TeamCard';
-
-export interface TeamListProps extends BaseTeamListProps {
-  onCopy?: () => void;
-  isCopied?: boolean;
-}
 
 export const TeamList: React.FC<TeamListProps> = ({
   teams,

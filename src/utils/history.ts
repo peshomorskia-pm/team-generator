@@ -24,6 +24,13 @@ export function generateTeamsFingerprint(teams: Team[]): string {
 }
 
 /**
+ * Validates that an unknown value is an array of strings.
+ */
+export function isStringArray(val: unknown): val is string[] {
+  return Array.isArray(val) && val.every((item) => typeof item === 'string');
+}
+
+/**
  * Retrieves the set of previous matchup fingerprints.
  */
 export function getPreviousMatchups(): Set<string> {
@@ -32,7 +39,7 @@ export function getPreviousMatchups(): Set<string> {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
+        if (isStringArray(parsed)) {
           return new Set(parsed);
         }
       }

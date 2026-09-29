@@ -73,8 +73,8 @@ export const GeneratorPage: React.FC = () => {
               )}
 
               <TeamSettings
-                numberOfTeams={typeof numberOfTeams === 'number' ? numberOfTeams : 0}
-                onSettingsChange={(val) => setNumberOfTeams(val > 0 ? val : '')}
+                numberOfTeams={numberOfTeams ?? 0}
+                onSettingsChange={(val) => setNumberOfTeams(val > 0 ? val : null)}
                 playersPerTeam={playersPerTeam}
                 onPlayersPerTeamChange={setPlayersPerTeam}
                 onGenerate={generateTeams}

@@ -3,6 +3,7 @@ import {
   generateTeamsFingerprint,
   saveMatchup,
   getPreviousMatchups,
+  isStringArray,
 } from '../history';
 import { Team } from '../../types';
 
@@ -139,6 +140,66 @@ describe('history and fingerprint utilities', () => {
           expect(currentFingerprint).not.toBe(lastFingerprint);
         }
         lastFingerprint = currentFingerprint;
+      }
+    });
+  });
+
+  describe('runtime type guard isStringArray', () => {
+    it('returns true for string arrays', () => {
+      expect(isStringArray([])).toBe(true);
+      expect(isStringArray(['a', 'b', 'c'])).toBe(true);
+    });
+
+    it('returns false for null, undefined, primitives, and non-array objects', () => {
+      expect(isStringArray(null)).toBe(false);
+      expect(isStringArray(undefined)).toBe(false);
+      expect(isStringArray(123)).toBe(false);
+      expect(isStringArray('hello')).toBe(false);
+      expect(isStringArray({ a: 'b' })).toBe(false);
+    });
+
+    it('returns false for arrays containing non-string items', () => {
+      expect(isStringArray([1, 2, 3])).toBe(false);
+      expect(isStringArray(['a', 1])).toBe(false);
+      expect(isStringArray(['a', null])).toBe(false);
+      expect(isStringArray([{}])).toBe(false);
+    });
+  });
+
+  describe('corrupted storage handling', () => {
+    it('gracefully handles malformed JSON and non-string array payloads in localStorage', () => {
+      const mockStorage: Record<string, string> = {};
+      const fakeWindow = {
+        localStorage: {
+          getItem: (key: string) => mockStorage[key] ?? null,
+          setItem: (key: string, value: string) => {
+            mockStorage[key] = value;
+          },
+        },
+      };
+
+      const originalWindow = (globalThis as unknown as { window?: unknown }).window;
+      (globalThis as unknown as { window?: unknown }).window = fakeWindow;
+
+      try {
+        // Corrupted JSON
+        mockStorage['team_generator_matchup_history'] = 'invalid json {[';
+        expect(() => getPreviousMatchups()).not.toThrow();
+        expect(getPreviousMatchups()).toBeInstanceOf(Set);
+
+        // Valid JSON but not an array
+        mockStorage['team_generator_matchup_history'] = JSON.stringify({ not: 'an array' });
+        expect(() => getPreviousMatchups()).not.toThrow();
+
+        // Valid JSON array but with non-string elements
+        mockStorage['team_generator_matchup_history'] = JSON.stringify([123, true, null]);
+        expect(() => getPreviousMatchups()).not.toThrow();
+      } finally {
+        if (originalWindow !== undefined) {
+          (globalThis as unknown as { window?: unknown }).window = originalWindow;
+        } else {
+          delete (globalThis as unknown as { window?: unknown }).window;
+        }
       }
     });
   });

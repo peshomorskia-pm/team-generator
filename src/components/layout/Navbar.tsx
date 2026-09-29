@@ -1,17 +1,19 @@
 import React from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { Dices, Moon, Sun } from 'lucide-react';
+import { Dices, Moon, Sun, Home, Users, Swords, Trophy } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useTheme } from '../../hooks/useTheme';
+import { NavItem } from '../../types';
 
 export const Navbar: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
 
-  const navItems = [
-    { to: '/', label: 'Начало', end: true },
-    { to: '/generator', label: 'Генератор', end: false },
-    { to: '/players', label: 'Играчи', end: false },
-    { to: '/matches', label: 'Мачове', end: false },
-    { to: '/rankings', label: 'Класиране', end: false },
+  const navItems: (NavItem & { icon: LucideIcon })[] = [
+    { href: '/', name: 'Начало', icon: Home, end: true },
+    { href: '/generator', name: 'Генератор', icon: Dices, end: false },
+    { href: '/players', name: 'Играчи', icon: Users, end: false },
+    { href: '/matches', name: 'Мачове', icon: Swords, end: false },
+    { href: '/rankings', name: 'Класиране', icon: Trophy, end: false },
   ];
 
   return (
@@ -37,8 +39,8 @@ export const Navbar: React.FC = () => {
           <nav className="flex items-center space-x-1" aria-label="Основна навигация">
             {navItems.map((item) => (
               <NavLink
-                key={item.to}
-                to={item.to}
+                key={item.href}
+                to={item.href}
                 end={item.end}
                 className={({ isActive }) =>
                   `px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -48,7 +50,7 @@ export const Navbar: React.FC = () => {
                   }`
                 }
               >
-                {item.label}
+                {item.name}
               </NavLink>
             ))}
           </nav>
