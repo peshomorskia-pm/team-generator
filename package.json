@@ -1,0 +1,22 @@
+{
+  "name": "team-generator",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/peshomorskia-pm/team-generator.git"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/peshomorskia-pm/team-generator/issues"
+  },
+  "homepage": "https://github.com/peshomorskia-pm/team-generator#readme",
+  "devDependencies": {
+    "supabase": "^2.118.0"
+  }
+}
