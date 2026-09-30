@@ -75,22 +75,68 @@ describe('balanceTeams', () => {
     expect(new Set(allAssigned.map((p) => p.id)).size).toBe(3);
   });
 
-  it('preserves input order among players with equal ratings to vary assignments with pre-shuffle', () => {
-    // 4 players with the same rating: order in input dictates team assignments
-    const p1 = { id: '1', name: 'Alice', rating: 5 };
-    const p2 = { id: '2', name: 'Bob', rating: 5 };
-    const p3 = { id: '3', name: 'Charlie', rating: 5 };
-    const p4 = { id: '4', name: 'Diana', rating: 5 };
+  it('produces non-deterministic player distributions across multiple calls while preserving rating bounds', () => {
+    const players: Player[] = [
+      { id: '1', name: 'P1', rating: 10 },
+      { id: '2', name: 'P2', rating: 10 },
+      { id: '3', name: 'P3', rating: 8 },
+      { id: '4', name: 'P4', rating: 8 },
+      { id: '5', name: 'P5', rating: 6 },
+      { id: '6', name: 'P6', rating: 6 },
+    ];
 
-    const teamsOrder1 = balanceTeams([p1, p2, p3, p4], 2);
-    // Team 1 gets p1 and p3, Team 2 gets p2 and p4
-    expect(teamsOrder1[0].players.map((p) => p.name)).toEqual(['Alice', 'Charlie']);
-    expect(teamsOrder1[1].players.map((p) => p.name)).toEqual(['Bob', 'Diana']);
+    const observedDistributions = new Set<string>();
 
-    // Changing input order changes team composition
-    const teamsOrder2 = balanceTeams([p1, p3, p2, p4], 2);
-    // Team 1 gets p1 and p2, Team 2 gets p3 and p4
-    expect(teamsOrder2[0].players.map((p) => p.name)).toEqual(['Alice', 'Bob']);
-    expect(teamsOrder2[1].players.map((p) => p.name)).toEqual(['Charlie', 'Diana']);
+    for (let run = 0; run < 30; run++) {
+      const teams = balanceTeams(players, 2);
+      expect(teams).toHaveLength(2);
+
+      // Verify rating delta optimality: total ratings should be within bounds (delta <= 2)
+      const diff = Math.abs((teams[0].totalRating ?? 0) - (teams[1].totalRating ?? 0));
+      expect(diff).toBeLessThanOrEqual(2);
+
+      // Verify player count balance
+      expect(teams[0].players).toHaveLength(3);
+      expect(teams[1].players).toHaveLength(3);
+
+      // Track distribution
+      const team1Names = teams[0].players.map((p) => p.name).sort().join(',');
+      const team2Names = teams[1].players.map((p) => p.name).sort().join(',');
+      observedDistributions.add([team1Names, team2Names].sort().join(' vs '));
+    }
+
+    // Randomized tie-breaking should yield multiple distinct valid balanced partitions
+    expect(observedDistributions.size).toBeGreaterThan(1);
+  });
+
+  it('shuffles final team assignments so the first team is not predictable and maintains sequential IDs/names', () => {
+    const players: Player[] = [
+      { id: '1', name: 'SuperStar', rating: 100 },
+      { id: '2', name: 'AveragePlayer', rating: 50 },
+      { id: '3', name: 'Rookie', rating: 10 },
+    ];
+
+    let superstarOnTeam1 = 0;
+    let superstarOnTeam2 = 0;
+
+    for (let run = 0; run < 40; run++) {
+      const teams = balanceTeams(players, 2);
+      expect(teams).toHaveLength(2);
+      expect(teams[0].id).toBe('team-1');
+      expect(teams[0].name).toBe('Отбор 1');
+      expect(teams[1].id).toBe('team-2');
+      expect(teams[1].name).toBe('Отбор 2');
+
+      const isSuperstarOnTeam1 = teams[0].players.some((p) => p.name === 'SuperStar');
+      if (isSuperstarOnTeam1) {
+        superstarOnTeam1++;
+      } else {
+        superstarOnTeam2++;
+      }
+    }
+
+    // Shuffling guarantees SuperStar is placed on Team 1 sometimes and Team 2 sometimes
+    expect(superstarOnTeam1).toBeGreaterThan(0);
+    expect(superstarOnTeam2).toBeGreaterThan(0);
   });
 });

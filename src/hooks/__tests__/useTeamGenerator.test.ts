@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useTeamGenerator } from '../useTeamGenerator';
+import { areTeamConfigsEqual } from '../../utils/history';
 
 describe('useTeamGenerator', () => {
   beforeEach(() => {
@@ -238,5 +239,62 @@ describe('useTeamGenerator', () => {
     expect(copySuccess).toBe(true);
     expect(writeTextMock).toHaveBeenCalled();
     expect(result.current.isCopied).toBe(true);
+  });
+
+  it('guarantees consecutive different configurations when balanceByRating is true', () => {
+    const { result } = renderHook(() => useTeamGenerator());
+
+    act(() => {
+      // 4 players with ratings allowing multiple balanced pairings (18 vs 18)
+      result.current.setRawText('Иван (10)\nПетър (10)\nГеорги (8)\nДимитър (8)');
+      result.current.setNumberOfTeams(2);
+      result.current.setBalanceByRating(true);
+    });
+
+    act(() => {
+      result.current.generateTeams();
+    });
+
+    const firstRunTeams = result.current.teams;
+    expect(firstRunTeams).toHaveLength(2);
+    expect(firstRunTeams[0].totalRating).toBe(18);
+    expect(firstRunTeams[1].totalRating).toBe(18);
+
+    act(() => {
+      result.current.generateTeams();
+    });
+
+    const secondRunTeams = result.current.teams;
+    expect(secondRunTeams).toHaveLength(2);
+    expect(secondRunTeams[0].totalRating).toBe(18);
+    expect(secondRunTeams[1].totalRating).toBe(18);
+
+    // Consecutive runs must not have the exact same roster configuration
+    expect(areTeamConfigsEqual(firstRunTeams, secondRunTeams)).toBe(false);
+  });
+
+  it('produces consecutive non-repeated balanced matchups across multiple generations', () => {
+    const { result } = renderHook(() => useTeamGenerator());
+
+    act(() => {
+      result.current.setRawText('P1 (10)\nP2 (10)\nP3 (8)\nP4 (8)\nP5 (6)\nP6 (6)');
+      result.current.setNumberOfTeams(2);
+      result.current.setBalanceByRating(true);
+    });
+
+    let previousTeams = null;
+    for (let i = 0; i < 5; i++) {
+      act(() => {
+        result.current.generateTeams();
+      });
+      const currentTeams = result.current.teams;
+      expect(currentTeams).toHaveLength(2);
+      expect(currentTeams[0].players).toHaveLength(3);
+      expect(currentTeams[1].players).toHaveLength(3);
+      if (previousTeams) {
+        expect(areTeamConfigsEqual(previousTeams, currentTeams)).toBe(false);
+      }
+      previousTeams = currentTeams;
+    }
   });
 });
