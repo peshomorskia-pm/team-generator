@@ -94,7 +94,9 @@ team-generator/
 │       ├── 0003-tech-stack-selection.md
 │       ├── 0004-localization-and-language-boundary.md
 │       ├── 0005-app-shell-routing-and-theming.md
-│       └── 0006-mandatory-automated-testing-protocol.md
+│       ├── 0006-mandatory-automated-testing-protocol.md
+│       ├── 0007-strict-scoping-and-code-health-auditor.md
+│       └── 0008-orchestrator-planner-investigation-boundary.md
 ├── src/                    # React application source code
 │   ├── assets/styles/      # Tailwind CSS entry points
 │   ├── components/         # Modular UI components
@@ -122,15 +124,15 @@ team-generator/
 This repository employs a modular, multi-agent engineering lifecycle managed by specialized AI agent roles. Global protocols, role definitions, progressive disclosure skills, and architectural decisions are codified under dedicated directories:
 
 ### Agent Roles & Lifecycle
-1. **[Orchestrator](.agents/roles/orchestrator.md) (`pro`/`flash`):** Coordinates requests, verifies Git SOP, and initializes context (`0_context.md`).
-2. **[Planner](.agents/roles/planner.md) (`flash`):** Analyzes requirements and formulates high-level execution objectives (`1_plan.md`).
+1. **[Orchestrator](.agents/roles/orchestrator.md) (`pro`/`flash`):** Agile PM & Release Gatekeeper. Zero source code access. Coordinates requests, verifies Git SOP, and initializes context (`0_context.md`) before any code inspection occurs.
+2. **[Planner](.agents/roles/planner.md) (`flash`):** Technical Lead & first-responder codebase inspector. Scopes features, triages defects, and formulates high-level execution objectives (`1_plan.md`).
 3. **[Architect](.agents/roles/architect.md) (`pro`):** Defines file structures, interfaces, and technical contracts (`2_architecture.md`).
 4. **[Senior Dev](.agents/roles/senior-dev.md) (`inherit`/`flash`):** Implements code conforming strictly to architectural specifications (`3_implementation.md`).
 5. **[Code Reviewer](.agents/roles/code-reviewer.md) (`flash`):** Independently audits changes via diff analysis and renders approval verdicts (`4_review.md`).
 6. **[Document Writer](.agents/roles/document-writer.md) (`flash_lite`):** Drafts documentation, updates ADRs, and opens Pull Requests targeting `dev` (`5_documentation.md`).
 7. **[Code Health Auditor](.agents/roles/code-health-auditor.md) (`flash`):** Performs read-only static analysis to identify technical debt, test coverage gaps, dead code, weak typings, and UI componentization candidates (`docs/proposals/`).
 
-For full details, refer to [GEMINI.md](GEMINI.md), [ADR 0001](docs/adr/0001-modular-agent-roles.md), [ADR 0002](docs/adr/0002-token-optimization-strategy.md), [ADR 0003](docs/adr/0003-tech-stack-selection.md), [ADR 0004](docs/adr/0004-localization-and-language-boundary.md), [ADR 0005](docs/adr/0005-app-shell-routing-and-theming.md), [ADR 0006](docs/adr/0006-mandatory-automated-testing-protocol.md), and [ADR 0007](docs/adr/0007-strict-scoping-and-code-health-auditor.md).
+For full details, refer to [GEMINI.md](GEMINI.md), [ADR 0001](docs/adr/0001-modular-agent-roles.md), [ADR 0002](docs/adr/0002-token-optimization-strategy.md), [ADR 0003](docs/adr/0003-tech-stack-selection.md), [ADR 0004](docs/adr/0004-localization-and-language-boundary.md), [ADR 0005](docs/adr/0005-app-shell-routing-and-theming.md), [ADR 0006](docs/adr/0006-mandatory-automated-testing-protocol.md), [ADR 0007](docs/adr/0007-strict-scoping-and-code-health-auditor.md), and [ADR 0008](docs/adr/0008-orchestrator-planner-investigation-boundary.md).
 
 ---
 
