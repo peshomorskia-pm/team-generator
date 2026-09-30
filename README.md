@@ -1,6 +1,6 @@
 # Team Generator
 
-A scalable Multi-Page Application (SPA) with a responsive App Shell, client-side routing, and light/dark theme support for randomly assigning and balancing players into competitive teams. Built with **React 19**, **TypeScript**, **Vite**, **Tailwind CSS**, **React Router v7**, and **Vitest**, alongside **Supabase** backend integration.
+A scalable Multi-Page Application (SPA) with a responsive App Shell, client-side routing, and light/dark theme support for randomly assigning and balancing players into competitive teams. Built with **React 19**, **TypeScript**, **Vite**, **Tailwind CSS**, **React Router v7**, **Vitest**, **happy-dom**, and **React Testing Library**, alongside **Supabase** backend integration.
 
 ---
 
@@ -45,18 +45,22 @@ npm install
 * **`npm run preview`**: Locally preview the production build.
 * **`npm run typecheck`**: Run TypeScript static type checking without emitting files (`tsc --noEmit`).
 * **`npm test`**: Run the Vitest automated test suite (`vitest run`).
+* **`npm run test:coverage`**: Run Vitest with V8 coverage collection (`vitest run --coverage`), achieving >90% test coverage.
 * **`npm run lint`**: Run ESLint across `src/` to enforce code quality standards.
 
 ---
 
 ## Automated Testing & Quality Gates
 
-This project enforces a strict [Mandatory Automated Testing Protocol](.agents/protocols/testing-protocol.md) using **Vitest** and **React Testing Library**. All new features and bug fixes must be accompanied by comprehensive tests across the testing pyramid (unit, hook, component, and integration).
+This project enforces a strict [Mandatory Automated Testing Protocol](.agents/protocols/testing-protocol.md) using **Vitest**, **happy-dom**, and **React Testing Library**. All new features and bug fixes must be accompanied by comprehensive tests across the testing pyramid (unit, hook, component, and integration), achieving 90%+ test coverage.
 
 ### Running Tests
 ```bash
-# Run all automated test suites
+# Run all automated test suites (75 tests across 13 files)
 npm test
+
+# Run tests with V8 coverage report (>90% overall coverage)
+npm run test:coverage
 
 # Run tests in watch mode during development
 npx vitest
@@ -67,10 +71,11 @@ npx vitest --ui
 
 ### Mandatory Quality Gates
 Before any pull request can be approved and merged into `dev`:
-1. **`npm test`**: 100% test pass rate across all suites (zero failing tests, zero skipped assertions).
-2. **`npm run typecheck`**: Zero TypeScript static compilation errors (`tsc --noEmit`).
-3. **`npm run lint`**: Zero ESLint warnings or errors (`eslint src`).
-4. **`npm run build`**: Clean production build compilation without warnings.
+1. **`npm test`**: 100% test pass rate across all suites (75/75 tests passing).
+2. **`npm run test:coverage`**: >90% overall line and statement coverage.
+3. **`npm run typecheck`**: Zero TypeScript static compilation errors (`tsc --noEmit`).
+4. **`npm run lint`**: Zero ESLint warnings or errors (`eslint src`).
+5. **`npm run build`**: Clean production build compilation without warnings.
 
 ---
 
