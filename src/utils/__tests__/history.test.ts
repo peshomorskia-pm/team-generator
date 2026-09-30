@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   generateTeamsFingerprint,
+  areTeamConfigsEqual,
   saveMatchup,
   getPreviousMatchups,
   isStringArray,
@@ -26,29 +27,88 @@ describe('history and fingerprint utilities', () => {
     ],
   };
 
-  it('generates identical fingerprints regardless of player or team order', () => {
-    const teams1 = [teamA, teamB];
-    const teams2 = [
+  it('generates identical fingerprints and verifies equality when player order within a team is swapped', () => {
+    const teamsOriginal = [teamA, teamB];
+    const teamsSwappedPlayers = [
       {
-        id: 'team-2-alt',
-        name: 'Team 2 Alt',
-        players: [
-          { id: '4', name: 'David' },
-          { id: '3', name: 'Charlie' },
-        ],
-      },
-      {
-        id: 'team-1-alt',
-        name: 'Team 1 Alt',
+        id: 'team-1',
+        name: 'Team 1',
         players: [
           { id: '2', name: 'Bob' },
           { id: '1', name: 'Alice' },
         ],
       },
+      teamB,
     ];
 
-    expect(generateTeamsFingerprint(teams1)).toBe(generateTeamsFingerprint(teams2));
+    expect(generateTeamsFingerprint(teamsOriginal)).toBe(
+      generateTeamsFingerprint(teamsSwappedPlayers)
+    );
+    expect(areTeamConfigsEqual(teamsOriginal, teamsSwappedPlayers)).toBe(true);
   });
+
+  it('generates identical fingerprints and verifies equality when team order in the list is swapped', () => {
+    const teamsOriginal = [teamA, teamB];
+    const teamsSwappedTeams = [teamB, teamA];
+
+    expect(generateTeamsFingerprint(teamsOriginal)).toBe(
+      generateTeamsFingerprint(teamsSwappedTeams)
+    );
+    expect(areTeamConfigsEqual(teamsOriginal, teamsSwappedTeams)).toBe(true);
+  });
+
+  it('handles teams sharing the same first player name without order dependency', () => {
+    const teamAlpha: Team = {
+      id: 't-1',
+      name: 'Team Alpha',
+      players: [
+        { id: '1', name: 'Alex' },
+        { id: '2', name: 'Dan' },
+      ],
+    };
+    const teamBeta: Team = {
+      id: 't-2',
+      name: 'Team Beta',
+      players: [
+        { id: '3', name: 'Alex' },
+        { id: '4', name: 'Bob' },
+      ],
+    };
+
+    const config1 = [teamAlpha, teamBeta];
+    const config2 = [teamBeta, teamAlpha];
+
+    expect(generateTeamsFingerprint(config1)).toBe(generateTeamsFingerprint(config2));
+    expect(areTeamConfigsEqual(config1, config2)).toBe(true);
+  });
+
+  it('returns false for areTeamConfigsEqual when team compositions differ', () => {
+    const teamsOriginal = [teamA, teamB];
+    const teamsDifferent: Team[] = [
+      {
+        id: 'team-1',
+        name: 'Team 1',
+        players: [
+          { id: '1', name: 'Alice' },
+          { id: '3', name: 'Charlie' },
+        ],
+      },
+      {
+        id: 'team-2',
+        name: 'Team 2',
+        players: [
+          { id: '2', name: 'Bob' },
+          { id: '4', name: 'David' },
+        ],
+      },
+    ];
+
+    expect(generateTeamsFingerprint(teamsOriginal)).not.toBe(
+      generateTeamsFingerprint(teamsDifferent)
+    );
+    expect(areTeamConfigsEqual(teamsOriginal, teamsDifferent)).toBe(false);
+  });
+
 
   it('saves and retrieves matchups from history', () => {
     expect(getPreviousMatchups().size).toBe(0);

@@ -5,23 +5,31 @@ const memoryHistory = new Set<string>();
 
 /**
  * Computes a canonical deterministic fingerprint string for a set of teams.
- * Players within each team are sorted by ID/name, and teams are sorted by their first player.
+ * Players within each team are sorted by normalized name and joined into a team roster signature.
+ * Team roster signatures are sorted lexicographically, making the fingerprint
+ * order-agnostic for both player order within teams and team order in the list.
  */
 export function generateTeamsFingerprint(teams: Team[]): string {
-  const normalizedTeams = teams
+  const teamSignatures = teams
     .map((team) =>
       [...team.players]
         .map((p) => p.name.trim().toLowerCase())
         .sort((a, b) => a.localeCompare(b))
+        .join('|')
     )
-    .sort((a, b) => {
-      const firstA = a[0] ?? '';
-      const firstB = b[0] ?? '';
-      return firstA.localeCompare(firstB);
-    });
+    .sort((a, b) => a.localeCompare(b));
 
-  return JSON.stringify(normalizedTeams);
+  return JSON.stringify(teamSignatures);
 }
+
+/**
+ * Checks whether two team configurations are equivalent, ignoring player order
+ * within teams and team order in the array.
+ */
+export function areTeamConfigsEqual(teamsA: Team[], teamsB: Team[]): boolean {
+  return generateTeamsFingerprint(teamsA) === generateTeamsFingerprint(teamsB);
+}
+
 
 /**
  * Validates that an unknown value is an array of strings.

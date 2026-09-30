@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useRef, useDeferredValue } from 'react'
 import { Player, Team, AlertNotification } from '../types';
 import { fisherYatesShuffle } from '../utils/shuffle';
 import { balanceTeams } from '../utils/balance';
-import { saveMatchup, generateTeamsFingerprint } from '../utils/history';
+import { saveMatchup, generateTeamsFingerprint, areTeamConfigsEqual } from '../utils/history';
 
 export function useTeamGenerator() {
   const [rawText, setRawText] = useState<string>('');
@@ -12,6 +12,7 @@ export function useTeamGenerator() {
   const [alert, setAlert] = useState<AlertNotification | null>(null);
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [balanceByRating, setBalanceByRating] = useState<boolean>(false);
+  const lastTeamsRef = useRef<Team[] | null>(null);
   const lastFingerprintRef = useRef<string>('');
   const deferredRawText = useDeferredValue(rawText);
 
@@ -107,7 +108,7 @@ export function useTeamGenerator() {
       return;
     }
 
-    const lastFingerprint = lastFingerprintRef.current;
+    const lastTeams = lastTeamsRef.current;
     let generatedTeams: Team[] = [];
     let attempts = 0;
     const maxAttempts = 15;
@@ -161,11 +162,12 @@ export function useTeamGenerator() {
 
       attempts++;
     } while (
-      lastFingerprint &&
-      generateTeamsFingerprint(generatedTeams) === lastFingerprint &&
+      lastTeams &&
+      areTeamConfigsEqual(generatedTeams, lastTeams) &&
       attempts < maxAttempts
     );
 
+    lastTeamsRef.current = generatedTeams;
     lastFingerprintRef.current = generateTeamsFingerprint(generatedTeams);
     saveMatchup(generatedTeams);
     setTeams(generatedTeams);
@@ -182,6 +184,7 @@ export function useTeamGenerator() {
         }
         return team;
       });
+      lastTeamsRef.current = updated;
       lastFingerprintRef.current = generateTeamsFingerprint(updated);
       return updated;
     });

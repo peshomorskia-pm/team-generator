@@ -1,8 +1,11 @@
 import { Player, Team } from '../types';
+import { fisherYatesShuffle } from './shuffle';
 
 /**
  * Distributes players into teams balancing by total skill rating.
- * Uses greedy multi-way number partitioning (LPT) with secondary tie-breaker on player count.
+ * Uses greedy multi-way number partitioning (LPT) with randomized tie-breaking
+ * on candidate teams sharing the minimum rating and player count, and shuffles
+ * final team groupings to avoid deterministic team ordering.
  *
  * @param players - Array of players to distribute
  * @param numTeams - Positive number of teams to form
@@ -37,26 +40,44 @@ export function balanceTeams(players: Player[], numTeams: number): Team[] {
     return 0;
   });
 
-  // Distribute players greedily to the team with lowest total rating,
-  // breaking ties with least number of players
+  // Distribute players greedily to candidate teams with lowest total rating,
+  // breaking ties with least number of players and randomizing among identical candidates.
   for (const player of sortedPlayers) {
-    let minTeamIndex = 0;
-    for (let i = 1; i < teams.length; i++) {
-      const currentMinRating = teams[minTeamIndex].totalRating ?? 0;
-      const candidateRating = teams[i].totalRating ?? 0;
+    let minRating = Infinity;
+    for (const team of teams) {
+      const rating = team.totalRating ?? 0;
+      if (rating < minRating) {
+        minRating = rating;
+      }
+    }
 
-      if (candidateRating < currentMinRating) {
-        minTeamIndex = i;
-      } else if (candidateRating === currentMinRating) {
-        if (teams[i].players.length < teams[minTeamIndex].players.length) {
-          minTeamIndex = i;
+    let minPlayerCount = Infinity;
+    for (const team of teams) {
+      if ((team.totalRating ?? 0) === minRating) {
+        if (team.players.length < minPlayerCount) {
+          minPlayerCount = team.players.length;
         }
       }
     }
 
-    teams[minTeamIndex].players.push(player);
-    teams[minTeamIndex].totalRating = (teams[minTeamIndex].totalRating ?? 0) + (player.rating ?? 0);
+    const candidates = teams.filter(
+      (t) => (t.totalRating ?? 0) === minRating && t.players.length === minPlayerCount
+    );
+
+    const chosenTeam = candidates[Math.floor(Math.random() * candidates.length)];
+    chosenTeam.players.push(player);
+    chosenTeam.totalRating = (chosenTeam.totalRating ?? 0) + (player.rating ?? 0);
   }
 
-  return teams;
+  // Shuffle final team groupings so the highest-rated player or first assignment
+  // is not predictably placed on the first team.
+  const shuffledTeams = fisherYatesShuffle(teams);
+
+  // Reassign IDs and names sequentially
+  return shuffledTeams.map((team, index) => ({
+    ...team,
+    id: `team-${index + 1}`,
+    name: `Отбор ${index + 1}`,
+  }));
 }
+
