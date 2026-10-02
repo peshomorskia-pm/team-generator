@@ -21,7 +21,7 @@ A scalable Multi-Page Application (SPA) with a responsive App Shell, client-side
 
 * **`/`** — Landing Page (Hero, feature highlights, balance visual, and primary CTA)
 * **`/generator`** — Team Generator (Player management, team settings, greedy balancing & shuffling)
-* **`/players`** — Players Database (Themed placeholder for future roster management)
+* **`/players`** — Players Database (Production CRUD management interface with search filtering, ELO rating tiers, responsive desktop table / mobile cards, and accessible modals)
 * **`/matches`** — Match History & Tracker (Themed placeholder for match results and stats)
 * **`/rankings`** — League Rankings / Leaderboard (Themed placeholder for ELO player standings)
 * **`*`** — 404 Not Found (Error page with navigation back to home)
@@ -94,7 +94,7 @@ This project enforces a strict [Mandatory Automated Testing Protocol](.agents/pr
 
 ### Running Tests
 ```bash
-# Run all automated test suites (81 tests across 13 files)
+# Run all automated test suites (141 tests across 19 files)
 npm test
 
 # Run tests with V8 coverage report (>90% overall coverage)
@@ -109,7 +109,7 @@ npx vitest --ui
 
 ### Mandatory Quality Gates
 Before any pull request can be approved and merged into `dev`:
-1. **`npm test`**: 100% test pass rate across all suites (81/81 tests passing).
+1. **`npm test`**: 100% test pass rate across all suites (141/141 tests passing).
 2. **`npm run test:coverage`**: >90% overall line and statement coverage.
 3. **`npm run typecheck`**: Zero TypeScript static compilation errors (`tsc --noEmit`).
 4. **`npm run lint`**: Zero ESLint warnings or errors (`eslint src`).
@@ -139,12 +139,13 @@ team-generator/
 │   ├── assets/styles/      # Tailwind CSS entry points
 │   ├── components/         # Modular UI components
 │   │   ├── layout/         # AppShell, Navbar, MobileNav, PlaceholderPage
+│   │   ├── player/         # Player modals (PlayerModal, DeletePlayerModal)
 │   │   ├── ui/             # Reusable UI primitives (Badge, Alert, ThemeToggle, Button, Input, index.ts)
 │   │   └── ...             # PlayerInput, TeamCard, TeamSettings, etc.
 │   ├── context/            # React Context providers (ThemeContext)
-│   ├── hooks/              # Custom business logic hooks (useTeamGenerator, useTheme)
+│   ├── hooks/              # Custom business logic hooks (useTeamGenerator, usePlayers, useTheme)
 │   ├── pages/              # Route views (LandingPage, GeneratorPage, PlayersPage, MatchesPage, RankingsPage, NotFoundPage)
-│   ├── types/              # TypeScript domain contracts (Player, Team, etc.)
+│   ├── types/              # TypeScript domain contracts (Player, Team, Database, etc.)
 │   ├── utils/              # Pure algorithmic utilities (shuffle, balance, history)
 │   ├── App.tsx             # Root routing tree & AppShell wrapper
 │   └── main.tsx            # React DOM mounting entry point
