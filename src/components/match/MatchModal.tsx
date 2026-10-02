@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Save, Swords, Loader2, User } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { PlayerCombobox } from './PlayerCombobox';
 import type { PlayerRow } from '../../types/database.types';
 import type { MatchDetail, MatchFormData } from '../../types/matches';
 
@@ -19,6 +20,14 @@ interface Participant {
   name: string;
 }
 
+const getTodayFormatted = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const MatchModal: React.FC<MatchModalProps> = ({
   isOpen,
   onClose,
@@ -32,7 +41,7 @@ export const MatchModal: React.FC<MatchModalProps> = ({
     if (match) {
       return match.played_at.slice(0, 10);
     }
-    return new Date().toISOString().slice(0, 10);
+    return getTodayFormatted();
   };
 
   const getInitialParticipants = (side: 'team_1' | 'team_2'): Participant[] => {
@@ -47,8 +56,12 @@ export const MatchModal: React.FC<MatchModalProps> = ({
   };
 
   const [date, setDate] = useState(getInitialDate);
-  const [team1Score, setTeam1Score] = useState(match ? String(match.team_1_score) : '0');
-  const [team2Score, setTeam2Score] = useState(match ? String(match.team_2_score) : '0');
+  const [team1Score, setTeam1Score] = useState(
+    match && match.team_1_score !== null ? String(match.team_1_score) : ''
+  );
+  const [team2Score, setTeam2Score] = useState(
+    match && match.team_2_score !== null ? String(match.team_2_score) : ''
+  );
   const [team1Players, setTeam1Players] = useState<Participant[]>(() =>
     getInitialParticipants('team_1')
   );
@@ -56,8 +69,6 @@ export const MatchModal: React.FC<MatchModalProps> = ({
     getInitialParticipants('team_2')
   );
 
-  const [selectedPlayerT1, setSelectedPlayerT1] = useState('');
-  const [selectedPlayerT2, setSelectedPlayerT2] = useState('');
   const [guestNameT1, setGuestNameT1] = useState('');
   const [guestNameT2, setGuestNameT2] = useState('');
 
@@ -71,12 +82,10 @@ export const MatchModal: React.FC<MatchModalProps> = ({
     setPrevIsOpen(isOpen);
     setPrevMatch(match);
     setDate(getInitialDate());
-    setTeam1Score(match ? String(match.team_1_score) : '0');
-    setTeam2Score(match ? String(match.team_2_score) : '0');
+    setTeam1Score(match && match.team_1_score !== null ? String(match.team_1_score) : '');
+    setTeam2Score(match && match.team_2_score !== null ? String(match.team_2_score) : '');
     setTeam1Players(getInitialParticipants('team_1'));
     setTeam2Players(getInitialParticipants('team_2'));
-    setSelectedPlayerT1('');
-    setSelectedPlayerT2('');
     setGuestNameT1('');
     setGuestNameT2('');
     setValidationError(null);
@@ -113,11 +122,9 @@ export const MatchModal: React.FC<MatchModalProps> = ({
     if (teamSide === 'team_1') {
       if (team1Players.some((p) => p.player_id === playerId)) return;
       setTeam1Players((prev) => [...prev, participant]);
-      setSelectedPlayerT1('');
     } else {
       if (team2Players.some((p) => p.player_id === playerId)) return;
       setTeam2Players((prev) => [...prev, participant]);
-      setSelectedPlayerT2('');
     }
     setValidationError(null);
   };
@@ -153,21 +160,6 @@ export const MatchModal: React.FC<MatchModalProps> = ({
     e.preventDefault();
     setValidationError(null);
 
-    const score1 = Number(team1Score);
-    const score2 = Number(team2Score);
-
-    if (
-      team1Score.trim() === '' ||
-      team2Score.trim() === '' ||
-      Number.isNaN(score1) ||
-      Number.isNaN(score2) ||
-      score1 < 0 ||
-      score2 < 0
-    ) {
-      setValidationError('Резултатът трябва да бъде 0 или по-голям.');
-      return;
-    }
-
     if (team1Players.length === 0 || team2Players.length === 0) {
       setValidationError('Всеки отбор трябва да има поне един играч.');
       return;
@@ -202,9 +194,56 @@ export const MatchModal: React.FC<MatchModalProps> = ({
       }
     }
 
+    // Date-aware score validation
+    const today = getTodayFormatted();
+    const isPastDate = date < today;
+    const isT1Empty = team1Score.trim() === '';
+    const isT2Empty = team2Score.trim() === '';
+
+    let parsedScore1: number | null = null;
+    let parsedScore2: number | null = null;
+
+    if (isPastDate) {
+      if (isT1Empty || isT2Empty) {
+        setValidationError('За минали мачове резултатът е задължителен.');
+        return;
+      }
+
+      const num1 = Number(team1Score);
+      const num2 = Number(team2Score);
+
+      if (Number.isNaN(num1) || Number.isNaN(num2) || num1 < 0 || num2 < 0) {
+        setValidationError('Резултатът трябва да бъде 0 или по-голям.');
+        return;
+      }
+
+      parsedScore1 = num1;
+      parsedScore2 = num2;
+    } else {
+      // Today or future date: scores are optional, but if one is provided both must be valid
+      if (isT1Empty && isT2Empty) {
+        parsedScore1 = null;
+        parsedScore2 = null;
+      } else if (isT1Empty || isT2Empty) {
+        setValidationError('Моля, въведете резултат и за двата отбора или оставете полетата празни.');
+        return;
+      } else {
+        const num1 = Number(team1Score);
+        const num2 = Number(team2Score);
+
+        if (Number.isNaN(num1) || Number.isNaN(num2) || num1 < 0 || num2 < 0) {
+          setValidationError('Резултатът трябва да бъде 0 или по-голям.');
+          return;
+        }
+
+        parsedScore1 = num1;
+        parsedScore2 = num2;
+      }
+    }
+
     const formData: MatchFormData = {
-      team_1_score: score1,
-      team_2_score: score2,
+      team_1_score: parsedScore1,
+      team_2_score: parsedScore2,
       played_at: new Date(date).toISOString(),
       team_1_players: team1Players.map((p) => ({
         player_id: p.player_id,
@@ -298,7 +337,7 @@ export const MatchModal: React.FC<MatchModalProps> = ({
               min="0"
               step="1"
               label="Резултат Отбор 1"
-              placeholder="0"
+              placeholder="-"
               value={team1Score}
               onChange={(e) => {
                 setTeam1Score(e.target.value);
@@ -312,7 +351,7 @@ export const MatchModal: React.FC<MatchModalProps> = ({
               min="0"
               step="1"
               label="Резултат Отбор 2"
-              placeholder="0"
+              placeholder="-"
               value={team2Score}
               onChange={(e) => {
                 setTeam2Score(e.target.value);
@@ -333,30 +372,16 @@ export const MatchModal: React.FC<MatchModalProps> = ({
                 </span>
               </h3>
 
-              {/* Add Registered Player */}
-              <div className="flex gap-2">
-                <select
-                  aria-label="Избери играч за Отбор 1"
-                  value={selectedPlayerT1}
-                  onChange={(e) => setSelectedPlayerT1(e.target.value)}
-                  className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                >
-                  <option value="">Избери играч...</option>
-                  {availablePlayers.map((player) => (
-                    <option key={player.id} value={player.id}>
-                      {player.name}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => handleAddPlayer('team_1', selectedPlayerT1)}
-                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm transition-colors"
-                  aria-label="Добави играч към Отбор 1"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
+              {/* Player Combobox for Registered Players */}
+              <PlayerCombobox
+                players={availablePlayers}
+                selectedIds={team1Players.filter((p) => p.player_id).map((p) => p.player_id!)}
+                excludedIds={team2Players.filter((p) => p.player_id).map((p) => p.player_id!)}
+                onSelect={(player) => handleAddPlayer('team_1', player.id)}
+                ariaLabel="Избери играч за Отбор 1"
+                placeholder="Избери играч..."
+                disabled={isSubmitting}
+              />
 
               {/* Add Guest */}
               <div className="flex gap-2">
@@ -416,30 +441,16 @@ export const MatchModal: React.FC<MatchModalProps> = ({
                 </span>
               </h3>
 
-              {/* Add Registered Player */}
-              <div className="flex gap-2">
-                <select
-                  aria-label="Избери играч за Отбор 2"
-                  value={selectedPlayerT2}
-                  onChange={(e) => setSelectedPlayerT2(e.target.value)}
-                  className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                >
-                  <option value="">Избери играч...</option>
-                  {availablePlayers.map((player) => (
-                    <option key={player.id} value={player.id}>
-                      {player.name}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => handleAddPlayer('team_2', selectedPlayerT2)}
-                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm transition-colors"
-                  aria-label="Добави играч към Отбор 2"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
+              {/* Player Combobox for Registered Players */}
+              <PlayerCombobox
+                players={availablePlayers}
+                selectedIds={team2Players.filter((p) => p.player_id).map((p) => p.player_id!)}
+                excludedIds={team1Players.filter((p) => p.player_id).map((p) => p.player_id!)}
+                onSelect={(player) => handleAddPlayer('team_2', player.id)}
+                ariaLabel="Избери играч за Отбор 2"
+                placeholder="Избери играч..."
+                disabled={isSubmitting}
+              />
 
               {/* Add Guest */}
               <div className="flex gap-2">

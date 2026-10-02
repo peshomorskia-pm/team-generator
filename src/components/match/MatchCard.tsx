@@ -12,9 +12,10 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, onEdit, onDelete })
   const team1Players = match.match_players.filter((p) => p.team_side === 'team_1');
   const team2Players = match.match_players.filter((p) => p.team_side === 'team_2');
 
-  const team1Won = match.team_1_score > match.team_2_score;
-  const team2Won = match.team_2_score > match.team_1_score;
-  const isDraw = match.team_1_score === match.team_2_score;
+  const isUpcoming = match.team_1_score === null || match.team_2_score === null;
+  const team1Won = !isUpcoming && match.team_1_score! > match.team_2_score!;
+  const team2Won = !isUpcoming && match.team_2_score! > match.team_1_score!;
+  const isDraw = !isUpcoming && match.team_1_score === match.team_2_score;
 
   const formattedDate = new Date(match.played_at).toLocaleDateString('bg-BG', {
     day: '2-digit',
@@ -29,6 +30,11 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, onEdit, onDelete })
         <div className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
           <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           <span>{formattedDate}</span>
+          {isUpcoming && (
+            <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+              Предстоящ
+            </span>
+          )}
           {isDraw && (
             <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
               Равенство
@@ -100,26 +106,34 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, onEdit, onDelete })
 
         {/* Score Board */}
         <div className="md:col-span-1 flex flex-col items-center justify-center py-2 px-3 rounded-xl bg-gray-50 dark:bg-gray-700/40 border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center gap-2 text-2xl sm:text-3xl font-extrabold">
-            <span
-              className={
-                team1Won
-                  ? 'text-emerald-600 dark:text-emerald-400'
-                  : 'text-gray-800 dark:text-gray-200'
-              }
-            >
-              {match.team_1_score}
-            </span>
-            <span className="text-gray-400 dark:text-gray-500 text-xl font-normal">:</span>
-            <span
-              className={
-                team2Won
-                  ? 'text-emerald-600 dark:text-emerald-400'
-                  : 'text-gray-800 dark:text-gray-200'
-              }
-            >
-              {match.team_2_score}
-            </span>
+          <div className="flex items-center justify-center text-2xl sm:text-3xl font-extrabold">
+            {isUpcoming ? (
+              <span className="text-gray-400 dark:text-gray-500 text-xl font-semibold tracking-widest">
+                - : -
+              </span>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span
+                  className={
+                    team1Won
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-gray-800 dark:text-gray-200'
+                  }
+                >
+                  {match.team_1_score}
+                </span>
+                <span className="text-gray-400 dark:text-gray-500 text-xl font-normal">:</span>
+                <span
+                  className={
+                    team2Won
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-gray-800 dark:text-gray-200'
+                  }
+                >
+                  {match.team_2_score}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

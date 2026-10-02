@@ -36,7 +36,7 @@ describe('MatchCard Component', () => {
     ],
   };
 
-  it('renders scores, team sides, and player names', () => {
+  it('renders scores, team sides, and player names for completed match', () => {
     render(<MatchCard match={sampleMatch} onEdit={vi.fn()} onDelete={vi.fn()} />);
 
     expect(screen.getByText('5')).toBeInTheDocument();
@@ -46,6 +46,24 @@ describe('MatchCard Component', () => {
     expect(screen.getByText('Димитър Бербатов')).toBeInTheDocument();
     expect(screen.getByText('Спас Делев')).toBeInTheDocument();
     expect(screen.getByText('(гост)')).toBeInTheDocument();
+    expect(screen.queryByText('Предстоящ')).not.toBeInTheDocument();
+  });
+
+  it('renders upcoming match with "- : -", "Предстоящ" badge, and no trophies', () => {
+    const upcomingMatch: MatchDetail = {
+      ...sampleMatch,
+      id: 'm-upcoming',
+      team_1_score: null,
+      team_2_score: null,
+    };
+
+    render(<MatchCard match={upcomingMatch} onEdit={vi.fn()} onDelete={vi.fn()} />);
+
+    expect(screen.getByText('- : -')).toBeInTheDocument();
+    expect(screen.getByText('Предстоящ')).toBeInTheDocument();
+    expect(screen.queryByText('Равенство')).not.toBeInTheDocument();
+    expect(screen.queryByText('5')).not.toBeInTheDocument();
+    expect(screen.queryByText('3')).not.toBeInTheDocument();
   });
 
   it('renders draw badge when match is a tie', () => {
@@ -57,6 +75,7 @@ describe('MatchCard Component', () => {
 
     render(<MatchCard match={drawMatch} onEdit={vi.fn()} onDelete={vi.fn()} />);
     expect(screen.getByText('Равенство')).toBeInTheDocument();
+    expect(screen.queryByText('Предстоящ')).not.toBeInTheDocument();
   });
 
   it('calls onEdit callback when clicking edit button', async () => {

@@ -28,24 +28,24 @@ export interface Database {
       matches: {
         Row: {
           id: string; // uuid
-          team_1_score: number; // integer
-          team_2_score: number; // integer
+          team_1_score: number | null; // integer
+          team_2_score: number | null; // integer
           played_at: string; // timestamptz
           created_at: string; // timestamptz
           updated_at: string; // timestamptz
         };
         Insert: {
           id?: string;
-          team_1_score: number;
-          team_2_score: number;
+          team_1_score?: number | null;
+          team_2_score?: number | null;
           played_at?: string;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
-          team_1_score?: number;
-          team_2_score?: number;
+          team_1_score?: number | null;
+          team_2_score?: number | null;
           played_at?: string;
           created_at?: string;
           updated_at?: string;

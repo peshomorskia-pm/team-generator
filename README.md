@@ -23,7 +23,7 @@ A scalable Multi-Page Application (SPA) with a responsive App Shell, client-side
 * **`/`** — Landing Page (Hero, feature highlights, balance visual, and primary CTA)
 * **`/generator`** — Team Generator (Player management, team settings, greedy balancing & shuffling)
 * **`/players`** — Players Database (Production CRUD management interface with search filtering, ELO rating tiers, responsive desktop table / mobile cards, and accessible modals)
-* **`/matches`** — Match History & Tracker (Live CRUD management for match records, scores, participant rosters combining registered players and guests, and stat aggregation summaries)
+* **`/matches`** — Match History & Tracker (Live CRUD management for match records, nullable scores for upcoming fixtures `- : -`, participant rosters with `PlayerCombobox` cross-team exclusion, multi-dimensional filters, and stat aggregation summaries)
 * **`/rankings`** — League Rankings / Leaderboard (Themed placeholder for ELO player standings)
 * **`*`** — 404 Not Found (Error page with navigation back to home)
 
@@ -57,11 +57,12 @@ npm install
 * **Migration Paths:** 
   - [`supabase/migrations/20261002000000_create_players_table.sql`](file:///D:/Projects/team-generator/supabase/migrations/20261002000000_create_players_table.sql)
   - [`supabase/migrations/20261003000000_create_matches_tables.sql`](file:///D:/Projects/team-generator/supabase/migrations/20261003000000_create_matches_tables.sql)
+  - [`supabase/migrations/20261003010000_allow_nullable_match_scores.sql`](file:///D:/Projects/team-generator/supabase/migrations/20261003010000_allow_nullable_match_scores.sql)
 * **Seed Script:** [`supabase/seed.sql`](file:///D:/Projects/team-generator/supabase/seed.sql) (populates initial sample players with realistic ELO ratings).
 * **TypeScript Types:** [`src/types/database.types.ts`](file:///D:/Projects/team-generator/src/types/database.types.ts), [`src/types/match.ts`](file:///D:/Projects/team-generator/src/types/match.ts).
 
 #### `matches` & `match_players` Relational Schema (Option A)
-- **`matches`**: Header table tracking `id`, `team1_score`, `team2_score`, `status`, `notes`, `created_at`, `updated_at`.
+- **`matches`**: Header table tracking `id`, `team1_score` (nullable), `team2_score` (nullable), `status`, `notes`, `created_at`, `updated_at`.
 - **`match_players`**: Line items table linking participants to matches via foreign keys (`match_id` with `ON DELETE CASCADE`, `player_id` with `ON DELETE SET NULL`), team number, and guest name, enforced by check constraint `check_participant`.
 
 * **Row Level Security (RLS):** Enabled on public tables with permissive local development policies.
@@ -92,7 +93,7 @@ This project enforces a strict [Mandatory Automated Testing Protocol](.agents/pr
 
 ### Running Tests
 ```bash
-# Run all automated test suites (216 tests across 29 files)
+# Run all automated test suites (235 tests across 30 files)
 npm test
 
 # Run tests with V8 coverage report (>90% overall coverage)
@@ -107,7 +108,7 @@ npx vitest --ui
 
 ### Mandatory Quality Gates
 Before any pull request can be approved and merged into `dev`:
-1. **`npm test`**: 100% test pass rate across all suites (216/216 tests passing).
+1. **`npm test`**: 100% test pass rate across all suites (235/235 tests passing).
 2. **`npm run test:coverage`**: >90% overall line and statement coverage.
 3. **`npm run typecheck`**: Zero TypeScript static compilation errors (`tsc --noEmit`).
 4. **`npm run lint`**: Zero ESLint warnings or errors (`eslint src`).

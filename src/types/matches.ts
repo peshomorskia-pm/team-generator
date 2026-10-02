@@ -12,8 +12,8 @@ export interface MatchDetail extends MatchRow {
 }
 
 export interface MatchFormData {
-  team_1_score: number;
-  team_2_score: number;
+  team_1_score: number | null;
+  team_2_score: number | null;
   played_at: string; // ISO date string
   team_1_players: { player_id?: string; guest_name?: string }[];
   team_2_players: { player_id?: string; guest_name?: string }[];

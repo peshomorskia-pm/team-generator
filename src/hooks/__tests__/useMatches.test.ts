@@ -77,6 +77,35 @@ describe('useMatches hook', () => {
       expect(result.current.alert).toBeNull();
     });
 
+    it('fetches matches containing both upcoming fixtures (null scores) and completed matches', async () => {
+      const mixedMatches: MatchDetail[] = [
+        {
+          id: 'upcoming-1',
+          team_1_score: null,
+          team_2_score: null,
+          played_at: '2026-10-10T18:00:00Z',
+          created_at: '2026-10-02T18:00:00Z',
+          updated_at: '2026-10-02T18:00:00Z',
+          match_players: [],
+        },
+        ...sampleMatches,
+      ];
+      const orderMock = vi.fn().mockResolvedValue({
+        data: mixedMatches,
+        error: null,
+      });
+      const selectMock = vi.fn().mockReturnValue({ order: orderMock });
+      mockFrom.mockReturnValue({ select: selectMock });
+
+      const { result } = renderHook(() => useMatches());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.matches).toHaveLength(2);
+      expect(result.current.matches[0].team_1_score).toBeNull();
+      expect(result.current.matches[0].team_2_score).toBeNull();
+      expect(result.current.matches[1].team_1_score).toBe(5);
+    });
+
     it('sets error and alert when fetch query returns an error', async () => {
       const orderMock = vi.fn().mockResolvedValue({
         data: null,
@@ -260,6 +289,66 @@ describe('useMatches hook', () => {
         type: 'success',
         message: 'Мачът е записан успешно.',
       });
+    });
+
+    it('creates upcoming match with null scores and sorts correctly', async () => {
+      const orderMock = vi.fn().mockResolvedValue({
+        data: sampleMatches,
+        error: null,
+      });
+      const initialSelect = vi.fn().mockReturnValue({ order: orderMock });
+
+      const createdUpcomingMatch = {
+        id: 'match-upcoming-future',
+        team_1_score: null,
+        team_2_score: null,
+        played_at: '2026-10-10T19:00:00Z',
+        created_at: '2026-10-03T19:00:00Z',
+        updated_at: '2026-10-03T19:00:00Z',
+      };
+
+      const matchSingleMock = vi.fn().mockResolvedValue({ data: createdUpcomingMatch, error: null });
+      const matchInsertSelect = vi.fn().mockReturnValue({ single: matchSingleMock });
+      const matchInsertMock = vi.fn().mockReturnValue({ select: matchInsertSelect });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'matches') {
+          return {
+            select: initialSelect,
+            insert: matchInsertMock,
+          };
+        }
+        if (table === 'match_players') {
+          return {
+            insert: vi.fn().mockReturnValue({ select: vi.fn().mockResolvedValue({ data: [], error: null }) }),
+          };
+        }
+        return {};
+      });
+
+      const { result } = renderHook(() => useMatches());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      const newMatchData: MatchFormData = {
+        team_1_score: null,
+        team_2_score: null,
+        played_at: '2026-10-10T19:00:00Z',
+        team_1_players: [],
+        team_2_players: [],
+      };
+
+      await act(async () => {
+        await result.current.createMatch(newMatchData);
+      });
+
+      expect(matchInsertMock).toHaveBeenCalledWith({
+        team_1_score: null,
+        team_2_score: null,
+        played_at: '2026-10-10T19:00:00Z',
+      });
+      expect(result.current.matches[0].id).toBe('match-upcoming-future');
+      expect(result.current.matches[0].team_1_score).toBeNull();
+      expect(result.current.matches[0].team_2_score).toBeNull();
     });
 
     it('handles create match error when matches insert fails', async () => {
@@ -452,6 +541,68 @@ describe('useMatches hook', () => {
         type: 'success',
         message: 'Мачът е обновен успешно.',
       });
+    });
+
+    it('updates existing match with null scores', async () => {
+      const orderMock = vi.fn().mockResolvedValue({
+        data: [...sampleMatches],
+        error: null,
+      });
+      const initialSelect = vi.fn().mockReturnValue({ order: orderMock });
+
+      const updatedRow = {
+        id: 'match-1',
+        team_1_score: null,
+        team_2_score: null,
+        played_at: '2026-10-02T19:00:00Z',
+        created_at: '2026-10-02T18:00:00Z',
+        updated_at: '2026-10-02T19:00:00Z',
+      };
+
+      const singleMock = vi.fn().mockResolvedValue({ data: updatedRow, error: null });
+      const selectMock = vi.fn().mockReturnValue({ single: singleMock });
+      const eqMock = vi.fn().mockReturnValue({ select: selectMock });
+      const updateMock = vi.fn().mockReturnValue({ eq: eqMock });
+
+      const deleteEqMock = vi.fn().mockResolvedValue({ error: null });
+      const deleteMock = vi.fn().mockReturnValue({ eq: deleteEqMock });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'matches') {
+          return {
+            select: initialSelect,
+            update: updateMock,
+          };
+        }
+        if (table === 'match_players') {
+          return {
+            delete: deleteMock,
+            insert: vi.fn().mockReturnValue({ select: vi.fn().mockResolvedValue({ data: [], error: null }) }),
+          };
+        }
+        return {};
+      });
+
+      const { result } = renderHook(() => useMatches());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await act(async () => {
+        await result.current.updateMatch('match-1', {
+          team_1_score: null,
+          team_2_score: null,
+          played_at: '2026-10-02T19:00:00Z',
+          team_1_players: [],
+          team_2_players: [],
+        });
+      });
+
+      expect(updateMock).toHaveBeenCalledWith({
+        team_1_score: null,
+        team_2_score: null,
+        played_at: '2026-10-02T19:00:00Z',
+      });
+      expect(result.current.matches[0].team_1_score).toBeNull();
+      expect(result.current.matches[0].team_2_score).toBeNull();
     });
 
     it('handles update failure gracefully', async () => {

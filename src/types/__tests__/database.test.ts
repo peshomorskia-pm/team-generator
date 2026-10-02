@@ -5,6 +5,7 @@ import type {
   PlayerUpdate,
   MatchRow,
   MatchInsert,
+  MatchUpdate,
   MatchPlayerRow,
   MatchPlayerInsert,
 } from '../database.types';
@@ -126,6 +127,20 @@ describe('Database Types Contract Tests', () => {
       expect(matchPlayerRow.guest_name).toBeNull();
     });
 
+    it('accepts MatchRow with nullable scores for upcoming fixtures', () => {
+      const upcomingMatchRow: MatchRow = {
+        id: 'match-upcoming',
+        team_1_score: null,
+        team_2_score: null,
+        played_at: '2026-10-04T10:00:00.000Z',
+        created_at: '2026-10-03T10:00:00.000Z',
+        updated_at: '2026-10-03T10:00:00.000Z',
+      };
+
+      expect(upcomingMatchRow.team_1_score).toBeNull();
+      expect(upcomingMatchRow.team_2_score).toBeNull();
+    });
+
     it('maps correctly to the application domain MatchDetail model with mock Supabase response', () => {
       const mockSupabaseResponse: MatchDetail = {
         id: 'm-456',
@@ -169,11 +184,17 @@ describe('Database Types Contract Tests', () => {
   });
 
   describe('MatchInsert and MatchPlayerInsert type contracts', () => {
-    it('accepts insert payloads', () => {
+    it('accepts insert payloads with scores or with null scores', () => {
       const matchInsert: MatchInsert = {
         team_1_score: 2,
         team_2_score: 1,
         played_at: '2026-10-03T12:00:00.000Z',
+      };
+
+      const upcomingInsert: MatchInsert = {
+        team_1_score: null,
+        team_2_score: null,
+        played_at: '2026-10-04T12:00:00.000Z',
       };
 
       const matchPlayerInsert: MatchPlayerInsert = {
@@ -184,7 +205,26 @@ describe('Database Types Contract Tests', () => {
       };
 
       expect(matchInsert.team_1_score).toBe(2);
+      expect(upcomingInsert.team_1_score).toBeNull();
+      expect(upcomingInsert.team_2_score).toBeNull();
       expect(matchPlayerInsert.team_side).toBe('team_1');
+    });
+  });
+
+  describe('MatchUpdate type contract', () => {
+    it('allows updating scores to null or values', () => {
+      const matchUpdateNull: MatchUpdate = {
+        team_1_score: null,
+        team_2_score: null,
+      };
+
+      const matchUpdateValues: MatchUpdate = {
+        team_1_score: 3,
+        team_2_score: 0,
+      };
+
+      expect(matchUpdateNull.team_1_score).toBeNull();
+      expect(matchUpdateValues.team_1_score).toBe(3);
     });
   });
 

@@ -72,7 +72,7 @@ describe('MatchModal Component', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('renders empty form in Create mode', () => {
+  it('renders empty form with empty scores in Create mode', () => {
     render(
       <MatchModal
         isOpen={true}
@@ -83,12 +83,13 @@ describe('MatchModal Component', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Нов мач' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Резултат Отбор 1')).toHaveValue(0);
-    expect(screen.getByLabelText('Резултат Отбор 2')).toHaveValue(0);
+    // In Create mode, score inputs start empty ('')
+    expect(screen.getByLabelText('Резултат Отбор 1')).toHaveValue(null);
+    expect(screen.getByLabelText('Резултат Отбор 2')).toHaveValue(null);
     expect(screen.getByRole('button', { name: /създай/i })).toBeInTheDocument();
   });
 
-  it('renders prefilled form in Edit mode', () => {
+  it('renders prefilled form in Edit mode with existing scores', () => {
     render(
       <MatchModal
         isOpen={true}
@@ -105,6 +106,127 @@ describe('MatchModal Component', () => {
     expect(screen.getAllByText('Христо Стоичков').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Димитър Бербатов').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole('button', { name: /запази/i })).toBeInTheDocument();
+  });
+
+  it('allows future/today matches to be saved without scores (null scores)', async () => {
+    const user = userEvent.setup();
+    const handleSave = vi.fn().mockResolvedValue(undefined);
+    const handleClose = vi.fn();
+
+    render(
+      <MatchModal
+        isOpen={true}
+        onClose={handleClose}
+        onSave={handleSave}
+        availablePlayers={availablePlayers}
+      />
+    );
+
+    // Set a future date
+    const dateInput = screen.getByLabelText('Дата на мача');
+    await user.clear(dateInput);
+    await user.type(dateInput, '2099-12-31');
+
+    // Add Player 1 to Team 1 via Combobox
+    const comboboxT1 = screen.getByLabelText('Избери играч за Отбор 1');
+    await user.click(comboboxT1);
+    const optionT1 = screen.getByRole('option', { name: /христо стоичков/i });
+    await user.click(optionT1);
+
+    // Add Player 2 to Team 2 via Combobox
+    const comboboxT2 = screen.getByLabelText('Избери играч за Отбор 2');
+    await user.click(comboboxT2);
+    const optionT2 = screen.getByRole('option', { name: /димитър бербатов/i });
+    await user.click(optionT2);
+
+    // Submit with empty scores
+    await user.click(screen.getByRole('button', { name: /създай/i }));
+
+    expect(handleSave).toHaveBeenCalledTimes(1);
+    expect(handleSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        team_1_score: null,
+        team_2_score: null,
+        team_1_players: [{ player_id: 'p-1', guest_name: undefined }],
+        team_2_players: [{ player_id: 'p-2', guest_name: undefined }],
+      })
+    );
+    expect(handleClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('demands scores when match date is in the past', async () => {
+    const user = userEvent.setup();
+    const handleSave = vi.fn();
+
+    render(
+      <MatchModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={handleSave}
+        availablePlayers={availablePlayers}
+      />
+    );
+
+    // Set past date
+    const dateInput = screen.getByLabelText('Дата на мача');
+    await user.clear(dateInput);
+    await user.type(dateInput, '2020-01-01');
+
+    // Add Player 1 to Team 1
+    const comboboxT1 = screen.getByLabelText('Избери играч за Отбор 1');
+    await user.click(comboboxT1);
+    await user.click(screen.getByRole('option', { name: /христо стоичков/i }));
+
+    // Add Player 2 to Team 2
+    const comboboxT2 = screen.getByLabelText('Избери играч за Отбор 2');
+    await user.click(comboboxT2);
+    await user.click(screen.getByRole('option', { name: /димитър бербатов/i }));
+
+    // Submit with empty scores
+    await user.click(screen.getByRole('button', { name: /създай/i }));
+
+    expect(
+      screen.getByText('За минали мачове резултатът е задължителен.')
+    ).toBeInTheDocument();
+    expect(handleSave).not.toHaveBeenCalled();
+  });
+
+  it('prevents submit when only one score is filled for today/future date', async () => {
+    const user = userEvent.setup();
+    const handleSave = vi.fn();
+
+    render(
+      <MatchModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={handleSave}
+        availablePlayers={availablePlayers}
+      />
+    );
+
+    const dateInput = screen.getByLabelText('Дата на мача');
+    await user.clear(dateInput);
+    await user.type(dateInput, '2099-12-31');
+
+    // Add players
+    const comboboxT1 = screen.getByLabelText('Избери играч за Отбор 1');
+    await user.click(comboboxT1);
+    await user.click(screen.getByRole('option', { name: /христо стоичков/i }));
+
+    const comboboxT2 = screen.getByLabelText('Избери играч за Отбор 2');
+    await user.click(comboboxT2);
+    await user.click(screen.getByRole('option', { name: /димитър бербатов/i }));
+
+    // Fill only score 1
+    const score1 = screen.getByLabelText('Резултат Отбор 1');
+    await user.type(score1, '2');
+
+    await user.click(screen.getByRole('button', { name: /създай/i }));
+
+    expect(
+      screen.getByText('Моля, въведете резултат и за двата отбора или оставете полетата празни.')
+    ).toBeInTheDocument();
+    expect(handleSave).not.toHaveBeenCalled();
   });
 
   it('prevents submit when score is negative', async () => {
@@ -155,36 +277,56 @@ describe('MatchModal Component', () => {
     expect(handleSave).not.toHaveBeenCalled();
   });
 
-  it('prevents submit if the same player is assigned to both teams', async () => {
+  it('filters players on keystroke and adds player instantly from combobox', async () => {
     const user = userEvent.setup();
-    const handleSave = vi.fn();
 
     render(
       <MatchModal
         isOpen={true}
         onClose={vi.fn()}
-        onSave={handleSave}
+        onSave={vi.fn()}
         availablePlayers={availablePlayers}
       />
     );
 
-    // Add Player 1 to Team 1
-    const selectT1 = screen.getByLabelText('Избери играч за Отбор 1');
-    await user.selectOptions(selectT1, 'p-1');
-    await user.click(screen.getByLabelText('Добави играч към Отбор 1'));
+    const comboboxT1 = screen.getByLabelText('Избери играч за Отбор 1');
+    await user.type(comboboxT1, 'Берб');
 
-    // Add same Player 1 to Team 2
-    const selectT2 = screen.getByLabelText('Избери играч за Отбор 2');
-    await user.selectOptions(selectT2, 'p-1');
-    await user.click(screen.getByLabelText('Добави играч към Отбор 2'));
+    // Only Димитър Бербатов should match
+    expect(screen.getByRole('option', { name: /димитър бербатов/i })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /христо стоичков/i })).not.toBeInTheDocument();
 
-    // Submit
-    await user.click(screen.getByRole('button', { name: /създай/i }));
+    // Clicking option instantly adds to Team 1
+    await user.click(screen.getByRole('option', { name: /димитър бербатов/i }));
 
-    expect(
-      screen.getByText('Играч не може да участва едновременно и в двата отбора.')
-    ).toBeInTheDocument();
-    expect(handleSave).not.toHaveBeenCalled();
+    expect(screen.getByText('Димитър Бербатов')).toBeInTheDocument();
+  });
+
+  it('enforces cross-team selection exclusion in player comboboxes', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MatchModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+        availablePlayers={availablePlayers}
+      />
+    );
+
+    // Add Христо Стоичков to Team 1
+    const comboboxT1 = screen.getByLabelText('Избери играч за Отбор 1');
+    await user.click(comboboxT1);
+    await user.click(screen.getByRole('option', { name: /христо стоичков/i }));
+
+    // Now open Team 2 combobox
+    const comboboxT2 = screen.getByLabelText('Избери играч за Отбор 2');
+    await user.click(comboboxT2);
+
+    // Option for Христо Стоичков should be disabled with "в другия отбор"
+    const t2OptionStoichkov = screen.getByRole('option', { name: /христо стоичков/i });
+    expect(t2OptionStoichkov).toBeDisabled();
+    expect(t2OptionStoichkov).toHaveTextContent(/в другия отбор/i);
   });
 
   it('allows adding guests and calls onSave with valid data', async () => {
@@ -201,24 +343,22 @@ describe('MatchModal Component', () => {
       />
     );
 
-    // Set scores
-    const score1 = screen.getByLabelText('Резултат Отбор 1');
-    await user.clear(score1);
-    await user.type(score1, '4');
-
-    const score2 = screen.getByLabelText('Резултат Отбор 2');
-    await user.clear(score2);
-    await user.type(score2, '2');
-
-    // Add Player 1 to Team 1
-    const selectT1 = screen.getByLabelText('Избери играч за Отбор 1');
-    await user.selectOptions(selectT1, 'p-1');
-    await user.click(screen.getByLabelText('Добави играч към Отбор 1'));
+    // Add Player 1 to Team 1 via Combobox
+    const comboboxT1 = screen.getByLabelText('Избери играч за Отбор 1');
+    await user.click(comboboxT1);
+    await user.click(screen.getByRole('option', { name: /христо стоичков/i }));
 
     // Add Guest to Team 2
     const guestInputT2 = screen.getByLabelText('Име на гост за Отбор 2');
     await user.type(guestInputT2, 'Гост Георги');
     await user.click(screen.getByLabelText('Добави гост към Отбор 2'));
+
+    // Set scores
+    const score1 = screen.getByLabelText('Резултат Отбор 1');
+    await user.type(score1, '4');
+
+    const score2 = screen.getByLabelText('Резултат Отбор 2');
+    await user.type(score2, '2');
 
     // Submit
     await user.click(screen.getByRole('button', { name: /създай/i }));

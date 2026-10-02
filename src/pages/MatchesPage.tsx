@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Swords, Plus, Search, Loader2 } from 'lucide-react';
+import { Swords, Plus, Search, Loader2, Calendar } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { MatchesStatSummary } from '../components/match/MatchesStatSummary';
@@ -9,6 +9,36 @@ import { DeleteMatchModal } from '../components/match/DeleteMatchModal';
 import { useMatches } from '../hooks/useMatches';
 import { usePlayers } from '../hooks/usePlayers';
 import type { MatchDetail, MatchFormData } from '../types/matches';
+
+export type StatusFilter = 'all' | 'completed' | 'upcoming';
+export type PeriodFilter = 'all' | 'this_week' | 'this_month';
+
+const isWithinThisWeek = (dateStr: string): boolean => {
+  const matchDate = new Date(dateStr);
+  const now = new Date();
+
+  const currentDay = now.getDay();
+  const distanceToMonday = currentDay === 0 ? 6 : currentDay - 1;
+
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - distanceToMonday);
+  monday.setHours(0, 0, 0, 0);
+
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23, 59, 59, 999);
+
+  return matchDate >= monday && matchDate <= sunday;
+};
+
+const isWithinThisMonth = (dateStr: string): boolean => {
+  const matchDate = new Date(dateStr);
+  const now = new Date();
+  return (
+    matchDate.getFullYear() === now.getFullYear() &&
+    matchDate.getMonth() === now.getMonth()
+  );
+};
 
 export const MatchesPage: React.FC = () => {
   const {
@@ -23,23 +53,46 @@ export const MatchesPage: React.FC = () => {
 
   const { players: availablePlayers } = usePlayers();
 
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingMatch, setEditingMatch] = useState<MatchDetail | null>(null);
   const [deletingMatch, setDeletingMatch] = useState<MatchDetail | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const filteredMatches = useMemo(() => {
-    if (!searchQuery.trim()) return matches;
     const query = searchQuery.toLowerCase().trim();
-    return matches.filter((m) =>
-      m.match_players.some(
-        (p) =>
-          p.players?.name?.toLowerCase().includes(query) ||
-          p.guest_name?.toLowerCase().includes(query)
-      )
-    );
-  }, [matches, searchQuery]);
+
+    return matches.filter((m) => {
+      // 1. Status Filter
+      if (statusFilter === 'completed') {
+        if (m.team_1_score === null || m.team_2_score === null) return false;
+      } else if (statusFilter === 'upcoming') {
+        if (m.team_1_score !== null && m.team_2_score !== null) return false;
+      }
+
+      // 2. Period Filter
+      if (periodFilter === 'this_week') {
+        if (!isWithinThisWeek(m.played_at)) return false;
+      } else if (periodFilter === 'this_month') {
+        if (!isWithinThisMonth(m.played_at)) return false;
+      }
+
+      // 3. Search Filter
+      if (query) {
+        const matchesPlayer = m.match_players.some(
+          (p) =>
+            p.players?.name?.toLowerCase().includes(query) ||
+            p.guest_name?.toLowerCase().includes(query)
+        );
+        if (!matchesPlayer) return false;
+      }
+
+      return true;
+    });
+  }, [matches, statusFilter, periodFilter, searchQuery]);
 
   const handleCreateSave = async (data: MatchFormData) => {
     await createMatch(data);
@@ -95,8 +148,65 @@ export const MatchesPage: React.FC = () => {
       {/* Stat Summary Widgets */}
       <MatchesStatSummary matches={matches} />
 
-      {/* Search Bar */}
-      <div className="mb-6 relative">
+      {/* Filters and Search Bar Section */}
+      <div className="mb-6 space-y-3">
+        <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
+          {/* Status Tabs */}
+          <div className="flex items-center rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700 self-start">
+            <button
+              type="button"
+              onClick={() => setStatusFilter('all')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                statusFilter === 'all'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              Всички
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('completed')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                statusFilter === 'completed'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              Изиграни
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('upcoming')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                statusFilter === 'upcoming'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              Предстоящи
+            </button>
+          </div>
+
+          {/* Period Filter Dropdown */}
+          <div className="flex items-center gap-2 self-start md:self-auto">
+            <div className="relative">
+              <Calendar className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <select
+                aria-label="Филтър по период"
+                value={periodFilter}
+                onChange={(e) => setPeriodFilter(e.target.value as PeriodFilter)}
+                className="pl-9 pr-8 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
+              >
+                <option value="all">Всички периоди</option>
+                <option value="this_week">Тази седмица</option>
+                <option value="this_month">Този месец</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Search Bar */}
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
@@ -139,7 +249,9 @@ export const MatchesPage: React.FC = () => {
       ) : filteredMatches.length === 0 ? (
         <div className="text-center py-12 px-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs">
           <p className="text-gray-500 dark:text-gray-400 font-medium">
-            Няма намерени мачове за &ldquo;{searchQuery}&rdquo;.
+            {searchQuery
+              ? `Няма намерени мачове за \u201C${searchQuery}\u201D.`
+              : 'Няма намерени мачове, отговарящи на избраните филтри.'}
           </p>
         </div>
       ) : (

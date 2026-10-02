@@ -45,14 +45,20 @@ vi.mock('../../hooks/usePlayers', () => ({
 }));
 
 describe('MatchesPage Integration Tests', () => {
+  const now = new Date();
+  const currentWeekDate = now.toISOString();
+
+  // Create a date in another month/year
+  const pastYearDate = new Date(now.getFullYear() - 1, 0, 15).toISOString();
+
   const sampleMatches: MatchDetail[] = [
     {
       id: 'm-1',
       team_1_score: 4,
       team_2_score: 2,
-      played_at: '2026-10-02T18:00:00Z',
-      created_at: '2026-10-02T18:00:00Z',
-      updated_at: '2026-10-02T18:00:00Z',
+      played_at: currentWeekDate,
+      created_at: currentWeekDate,
+      updated_at: currentWeekDate,
       match_players: [
         {
           id: 'mp-1',
@@ -80,9 +86,9 @@ describe('MatchesPage Integration Tests', () => {
       id: 'm-2',
       team_1_score: 1,
       team_2_score: 1,
-      played_at: '2026-10-01T18:00:00Z',
-      created_at: '2026-10-01T18:00:00Z',
-      updated_at: '2026-10-01T18:00:00Z',
+      played_at: currentWeekDate,
+      created_at: currentWeekDate,
+      updated_at: currentWeekDate,
       match_players: [
         {
           id: 'mp-3',
@@ -93,6 +99,46 @@ describe('MatchesPage Integration Tests', () => {
           rating_before: 1300,
           rating_after: 1300,
           players: { id: 'p-2', name: 'Стоян Петров' },
+        },
+      ],
+    },
+    {
+      id: 'm-3',
+      team_1_score: null,
+      team_2_score: null,
+      played_at: currentWeekDate,
+      created_at: currentWeekDate,
+      updated_at: currentWeekDate,
+      match_players: [
+        {
+          id: 'mp-4',
+          match_id: 'm-3',
+          player_id: 'p-3',
+          guest_name: null,
+          team_side: 'team_1',
+          rating_before: 1400,
+          rating_after: 1400,
+          players: { id: 'p-3', name: 'Димитър Бербатов' },
+        },
+      ],
+    },
+    {
+      id: 'm-4',
+      team_1_score: 3,
+      team_2_score: 0,
+      played_at: pastYearDate,
+      created_at: pastYearDate,
+      updated_at: pastYearDate,
+      match_players: [
+        {
+          id: 'mp-5',
+          match_id: 'm-4',
+          player_id: 'p-4',
+          guest_name: null,
+          team_side: 'team_1',
+          rating_before: 1500,
+          rating_after: 1500,
+          players: { id: 'p-4', name: 'Красимир Балъков' },
         },
       ],
     },
@@ -114,17 +160,21 @@ describe('MatchesPage Integration Tests', () => {
     ];
   });
 
-  it('renders stats, search input, and match cards', () => {
+  it('renders stats, search input, status tabs, and match cards', () => {
     render(<MatchesPage />);
 
     expect(screen.getByRole('heading', { name: 'Мачове', level: 1 })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /нов мач/i })).toBeInTheDocument();
-    expect(screen.getByText('Общо изиграни мачове')).toBeInTheDocument();
+    expect(screen.getByText('Общо')).toBeInTheDocument();
+    expect(screen.getAllByText('Изиграни')).toHaveLength(2);
+    expect(screen.getAllByText('Предстоящи')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'Всички' })).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Търсене по име на играч или гост...')).toBeInTheDocument();
 
     expect(screen.getByText('Иван Иванов')).toBeInTheDocument();
     expect(screen.getByText('Георги Гост')).toBeInTheDocument();
     expect(screen.getByText('Стоян Петров')).toBeInTheDocument();
+    expect(screen.getByText('Димитър Бербатов')).toBeInTheDocument();
   });
 
   it('shows loading spinner when loading is true', () => {
@@ -144,6 +194,89 @@ describe('MatchesPage Integration Tests', () => {
     ).toBeInTheDocument();
   });
 
+  it('filters matches by status tabs (Всички, Изиграни, Предстоящи)', async () => {
+    const user = userEvent.setup();
+    render(<MatchesPage />);
+
+    // Click "Изиграни" tab
+    const completedTab = screen.getByRole('button', { name: 'Изиграни' });
+    await user.click(completedTab);
+
+    // Completed matches should be visible
+    expect(screen.getByText('Иван Иванов')).toBeInTheDocument();
+    expect(screen.getByText('Стоян Петров')).toBeInTheDocument();
+    expect(screen.getByText('Красимир Балъков')).toBeInTheDocument();
+    // Upcoming match should be hidden
+    expect(screen.queryByText('Димитър Бербатов')).not.toBeInTheDocument();
+
+    // Click "Предстоящи" tab
+    const upcomingTab = screen.getByRole('button', { name: 'Предстоящи' });
+    await user.click(upcomingTab);
+
+    // Upcoming match should be visible
+    expect(screen.getByText('Димитър Бербатов')).toBeInTheDocument();
+    // Completed matches should be hidden
+    expect(screen.queryByText('Иван Иванов')).not.toBeInTheDocument();
+    expect(screen.queryByText('Стоян Петров')).not.toBeInTheDocument();
+
+    // Click "Всички" tab
+    const allTab = screen.getByRole('button', { name: 'Всички' });
+    await user.click(allTab);
+
+    expect(screen.getByText('Иван Иванов')).toBeInTheDocument();
+    expect(screen.getByText('Димитър Бербатов')).toBeInTheDocument();
+  });
+
+  it('filters matches by period dropdown (Тази седмица, Този месец)', async () => {
+    const user = userEvent.setup();
+    render(<MatchesPage />);
+
+    const periodSelect = screen.getByLabelText('Филтър по период');
+
+    // Select "Тази седмица"
+    await user.selectOptions(periodSelect, 'this_week');
+
+    // Matches from this week should be visible
+    expect(screen.getByText('Иван Иванов')).toBeInTheDocument();
+    expect(screen.getByText('Димитър Бербатов')).toBeInTheDocument();
+    // Past year match should be hidden
+    expect(screen.queryByText('Красимир Балъков')).not.toBeInTheDocument();
+
+    // Select "Този месец"
+    await user.selectOptions(periodSelect, 'this_month');
+    expect(screen.getByText('Иван Иванов')).toBeInTheDocument();
+    expect(screen.queryByText('Красимир Балъков')).not.toBeInTheDocument();
+
+    // Select "Всички периоди"
+    await user.selectOptions(periodSelect, 'all');
+    expect(screen.getByText('Красимир Балъков')).toBeInTheDocument();
+  });
+
+  it('applies combined AND filtering logic (Status AND Period AND Search)', async () => {
+    const user = userEvent.setup();
+    render(<MatchesPage />);
+
+    // 1. Switch to "Предстоящи"
+    await user.click(screen.getByRole('button', { name: 'Предстоящи' }));
+    // 2. Select "Тази седмица"
+    await user.selectOptions(screen.getByLabelText('Филтър по период'), 'this_week');
+    // 3. Search for "Бербатов"
+    const searchInput = screen.getByPlaceholderText('Търсене по име на играч или гост...');
+    await user.type(searchInput, 'Бербатов');
+
+    // Only Димитър Бербатов should match
+    expect(screen.getByText('Димитър Бербатов')).toBeInTheDocument();
+    expect(screen.queryByText('Иван Иванов')).not.toBeInTheDocument();
+
+    // Search for someone not upcoming: "Иван"
+    await user.clear(searchInput);
+    await user.type(searchInput, 'Иван');
+
+    // No upcoming match has Иван
+    expect(screen.getByText(/Няма намерени мачове за/i)).toBeInTheDocument();
+    expect(screen.queryByText('Димитър Бербатов')).not.toBeInTheDocument();
+  });
+
   it('filters match cards by player or guest name through search bar', async () => {
     const user = userEvent.setup();
     render(<MatchesPage />);
@@ -153,7 +286,7 @@ describe('MatchesPage Integration Tests', () => {
 
     // Matches with 'Георги' should be visible
     expect(screen.getByText('Георги Гост')).toBeInTheDocument();
-    expect(screen.getByText('Иван Иванов')).toBeInTheDocument(); // part of match 1
+    expect(screen.getByText('Иван Иванов')).toBeInTheDocument();
 
     // Match 2 should be filtered out
     expect(screen.queryByText('Стоян Петров')).not.toBeInTheDocument();
