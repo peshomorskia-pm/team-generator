@@ -75,21 +75,21 @@ export const LandingPage: React.FC = () => {
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-bold text-sm text-indigo-900 dark:text-indigo-200">Отбор 1</span>
                   <Badge variant="indigo" size="sm">
-                    Рейтинг: 14.5
+                    Рейтинг: 4200
                   </Badge>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 p-1.5 rounded-lg bg-white dark:bg-slate-800 shadow-xs text-xs font-medium">
                     <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">1</span>
-                    <span className="truncate">Иван (★ 5.0)</span>
+                    <span className="truncate">Иван (★ 1500)</span>
                   </div>
                   <div className="flex items-center gap-2 p-1.5 rounded-lg bg-white dark:bg-slate-800 shadow-xs text-xs font-medium">
                     <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">2</span>
-                    <span className="truncate">Георги (★ 4.5)</span>
+                    <span className="truncate">Георги (★ 1400)</span>
                   </div>
                   <div className="flex items-center gap-2 p-1.5 rounded-lg bg-white dark:bg-slate-800 shadow-xs text-xs font-medium">
                     <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">3</span>
-                    <span className="truncate">Николай (★ 5.0)</span>
+                    <span className="truncate">Николай (★ 1300)</span>
                   </div>
                 </div>
               </div>
@@ -99,21 +99,21 @@ export const LandingPage: React.FC = () => {
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-bold text-sm text-purple-900 dark:text-purple-200">Отбор 2</span>
                   <Badge variant="purple" size="sm">
-                    Рейтинг: 14.5
+                    Рейтинг: 4200
                   </Badge>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 p-1.5 rounded-lg bg-white dark:bg-slate-800 shadow-xs text-xs font-medium">
                     <span className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px]">1</span>
-                    <span className="truncate">Димитър (★ 5.0)</span>
+                    <span className="truncate">Димитър (★ 1550)</span>
                   </div>
                   <div className="flex items-center gap-2 p-1.5 rounded-lg bg-white dark:bg-slate-800 shadow-xs text-xs font-medium">
                     <span className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px]">2</span>
-                    <span className="truncate">Александър (★ 4.5)</span>
+                    <span className="truncate">Александър (★ 1400)</span>
                   </div>
                   <div className="flex items-center gap-2 p-1.5 rounded-lg bg-white dark:bg-slate-800 shadow-xs text-xs font-medium">
                     <span className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px]">3</span>
-                    <span className="truncate">Стефан (★ 5.0)</span>
+                    <span className="truncate">Стефан (★ 1250)</span>
                   </div>
                 </div>
               </div>
@@ -152,10 +152,10 @@ export const LandingPage: React.FC = () => {
               <Zap className="w-6 h-6" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-              Бързо и лесно
+              Хибриден състав
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-              Въведете списък с имена или ги копирайте директно от груповия чат. Разпределянето става моментално само с едно натискане.
+              Избирайте регистрирани играчи от базата данни или бързо добавяйте временни гости за текущата игра. Разпределянето става моментално само с един клик.
             </p>
           </div>
 
@@ -168,7 +168,7 @@ export const LandingPage: React.FC = () => {
               Балансирани отбори
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-              Възможност за разпределение според индивидуалните умения и рейтинг (1-5 звезди). Край на неравностойните състави.
+              Интелигентно автоматично разпределение според реален ELO рейтинг на играчите. Край на неравностойните състави.
             </p>
           </div>
 
@@ -181,7 +181,7 @@ export const LandingPage: React.FC = () => {
               Справедлива игра
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-              Прозрачен и обективен алгоритъм без фаворитизъм. Презавъртане на отделни отбори и мигновено копиране на резултатите за чат.
+              Обективен алгоритъм с памет срещу повтарящи се отбори, истинска случайност и презавъртане на отделни състави.
             </p>
           </div>
         </div>
