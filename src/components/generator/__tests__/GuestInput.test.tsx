@@ -10,7 +10,7 @@ describe('GuestInput Component', () => {
 
     expect(screen.getByRole('heading', { name: 'Добави гости' })).toBeInTheDocument();
     expect(
-      screen.getByPlaceholderText('Въведете имена на гости (разделени със запетая)...')
+      screen.getByPlaceholderText('напр. Иван, Петър, Георги')
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /добави/i })).toBeInTheDocument();
   });
@@ -21,7 +21,7 @@ describe('GuestInput Component', () => {
     render(<GuestInput onAddGuest={onAddGuest} />);
 
     const input = screen.getByPlaceholderText(
-      'Въведете имена на гости (разделени със запетая)...'
+      'напр. Иван, Петър, Георги'
     ) as HTMLInputElement;
     const button = screen.getByRole('button', { name: /добави/i });
 
@@ -40,7 +40,7 @@ describe('GuestInput Component', () => {
     render(<GuestInput onAddGuest={onAddGuest} />);
 
     const input = screen.getByPlaceholderText(
-      'Въведете имена на гости (разделени със запетая)...'
+      'напр. Иван, Петър, Георги'
     ) as HTMLInputElement;
 
     await user.type(input, 'Георги{Enter}');
@@ -57,7 +57,7 @@ describe('GuestInput Component', () => {
     expect(button).toBeDisabled();
 
     const input = screen.getByPlaceholderText(
-      'Въведете имена на гости (разделени със запетая)...'
+      'напр. Иван, Петър, Георги'
     );
     await user.type(input, '   ');
     expect(button).toBeDisabled();
@@ -71,7 +71,7 @@ describe('GuestInput Component', () => {
     render(<GuestInput onAddGuest={onAddGuest} disabled={true} />);
 
     const input = screen.getByPlaceholderText(
-      'Въведете имена на гости (разделени със запетая)...'
+      'напр. Иван, Петър, Георги'
     );
     const button = screen.getByRole('button', { name: /добави/i });
 

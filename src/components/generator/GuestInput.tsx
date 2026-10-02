@@ -34,7 +34,7 @@ export const GuestInput: React.FC<GuestInputProps> = ({ onAddGuest, disabled = f
         <Input
           type="text"
           id="guestNamesInput"
-          placeholder="Въведете имена на гости (разделени със запетая)..."
+          placeholder="напр. Иван, Петър, Георги"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           disabled={disabled}

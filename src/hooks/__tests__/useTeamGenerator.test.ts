@@ -135,21 +135,28 @@ describe('useTeamGenerator', () => {
       expect(result.current.activePool).toHaveLength(0);
     });
 
-    it('clears active pool completely with clearPool', () => {
+    it('clears active pool and generated teams completely with clearPool', () => {
       const { result } = renderHook(() => useTeamGenerator());
 
       act(() => {
         result.current.addGuest('Гост 1, Гост 2');
         result.current.toggleRegisteredPlayer({ id: 'db-1', name: 'Играч 1', rating: 1200 });
+        result.current.setNumberOfTeams(2);
       });
 
       expect(result.current.activePool).toHaveLength(3);
+
+      act(() => {
+        result.current.generateTeams();
+      });
+      expect(result.current.teams.length).toBeGreaterThan(0);
 
       act(() => {
         result.current.clearPool();
       });
 
       expect(result.current.activePool).toEqual([]);
+      expect(result.current.teams).toEqual([]);
     });
   });
 

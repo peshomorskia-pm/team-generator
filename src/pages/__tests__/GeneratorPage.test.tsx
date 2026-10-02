@@ -78,7 +78,7 @@ describe('GeneratorPage Integration Tests', () => {
 
     // 2. Add 2 guest players via guest input
     const guestInput = screen.getByPlaceholderText(
-      'Въведете имена на гости (разделени със запетая)...'
+      'напр. Иван, Петър, Георги'
     );
     const addGuestBtn = screen.getByRole('button', { name: /добави/i });
 
@@ -119,7 +119,7 @@ describe('GeneratorPage Integration Tests', () => {
 
     // Add 2 guests
     const guestInput = screen.getByPlaceholderText(
-      'Въведете имена на гости (разделени със запетая)...'
+      'напр. Иван, Петър, Георги'
     );
     await user.type(guestInput, 'Гост 1, Гост 2');
     await user.click(screen.getByRole('button', { name: /добави/i }));
@@ -169,7 +169,7 @@ describe('GeneratorPage Integration Tests', () => {
     renderComponent();
 
     const guestInput = screen.getByPlaceholderText(
-      'Въведете имена на гости (разделени със запетая)...'
+      'напр. Иван, Петър, Георги'
     );
     await user.type(guestInput, 'Никола');
     await user.click(screen.getByRole('button', { name: /добави/i }));
@@ -180,5 +180,37 @@ describe('GeneratorPage Integration Tests', () => {
     await user.click(removeBtn);
 
     expect(screen.queryByText('Никола')).not.toBeInTheDocument();
+  });
+
+  it("clears active pool and generated results when clicking 'Изчисти всички'", async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    // Select 2 DB players
+    await user.click(screen.getByRole('checkbox', { name: 'Иван Иванов' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Георги Димитров' }));
+
+    // Set number of teams = 2 and generate
+    const numTeamsInput = screen.getByLabelText(/брой отбори/i);
+    await user.clear(numTeamsInput);
+    await user.type(numTeamsInput, '2');
+
+    const generateBtn = screen.getByRole('button', { name: /разпредели в отбори/i });
+    await user.click(generateBtn);
+
+    // Verify results exist
+    expect(screen.getByRole('heading', { level: 2, name: 'Резултати' })).toBeInTheDocument();
+
+    // Click 'Изчисти всички'
+    const clearAllBtn = screen.getByRole('button', { name: /изчисти всички/i });
+    await user.click(clearAllBtn);
+
+    // Verify active pool is cleared
+    expect(
+      screen.getByText(/Няма избрани играчи. Изберете регистрирани играчи или добавете гости/i)
+    ).toBeInTheDocument();
+
+    // Verify results section is cleared
+    expect(screen.queryByRole('heading', { level: 2, name: 'Резултати' })).not.toBeInTheDocument();
   });
 });

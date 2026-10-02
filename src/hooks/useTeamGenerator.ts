@@ -78,6 +78,7 @@ export function useTeamGenerator() {
 
   const clearPool = useCallback(() => {
     setActivePool([]);
+    setTeams([]);
   }, []);
 
   const handleNumTeamsChange = useCallback((val: number | null) => {
