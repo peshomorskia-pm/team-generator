@@ -1,33 +1,43 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { GeneratorHeader } from '../components/team/GeneratorHeader';
 import { Card } from '../components/ui/Card';
 import { Alert } from '../components/ui/Alert';
-import { PlayerInput } from '../components/player/PlayerInput';
-import { PlayerList } from '../components/player/PlayerList';
 import { TeamSettings } from '../components/team/TeamSettings';
 import { TeamList } from '../components/team/TeamList';
+import { PlayerSelector } from '../components/generator/PlayerSelector';
+import { GuestInput } from '../components/generator/GuestInput';
+import { ActivePool } from '../components/generator/ActivePool';
 import { useTeamGenerator } from '../hooks/useTeamGenerator';
+import { usePlayers } from '../hooks/usePlayers';
 
 export const GeneratorPage: React.FC = () => {
   const {
-    rawText,
-    setRawText,
-    players,
-    numberOfTeams,
-    setNumberOfTeams,
-    playersPerTeam,
-    setPlayersPerTeam,
+    players: dbPlayers,
+    loading: dbLoading,
+    error: dbError,
+  } = usePlayers();
+
+  const {
+    activePool,
     teams,
     alert,
     isCopied,
     balanceByRating,
+    numberOfTeams,
+    playersPerTeam,
+    setNumberOfTeams,
+    setPlayersPerTeam,
     setBalanceByRating,
-    addPlayer,
+    addGuest,
+    toggleRegisteredPlayer,
     removePlayer,
+    clearPool,
     generateTeams,
     shuffleSingleTeam,
     copyResults,
   } = useTeamGenerator();
+
+  const selectedIds = useMemo(() => new Set(activePool.map((p) => p.id)), [activePool]);
 
   const handleNumberOfTeamsChange = useCallback(
     (val: number) => {
@@ -43,46 +53,69 @@ export const GeneratorPage: React.FC = () => {
     [setPlayersPerTeam]
   );
 
-  const hasRatings = players.some((p) => p.rating !== undefined);
+  const hasRatings = useMemo(
+    () => activePool.some((p) => p.rating !== undefined),
+    [activePool]
+  );
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 py-6 sm:py-8 flex flex-col items-center">
+    <div className="w-full max-w-6xl mx-auto px-4 py-6 sm:py-8 flex flex-col items-center">
       <div className="w-full">
-        <Card>
+        <Card className="mb-8">
           <GeneratorHeader />
 
-          <div className="px-6 py-8 sm:p-10">
-            {/* Custom Message Box */}
+          <div className="p-6 sm:p-8 space-y-6">
+            {/* Custom Notification Alert */}
             {alert && (
               <Alert
                 type={alert.type}
                 message={alert.message}
-                className="mb-6"
+                className="mb-4"
               />
             )}
 
-            <div className="space-y-6">
-              <PlayerInput
-                onAddPlayer={addPlayer}
-                value={rawText}
-                onChange={setRawText}
-                playerCount={players.length}
-              />
+            {/* Split Layout: Selection (Left) vs Pool & Settings (Right) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Left Column: Player Selection (Registered Players + Guest Input) */}
+              <div className="lg:col-span-6 space-y-6">
+                <div className="bg-white dark:bg-slate-800/80 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 shadow-sm space-y-6">
+                  <PlayerSelector
+                    players={dbPlayers}
+                    selectedIds={selectedIds}
+                    onTogglePlayer={toggleRegisteredPlayer}
+                    loading={dbLoading}
+                    error={dbError}
+                  />
 
-              {players.length > 0 && (
-                <PlayerList players={players} onRemovePlayer={removePlayer} />
-              )}
+                  <div className="border-t border-gray-200 dark:border-slate-700 pt-5">
+                    <GuestInput onAddGuest={addGuest} />
+                  </div>
+                </div>
+              </div>
 
-              <TeamSettings
-                numberOfTeams={numberOfTeams ?? 0}
-                onSettingsChange={handleNumberOfTeamsChange}
-                playersPerTeam={playersPerTeam}
-                onPlayersPerTeamChange={handlePlayersPerTeamChange}
-                onGenerate={generateTeams}
-                balanceByRating={balanceByRating}
-                onBalanceToggle={setBalanceByRating}
-                hasRatings={hasRatings}
-              />
+              {/* Right Column: Active Pool & Team Generation Settings */}
+              <div className="lg:col-span-6 space-y-6">
+                <div className="bg-white dark:bg-slate-800/80 rounded-2xl p-5 border border-gray-100 dark:border-slate-700 shadow-sm space-y-6">
+                  <ActivePool
+                    activePool={activePool}
+                    onRemovePlayer={removePlayer}
+                    onClearPool={clearPool}
+                  />
+
+                  <div className="border-t border-gray-200 dark:border-slate-700 pt-5">
+                    <TeamSettings
+                      numberOfTeams={numberOfTeams ?? 0}
+                      onSettingsChange={handleNumberOfTeamsChange}
+                      playersPerTeam={playersPerTeam}
+                      onPlayersPerTeamChange={handlePlayersPerTeamChange}
+                      onGenerate={generateTeams}
+                      balanceByRating={balanceByRating}
+                      onBalanceToggle={setBalanceByRating}
+                      hasRatings={hasRatings}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </Card>

@@ -9,6 +9,7 @@ A scalable Multi-Page Application (SPA) with a responsive App Shell, client-side
 * **Advanced Shuffling:** Fisher-Yates shuffle algorithm for fair, randomized distribution ([`shuffle.ts`](file:///D:/Projects/team-generator/src/utils/shuffle.ts)).
 * **LPT Greedy Balancing:** Optimizes team rating balance across player skill inputs ([`balance.ts`](file:///D:/Projects/team-generator/src/utils/balance.ts)).
 * **Anti-Repetition Cache:** Canonical history fingerprinting prevents generating consecutive identical team configurations ([`history.ts`](file:///D:/Projects/team-generator/src/utils/history.ts)).
+* **Hybrid Team Generator (Stage 3):** Combines registered database players with transient session guests (`activePool`), supporting bulk/single guest adding, unrated guest rating balancing, and zero-mutation database guarantees.
 * **Responsive App Shell & Client-Side Routing:** Built with React Router v7 and an App Shell featuring desktop header (`Navbar`), mobile bottom bar (`MobileNav`), and responsive padding.
 * **Light/Dark Theme Persistence:** Dynamic theme switching synchronized with `document.documentElement` (`<html>`) and persisted in `localStorage`.
 * **Localized User Interface:** The application UI is localized in Bulgarian for the primary user base, while development and engineering adhere to strict English standards.
@@ -94,7 +95,7 @@ This project enforces a strict [Mandatory Automated Testing Protocol](.agents/pr
 
 ### Running Tests
 ```bash
-# Run all automated test suites (141 tests across 19 files)
+# Run all automated test suites (165 tests across 23 files)
 npm test
 
 # Run tests with V8 coverage report (>90% overall coverage)
@@ -109,7 +110,7 @@ npx vitest --ui
 
 ### Mandatory Quality Gates
 Before any pull request can be approved and merged into `dev`:
-1. **`npm test`**: 100% test pass rate across all suites (141/141 tests passing).
+1. **`npm test`**: 100% test pass rate across all suites (165/165 tests passing).
 2. **`npm run test:coverage`**: >90% overall line and statement coverage.
 3. **`npm run typecheck`**: Zero TypeScript static compilation errors (`tsc --noEmit`).
 4. **`npm run lint`**: Zero ESLint warnings or errors (`eslint src`).
@@ -134,7 +135,8 @@ team-generator/
 │       ├── 0005-app-shell-routing-and-theming.md
 │       ├── 0006-mandatory-automated-testing-protocol.md
 │       ├── 0007-strict-scoping-and-code-health-auditor.md
-│       └── 0008-orchestrator-planner-investigation-boundary.md
+│       ├── 0008-orchestrator-planner-investigation-boundary.md
+│       └── 0009-stage-3-hybrid-generator-and-transient-guests.md
 ├── src/                    # React application source code
 │   ├── assets/styles/      # Tailwind CSS entry points
 │   ├── components/         # Modular UI components
@@ -171,7 +173,7 @@ This repository employs a modular, multi-agent engineering lifecycle managed by 
 6. **[Document Writer](.agents/roles/document-writer.md) (`flash_lite`):** Drafts documentation, updates ADRs, and opens Pull Requests targeting `dev` (`5_documentation.md`).
 7. **[Code Health Auditor](.agents/roles/code-health-auditor.md) (`flash`):** Performs read-only static analysis to identify technical debt, test coverage gaps, dead code, weak typings, and UI componentization candidates (`docs/proposals/`).
 
-For full details, refer to [GEMINI.md](GEMINI.md), [ADR 0001](docs/adr/0001-modular-agent-roles.md), [ADR 0002](docs/adr/0002-token-optimization-strategy.md), [ADR 0003](docs/adr/0003-tech-stack-selection.md), [ADR 0004](docs/adr/0004-localization-and-language-boundary.md), [ADR 0005](docs/adr/0005-app-shell-routing-and-theming.md), [ADR 0006](docs/adr/0006-mandatory-automated-testing-protocol.md), [ADR 0007](docs/adr/0007-strict-scoping-and-code-health-auditor.md), and [ADR 0008](docs/adr/0008-orchestrator-planner-investigation-boundary.md).
+For full details, refer to [GEMINI.md](GEMINI.md), [ADR 0001](docs/adr/0001-modular-agent-roles.md), [ADR 0002](docs/adr/0002-token-optimization-strategy.md), [ADR 0003](docs/adr/0003-tech-stack-selection.md), [ADR 0004](docs/adr/0004-localization-and-language-boundary.md), [ADR 0005](docs/adr/0005-app-shell-routing-and-theming.md), [ADR 0006](docs/adr/0006-mandatory-automated-testing-protocol.md), [ADR 0007](docs/adr/0007-strict-scoping-and-code-health-auditor.md), [ADR 0008](docs/adr/0008-orchestrator-planner-investigation-boundary.md), and [ADR 0009](docs/adr/0009-stage-3-hybrid-generator-and-transient-guests.md).
 
 ---
 

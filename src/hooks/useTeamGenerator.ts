@@ -1,44 +1,32 @@
-import { useState, useMemo, useCallback, useRef, useDeferredValue } from 'react';
-import { Player, Team, AlertNotification } from '../types';
+import { useState, useCallback, useRef } from 'react';
+import { Team, AlertNotification } from '../types';
+import { GeneratorPlayer, DatabasePlayer } from '../types/generator';
 import { fisherYatesShuffle } from '../utils/shuffle';
 import { balanceTeams } from '../utils/balance';
 import { saveMatchup, generateTeamsFingerprint, areTeamConfigsEqual } from '../utils/history';
 
+export function generateGuestId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export function useTeamGenerator() {
-  const [rawText, setRawText] = useState<string>('');
+  const [activePool, setActivePool] = useState<GeneratorPlayer[]>([]);
   const [numberOfTeams, setNumberOfTeams] = useState<number | null>(null);
   const [playersPerTeam, setPlayersPerTeam] = useState<number | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [history, setHistory] = useState<string[]>([]);
   const [alert, setAlert] = useState<AlertNotification | null>(null);
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [balanceByRating, setBalanceByRating] = useState<boolean>(false);
   const lastTeamsRef = useRef<Team[] | null>(null);
   const lastFingerprintRef = useRef<string>('');
-  const deferredRawText = useDeferredValue(rawText);
-
-  // Parse lines to Player array
-  const players: Player[] = useMemo(() => {
-    return deferredRawText
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0)
-      .map((line, index) => {
-        // Support optional rating in formats: "Name (5)" or "Name [5]" or "Name: 5"
-        const match = line.match(/^(.+?)(?:\s*[([:]\s*(\d+(?:\.\d+)?)\s*[)\]]?)?$/);
-        if (match && match[2] !== undefined) {
-          const parsedRating = parseFloat(match[2]);
-          return {
-            id: `p-${index + 1}`,
-            name: match[1].trim(),
-            rating: !Number.isNaN(parsedRating) ? parsedRating : undefined,
-          };
-        }
-        return {
-          id: `p-${index + 1}`,
-          name: line,
-        };
-      });
-  }, [deferredRawText]);
 
   const showAlert = useCallback((message: string, type: 'error' | 'success' = 'error') => {
     setAlert({ message, type });
@@ -47,25 +35,49 @@ export function useTeamGenerator() {
     }, 4000);
   }, []);
 
-  const addPlayer = useCallback((name: string, rating?: number) => {
+  const addGuest = useCallback((name: string) => {
     if (!name.trim()) return;
-    const formatted = rating !== undefined ? `${name.trim()} (${rating})` : name.trim();
-    setRawText((prev) => (prev ? `${prev}\n${formatted}` : formatted));
+    const names = name
+      .split(/[\n,]+/)
+      .map((n) => n.trim())
+      .filter((n) => n.length > 0);
+
+    if (names.length === 0) return;
+
+    const newGuests: GeneratorPlayer[] = names.map((guestName) => ({
+      id: generateGuestId(),
+      name: guestName,
+      source: 'guest',
+    }));
+
+    setActivePool((prev) => [...prev, ...newGuests]);
   }, []);
 
+  const toggleRegisteredPlayer = useCallback(
+    (player: DatabasePlayer | { id: string; name: string; rating?: number }) => {
+      setActivePool((prev) => {
+        const exists = prev.some((p) => p.id === player.id);
+        if (exists) {
+          return prev.filter((p) => p.id !== player.id);
+        }
+        const newPlayer: GeneratorPlayer = {
+          id: player.id,
+          name: player.name,
+          source: 'registered',
+          rating: player.rating,
+        };
+        return [...prev, newPlayer];
+      });
+    },
+    []
+  );
+
   const removePlayer = useCallback((id: string) => {
-    // Find player index and remove that line
-    const parsed = parseInt(id.replace('p-', ''), 10);
-    if (Number.isNaN(parsed)) return;
-    const index = parsed - 1;
-    setRawText((prev) => {
-      const lines = prev.split('\n');
-      if (index >= 0 && index < lines.length) {
-        lines.splice(index, 1);
-        return lines.join('\n');
-      }
-      return prev;
-    });
+    setActivePool((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
+  const clearPool = useCallback(() => {
+    setActivePool([]);
   }, []);
 
   const handleNumTeamsChange = useCallback((val: number | null) => {
@@ -82,96 +94,110 @@ export function useTeamGenerator() {
     }
   }, []);
 
-  const generateTeams = useCallback(() => {
-    if (players.length === 0) {
-      showAlert('Списъкът с играчи е празен. Моля, въведете поне няколко имена.', 'error');
-      return;
-    }
-    if (players.length < 2) {
-      showAlert('Нужни са поне 2-ма играчи за да се сформират отбори.', 'error');
-      return;
-    }
-
-    const numTeamsInt = numberOfTeams !== null && !Number.isNaN(numberOfTeams) ? numberOfTeams : null;
-    const pptInt = playersPerTeam !== null && !Number.isNaN(playersPerTeam) ? playersPerTeam : null;
-
-    const hasNumTeams = numTeamsInt !== null && numTeamsInt > 0;
-    const hasPpt = pptInt !== null && pptInt > 0;
-
-    if (!hasNumTeams && !hasPpt) {
-      showAlert("Моля, въведете 'Брой отбори' или 'Брой играчи в отбор'.", 'error');
-      return;
-    }
-
-    if (hasNumTeams && numTeamsInt > players.length) {
-      showAlert('Броят на отборите не може да е по-голям от броя на играчите.', 'error');
-      return;
-    }
-
-    const lastTeams = lastTeamsRef.current;
-    let generatedTeams: Team[] = [];
-    let attempts = 0;
-    const maxAttempts = 15;
-
-    // Check if ratings exist and balance requested
-    const hasRatings = players.some((p) => p.rating !== undefined);
-
-    do {
-      generatedTeams = [];
-
-      if (balanceByRating && hasRatings && hasNumTeams) {
-        // Balance by rating algorithm with shuffled players so equal ratings vary across shuffles
-        const shuffled = fisherYatesShuffle(players);
-        generatedTeams = balanceTeams(shuffled, numTeamsInt);
-      } else {
-        const shuffled = fisherYatesShuffle(players);
-
-        if (hasNumTeams) {
-          // Initialize empty teams
-          for (let i = 0; i < numTeamsInt; i++) {
-            generatedTeams.push({
-              id: `team-${i + 1}`,
-              name: `Отбор ${i + 1}`,
-              players: [],
-              totalRating: 0,
-            });
-          }
-          // Round-robin distribution
-          shuffled.forEach((player, index) => {
-            const teamIdx = index % numTeamsInt;
-            generatedTeams[teamIdx].players.push(player);
-            if (player.rating !== undefined) {
-              generatedTeams[teamIdx].totalRating = (generatedTeams[teamIdx].totalRating ?? 0) + player.rating;
-            }
-          });
-        } else if (hasPpt) {
-          let teamIndex = 1;
-          for (let i = 0; i < shuffled.length; i += pptInt) {
-            const chunk = shuffled.slice(i, i + pptInt);
-            const total = chunk.reduce((sum, p) => sum + (p.rating ?? 0), 0);
-            generatedTeams.push({
-              id: `team-${teamIndex}`,
-              name: `Отбор ${teamIndex}`,
-              players: chunk,
-              totalRating: total,
-            });
-            teamIndex++;
-          }
-        }
+  const generateTeams = useCallback(
+    (teamCount?: number, balanceByRatingParam?: boolean) => {
+      if (activePool.length === 0) {
+        showAlert('Списъкът с играчи е празен. Моля, въведете поне няколко имена.', 'error');
+        return;
+      }
+      if (activePool.length < 2) {
+        showAlert('Нужни са поне 2-ма играчи за да се сформират отбори.', 'error');
+        return;
       }
 
-      attempts++;
-    } while (
-      lastTeams &&
-      areTeamConfigsEqual(generatedTeams, lastTeams) &&
-      attempts < maxAttempts
-    );
+      const effectiveNumTeams =
+        typeof teamCount === 'number' && teamCount > 0
+          ? teamCount
+          : numberOfTeams !== null && !Number.isNaN(numberOfTeams) && numberOfTeams > 0
+            ? numberOfTeams
+            : null;
 
-    lastTeamsRef.current = generatedTeams;
-    lastFingerprintRef.current = generateTeamsFingerprint(generatedTeams);
-    saveMatchup(generatedTeams);
-    setTeams(generatedTeams);
-  }, [players, numberOfTeams, playersPerTeam, balanceByRating, showAlert]);
+      const pptInt =
+        playersPerTeam !== null && !Number.isNaN(playersPerTeam) && playersPerTeam > 0
+          ? playersPerTeam
+          : null;
+
+      const effectiveBalance =
+        typeof balanceByRatingParam === 'boolean' ? balanceByRatingParam : balanceByRating;
+
+      const hasNumTeams = effectiveNumTeams !== null && effectiveNumTeams > 0;
+      const hasPpt = pptInt !== null && pptInt > 0;
+
+      if (!hasNumTeams && !hasPpt) {
+        showAlert("Моля, въведете 'Брой отбори' или 'Брой играчи в отбор'.", 'error');
+        return;
+      }
+
+      if (hasNumTeams && effectiveNumTeams > activePool.length) {
+        showAlert('Броят на отборите не може да е по-голям от броя на играчите.', 'error');
+        return;
+      }
+
+      const lastTeams = lastTeamsRef.current;
+      let generatedTeams: Team[] = [];
+      let attempts = 0;
+      const maxAttempts = 15;
+
+      const hasRatings = activePool.some((p) => p.rating !== undefined);
+
+      do {
+        generatedTeams = [];
+
+        if (effectiveBalance && hasRatings && hasNumTeams) {
+          const shuffled = fisherYatesShuffle(activePool);
+          generatedTeams = balanceTeams(shuffled, effectiveNumTeams);
+        } else {
+          const shuffled = fisherYatesShuffle(activePool);
+
+          if (hasNumTeams) {
+            for (let i = 0; i < effectiveNumTeams; i++) {
+              generatedTeams.push({
+                id: `team-${i + 1}`,
+                name: `Отбор ${i + 1}`,
+                players: [],
+                totalRating: 0,
+              });
+            }
+            shuffled.forEach((player, index) => {
+              const teamIdx = index % effectiveNumTeams;
+              generatedTeams[teamIdx].players.push(player);
+              if (player.rating !== undefined) {
+                generatedTeams[teamIdx].totalRating =
+                  (generatedTeams[teamIdx].totalRating ?? 0) + player.rating;
+              }
+            });
+          } else if (hasPpt) {
+            let teamIndex = 1;
+            for (let i = 0; i < shuffled.length; i += pptInt) {
+              const chunk = shuffled.slice(i, i + pptInt);
+              const total = chunk.reduce((sum, p) => sum + (p.rating ?? 0), 0);
+              generatedTeams.push({
+                id: `team-${teamIndex}`,
+                name: `Отбор ${teamIndex}`,
+                players: chunk,
+                totalRating: total,
+              });
+              teamIndex++;
+            }
+          }
+        }
+
+        attempts++;
+      } while (
+        lastTeams &&
+        areTeamConfigsEqual(generatedTeams, lastTeams) &&
+        attempts < maxAttempts
+      );
+
+      lastTeamsRef.current = generatedTeams;
+      const fingerprint = generateTeamsFingerprint(generatedTeams);
+      lastFingerprintRef.current = fingerprint;
+      saveMatchup(generatedTeams);
+      setHistory((prev) => [fingerprint, ...prev]);
+      setTeams(generatedTeams);
+    },
+    [activePool, numberOfTeams, playersPerTeam, balanceByRating, showAlert]
+  );
 
   const shuffleSingleTeam = useCallback((teamId: string) => {
     setTeams((prevTeams) => {
@@ -185,7 +211,9 @@ export function useTeamGenerator() {
         return team;
       });
       lastTeamsRef.current = updated;
-      lastFingerprintRef.current = generateTeamsFingerprint(updated);
+      const fingerprint = generateTeamsFingerprint(updated);
+      lastFingerprintRef.current = fingerprint;
+      setHistory((prev) => [fingerprint, ...prev]);
       return updated;
     });
   }, []);
@@ -225,21 +253,23 @@ export function useTeamGenerator() {
   }, [teams, showAlert]);
 
   return {
-    rawText,
-    setRawText,
-    players,
+    activePool,
+    players: activePool,
     numberOfTeams,
     setNumberOfTeams: handleNumTeamsChange,
     playersPerTeam,
     setPlayersPerTeam: handlePlayersPerTeamChange,
     teams,
+    history,
     alert,
     showAlert,
     isCopied,
     balanceByRating,
     setBalanceByRating,
-    addPlayer,
+    addGuest,
+    toggleRegisteredPlayer,
     removePlayer,
+    clearPool,
     generateTeams,
     shuffleSingleTeam,
     copyResults,
