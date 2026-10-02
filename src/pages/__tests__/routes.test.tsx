@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '../../context/ThemeContext';
@@ -9,6 +9,20 @@ import { PlayersPage } from '../PlayersPage';
 import { MatchesPage } from '../MatchesPage';
 import { RankingsPage } from '../RankingsPage';
 import { NotFoundPage } from '../NotFoundPage';
+
+vi.mock('../../hooks/usePlayers', () => ({
+  usePlayers: () => ({
+    players: [],
+    loading: false,
+    error: null,
+    alert: null,
+    fetchPlayers: vi.fn(),
+    createPlayer: vi.fn(),
+    updatePlayer: vi.fn(),
+    deletePlayer: vi.fn(),
+    clearAlert: vi.fn(),
+  }),
+}));
 
 const renderAppRoute = (initialRoute: string) => {
   return render(
@@ -52,8 +66,8 @@ describe('App Route Smoke and Integration Tests', () => {
 
   it('renders PlayersPage on "/players"', () => {
     renderAppRoute('/players');
-    expect(screen.getByRole('heading', { name: 'Играчи', level: 2 })).toBeInTheDocument();
-    expect(screen.getByText('Управлението на играчи очаква старт')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Играчи', level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /нов играч/i })).toBeInTheDocument();
   });
 
   it('renders MatchesPage on "/matches"', () => {
