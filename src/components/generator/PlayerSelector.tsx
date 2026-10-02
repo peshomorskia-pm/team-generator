@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Star, Users, CheckSquare, Square } from 'lucide-react';
+import { Search, Star, Users, CheckSquare, Square, X } from 'lucide-react';
 import { PlayerRow } from '../../types/database.types';
 import { Badge, Input, Button } from '../ui';
 
@@ -11,6 +11,8 @@ export interface PlayerSelectorProps {
   onDeselectAll?: (playersToDeselect: PlayerRow[]) => void;
   loading?: boolean;
   error?: string | null;
+  searchTerm?: string;
+  onSearchChange?: (term: string) => void;
 }
 
 export const PlayerSelector: React.FC<PlayerSelectorProps> = ({
@@ -21,8 +23,22 @@ export const PlayerSelector: React.FC<PlayerSelectorProps> = ({
   onDeselectAll,
   loading = false,
   error = null,
+  searchTerm,
+  onSearchChange,
 }) => {
-  const [search, setSearch] = useState('');
+  const [internalSearch, setInternalSearch] = useState('');
+  const search = searchTerm !== undefined ? searchTerm : internalSearch;
+
+  const handleSearchChange = useCallback(
+    (val: string) => {
+      if (onSearchChange) {
+        onSearchChange(val);
+      } else {
+        setInternalSearch(val);
+      }
+    },
+    [onSearchChange]
+  );
 
   const filteredPlayers = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -82,12 +98,22 @@ export const PlayerSelector: React.FC<PlayerSelectorProps> = ({
           label="Списък с играчи"
           placeholder="Търсене на играчи..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           disabled={loading}
-          className="pl-9"
+          className="pl-9 pr-9"
           aria-label="Списък с играчи"
         />
         <Search className="w-4 h-4 text-gray-400 dark:text-gray-500 absolute left-3 top-10 pointer-events-none" />
+        {search.trim().length > 0 && !loading && (
+          <button
+            type="button"
+            onClick={() => handleSearchChange('')}
+            className="absolute right-3 top-10 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-0.5 rounded focus:outline-none"
+            aria-label="Изчисти търсенето"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {players.length > 0 && (

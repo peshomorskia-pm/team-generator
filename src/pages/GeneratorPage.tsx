@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { GeneratorHeader } from '../components/team/GeneratorHeader';
 import { Card } from '../components/ui/Card';
 import { Alert } from '../components/ui/Alert';
@@ -38,6 +38,13 @@ export const GeneratorPage: React.FC = () => {
   } = useTeamGenerator();
 
   const selectedIds = useMemo(() => new Set(activePool.map((p) => p.id)), [activePool]);
+
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleClearPool = useCallback(() => {
+    clearPool();
+    setSearchQuery('');
+  }, [clearPool]);
 
   const handleNumberOfTeamsChange = useCallback(
     (val: number) => {
@@ -85,6 +92,8 @@ export const GeneratorPage: React.FC = () => {
                     onTogglePlayer={toggleRegisteredPlayer}
                     loading={dbLoading}
                     error={dbError}
+                    searchTerm={searchQuery}
+                    onSearchChange={setSearchQuery}
                   />
 
                   <div className="border-t border-gray-200 dark:border-slate-700 pt-5">
@@ -99,7 +108,7 @@ export const GeneratorPage: React.FC = () => {
                   <ActivePool
                     activePool={activePool}
                     onRemovePlayer={removePlayer}
-                    onClearPool={clearPool}
+                    onClearPool={handleClearPool}
                   />
 
                   <div className="border-t border-gray-200 dark:border-slate-700 pt-5">

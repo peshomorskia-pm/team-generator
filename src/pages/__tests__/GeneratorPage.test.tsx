@@ -182,13 +182,25 @@ describe('GeneratorPage Integration Tests', () => {
     expect(screen.queryByText('Никола')).not.toBeInTheDocument();
   });
 
-  it("clears active pool and generated results when clicking 'Изчисти всички'", async () => {
+  it("clears active pool, generated results, and search filter when clicking 'Изчисти всички'", async () => {
     const user = userEvent.setup();
     renderComponent();
 
-    // Select 2 DB players
+    // Type in search query to filter registered players
+    const searchInput = screen.getByPlaceholderText('Търсене на играчи...') as HTMLInputElement;
+    await user.type(searchInput, 'Иван');
+    expect(searchInput.value).toBe('Иван');
+
+    // Select filtered player
     await user.click(screen.getByRole('checkbox', { name: 'Иван Иванов' }));
+
+    // Clear search and select second player
+    await user.clear(searchInput);
     await user.click(screen.getByRole('checkbox', { name: 'Георги Димитров' }));
+
+    // Re-type a search query to simulate active filter at time of clear
+    await user.type(searchInput, 'Димитров');
+    expect(searchInput.value).toBe('Димитров');
 
     // Set number of teams = 2 and generate
     const numTeamsInput = screen.getByLabelText(/брой отбори/i);
@@ -212,5 +224,8 @@ describe('GeneratorPage Integration Tests', () => {
 
     // Verify results section is cleared
     expect(screen.queryByRole('heading', { level: 2, name: 'Резултати' })).not.toBeInTheDocument();
+
+    // Verify search filter is also cleared
+    expect(searchInput.value).toBe('');
   });
 });

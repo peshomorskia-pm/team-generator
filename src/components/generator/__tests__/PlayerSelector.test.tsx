@@ -125,4 +125,46 @@ describe('PlayerSelector Component', () => {
 
     expect(screen.getByText('Грешка при зареждане.')).toBeInTheDocument();
   });
+
+  it('clears search input when clear button (X) is clicked', async () => {
+    const user = userEvent.setup();
+    render(
+      <PlayerSelector
+        players={samplePlayers}
+        selectedIds={new Set()}
+        onTogglePlayer={vi.fn()}
+      />
+    );
+
+    const searchInput = screen.getByPlaceholderText('Търсене на играчи...') as HTMLInputElement;
+    await user.type(searchInput, 'Борис');
+    expect(searchInput.value).toBe('Борис');
+
+    const clearBtn = screen.getByRole('button', { name: 'Изчисти търсенето' });
+    expect(clearBtn).toBeInTheDocument();
+
+    await user.click(clearBtn);
+    expect(searchInput.value).toBe('');
+    expect(screen.queryByRole('button', { name: 'Изчисти търсенето' })).not.toBeInTheDocument();
+  });
+
+  it('supports controlled searchTerm and triggers onSearchChange', async () => {
+    const user = userEvent.setup();
+    const onSearchChange = vi.fn();
+    render(
+      <PlayerSelector
+        players={samplePlayers}
+        selectedIds={new Set()}
+        onTogglePlayer={vi.fn()}
+        searchTerm="Алекс"
+        onSearchChange={onSearchChange}
+      />
+    );
+
+    const searchInput = screen.getByPlaceholderText('Търсене на играчи...') as HTMLInputElement;
+    expect(searchInput.value).toBe('Алекс');
+
+    await user.type(searchInput, 'а');
+    expect(onSearchChange).toHaveBeenCalled();
+  });
 });
