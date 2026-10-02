@@ -15,7 +15,7 @@ export const isSupabaseConfigured = (): boolean => {
   );
 };
 
-const supabaseUrl: string = import.meta.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321';
+const supabaseUrl: string = import.meta.env.VITE_SUPABASE_URL || 'http://127.0.0.1:55321';
 const supabaseAnonKey: string = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key';
 
 if (!isSupabaseConfigured()) {
