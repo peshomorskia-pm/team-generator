@@ -58,3 +58,4 @@ export interface NavItem {
 }
 
 export * from './generator';
+export * from './matches';

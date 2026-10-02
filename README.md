@@ -23,7 +23,7 @@ A scalable Multi-Page Application (SPA) with a responsive App Shell, client-side
 * **`/`** — Landing Page (Hero, feature highlights, balance visual, and primary CTA)
 * **`/generator`** — Team Generator (Player management, team settings, greedy balancing & shuffling)
 * **`/players`** — Players Database (Production CRUD management interface with search filtering, ELO rating tiers, responsive desktop table / mobile cards, and accessible modals)
-* **`/matches`** — Match History & Tracker (Themed placeholder for match results and stats)
+* **`/matches`** — Match History & Tracker (Live CRUD management for match records, scores, participant rosters combining registered players and guests, and stat aggregation summaries)
 * **`/rankings`** — League Rankings / Leaderboard (Themed placeholder for ELO player standings)
 * **`*`** — 404 Not Found (Error page with navigation back to home)
 
@@ -53,22 +53,19 @@ npm install
    npm run db:reset
    ```
 
-### Database Schema & Migrations (`players` Table)
-* **Migration Path:** [`supabase/migrations/20261002000000_create_players_table.sql`](file:///D:/Projects/team-generator/supabase/migrations/20261002000000_create_players_table.sql)
+### Database Schema & Migrations (`players` & `matches` Tables)
+* **Migration Paths:** 
+  - [`supabase/migrations/20261002000000_create_players_table.sql`](file:///D:/Projects/team-generator/supabase/migrations/20261002000000_create_players_table.sql)
+  - [`supabase/migrations/20261003000000_create_matches_tables.sql`](file:///D:/Projects/team-generator/supabase/migrations/20261003000000_create_matches_tables.sql)
 * **Seed Script:** [`supabase/seed.sql`](file:///D:/Projects/team-generator/supabase/seed.sql) (populates initial sample players with realistic ELO ratings).
-* **TypeScript Types:** [`src/types/database.types.ts`](file:///D:/Projects/team-generator/src/types/database.types.ts) (`Database`, `PlayerRow`, `PlayerInsert`, `PlayerUpdate`).
+* **TypeScript Types:** [`src/types/database.types.ts`](file:///D:/Projects/team-generator/src/types/database.types.ts), [`src/types/match.ts`](file:///D:/Projects/team-generator/src/types/match.ts).
 
-#### `players` Table Schema Specifications
-| Column | Type | Constraints / Defaults | Description |
-|---|---|---|---|
-| `id` | `UUID` | `DEFAULT gen_random_uuid() PRIMARY KEY` | Unique player identifier |
-| `name` | `TEXT` | `NOT NULL` | Player display name |
-| `rating` | `NUMERIC(7,2)` | `NOT NULL DEFAULT 1200.00` | ELO rating skill score |
-| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT now()` | Record creation timestamp |
-| `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT now()` | Auto-updated via plpgsql trigger |
+#### `matches` & `match_players` Relational Schema (Option A)
+- **`matches`**: Header table tracking `id`, `team1_score`, `team2_score`, `status`, `notes`, `created_at`, `updated_at`.
+- **`match_players`**: Line items table linking participants to matches via foreign keys (`match_id` with `ON DELETE CASCADE`, `player_id` with `ON DELETE SET NULL`), team number, and guest name, enforced by check constraint `check_participant`.
 
-* **Row Level Security (RLS):** Enabled on `public.players` with permissive local development policies for `SELECT`, `INSERT`, `UPDATE`, and `DELETE`.
-* **Client Integration:** Strongly typed Supabase client initialized in [`src/lib/supabase.ts`](file:///D:/Projects/team-generator/src/lib/supabase.ts) using `Database`.
+* **Row Level Security (RLS):** Enabled on public tables with permissive local development policies.
+* **Client Integration:** Strongly typed Supabase client initialized in [`src/lib/supabase.ts`](file:///D:/Projects/team-generator/src/lib/supabase.ts).
 
 ### Available Scripts
 * **`npm run dev`**: Start the local Vite development server with Hot Module Replacement (HMR).
@@ -95,7 +92,7 @@ This project enforces a strict [Mandatory Automated Testing Protocol](.agents/pr
 
 ### Running Tests
 ```bash
-# Run all automated test suites (165 tests across 23 files)
+# Run all automated test suites (216 tests across 29 files)
 npm test
 
 # Run tests with V8 coverage report (>90% overall coverage)
@@ -110,7 +107,7 @@ npx vitest --ui
 
 ### Mandatory Quality Gates
 Before any pull request can be approved and merged into `dev`:
-1. **`npm test`**: 100% test pass rate across all suites (165/165 tests passing).
+1. **`npm test`**: 100% test pass rate across all suites (216/216 tests passing).
 2. **`npm run test:coverage`**: >90% overall line and statement coverage.
 3. **`npm run typecheck`**: Zero TypeScript static compilation errors (`tsc --noEmit`).
 4. **`npm run lint`**: Zero ESLint warnings or errors (`eslint src`).
@@ -136,21 +133,28 @@ team-generator/
 │       ├── 0006-mandatory-automated-testing-protocol.md
 │       ├── 0007-strict-scoping-and-code-health-auditor.md
 │       ├── 0008-orchestrator-planner-investigation-boundary.md
-│       └── 0009-stage-3-hybrid-generator-and-transient-guests.md
+│       ├── 0009-stage-3-hybrid-generator-and-transient-guests.md
+│       └── 0010-matches-module-and-relational-schema.md
 ├── src/                    # React application source code
 │   ├── assets/styles/      # Tailwind CSS entry points
 │   ├── components/         # Modular UI components
 │   │   ├── layout/         # AppShell, Navbar, MobileNav, PlaceholderPage
+│   │   ├── match/          # Match components (MatchCard, MatchModal, DeleteMatchModal, MatchesStatSummary)
 │   │   ├── player/         # Player modals (PlayerModal, DeletePlayerModal)
 │   │   ├── ui/             # Reusable UI primitives (Badge, Alert, ThemeToggle, Button, Input, index.ts)
 │   │   └── ...             # PlayerInput, TeamCard, TeamSettings, etc.
 │   ├── context/            # React Context providers (ThemeContext)
-│   ├── hooks/              # Custom business logic hooks (useTeamGenerator, usePlayers, useTheme)
+│   ├── hooks/              # Custom business logic hooks (useTeamGenerator, usePlayers, useMatches, useTheme)
 │   ├── pages/              # Route views (LandingPage, GeneratorPage, PlayersPage, MatchesPage, RankingsPage, NotFoundPage)
-│   ├── types/              # TypeScript domain contracts (Player, Team, Database, etc.)
+│   ├── types/              # TypeScript domain contracts (Player, Team, Match, Database, etc.)
 │   ├── utils/              # Pure algorithmic utilities (shuffle, balance, history)
 │   ├── App.tsx             # Root routing tree & AppShell wrapper
 │   └── main.tsx            # React DOM mounting entry point
+├── supabase/
+│   ├── migrations/         # Supabase PostgreSQL schema migrations
+│   │   ├── 20261002000000_create_players_table.sql
+│   │   └── 20261003000000_create_matches_tables.sql
+│   └── seed.sql            # Initial sample data seed script
 ├── index.html              # HTML entry point
 ├── package.json            # Project dependencies and npm scripts
 ├── tailwind.config.js      # Tailwind CSS configuration
@@ -173,7 +177,7 @@ This repository employs a modular, multi-agent engineering lifecycle managed by 
 6. **[Document Writer](.agents/roles/document-writer.md) (`flash_lite`):** Drafts documentation, updates ADRs, and opens Pull Requests targeting `dev` (`5_documentation.md`).
 7. **[Code Health Auditor](.agents/roles/code-health-auditor.md) (`flash`):** Performs read-only static analysis to identify technical debt, test coverage gaps, dead code, weak typings, and UI componentization candidates (`docs/proposals/`).
 
-For full details, refer to [GEMINI.md](GEMINI.md), [ADR 0001](docs/adr/0001-modular-agent-roles.md), [ADR 0002](docs/adr/0002-token-optimization-strategy.md), [ADR 0003](docs/adr/0003-tech-stack-selection.md), [ADR 0004](docs/adr/0004-localization-and-language-boundary.md), [ADR 0005](docs/adr/0005-app-shell-routing-and-theming.md), [ADR 0006](docs/adr/0006-mandatory-automated-testing-protocol.md), [ADR 0007](docs/adr/0007-strict-scoping-and-code-health-auditor.md), [ADR 0008](docs/adr/0008-orchestrator-planner-investigation-boundary.md), and [ADR 0009](docs/adr/0009-stage-3-hybrid-generator-and-transient-guests.md).
+For full details, refer to [GEMINI.md](GEMINI.md), [ADR 0001](docs/adr/0001-modular-agent-roles.md), [ADR 0002](docs/adr/0002-token-optimization-strategy.md), [ADR 0003](docs/adr/0003-tech-stack-selection.md), [ADR 0004](docs/adr/0004-localization-and-language-boundary.md), [ADR 0005](docs/adr/0005-app-shell-routing-and-theming.md), [ADR 0006](docs/adr/0006-mandatory-automated-testing-protocol.md), [ADR 0007](docs/adr/0007-strict-scoping-and-code-health-auditor.md), [ADR 0008](docs/adr/0008-orchestrator-planner-investigation-boundary.md), [ADR 0009](docs/adr/0009-stage-3-hybrid-generator-and-transient-guests.md), and [ADR 0010](docs/adr/0010-matches-module-and-relational-schema.md).
 
 ---
 

@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import type { PlayerRow, PlayerInsert, PlayerUpdate } from '../database.types';
-import type { Player } from '../index';
+import type {
+  PlayerRow,
+  PlayerInsert,
+  PlayerUpdate,
+  MatchRow,
+  MatchInsert,
+  MatchPlayerRow,
+  MatchPlayerInsert,
+} from '../database.types';
+import type { Player, MatchDetail } from '../index';
 import { supabase } from '../../lib/supabase';
 
 describe('Database Types Contract Tests', () => {
@@ -89,14 +97,116 @@ describe('Database Types Contract Tests', () => {
     });
   });
 
+  describe('MatchRow and MatchPlayerRow type shapes and contracts', () => {
+    it('accepts compliant MatchRow and MatchPlayerRow records', () => {
+      const matchRow: MatchRow = {
+        id: 'match-123',
+        team_1_score: 5,
+        team_2_score: 3,
+        played_at: '2026-10-03T10:00:00.000Z',
+        created_at: '2026-10-03T10:00:00.000Z',
+        updated_at: '2026-10-03T10:00:00.000Z',
+      };
+
+      const matchPlayerRow: MatchPlayerRow = {
+        id: 'mp-1',
+        match_id: 'match-123',
+        player_id: 'player-1',
+        guest_name: null,
+        team_side: 'team_1',
+        rating_before: 1200,
+        rating_after: 1215,
+      };
+
+      expect(matchRow.id).toBe('match-123');
+      expect(matchRow.team_1_score).toBe(5);
+      expect(matchRow.team_2_score).toBe(3);
+      expect(matchPlayerRow.team_side).toBe('team_1');
+      expect(matchPlayerRow.player_id).toBe('player-1');
+      expect(matchPlayerRow.guest_name).toBeNull();
+    });
+
+    it('maps correctly to the application domain MatchDetail model with mock Supabase response', () => {
+      const mockSupabaseResponse: MatchDetail = {
+        id: 'm-456',
+        team_1_score: 4,
+        team_2_score: 2,
+        played_at: '2026-10-03T11:00:00.000Z',
+        created_at: '2026-10-03T11:00:00.000Z',
+        updated_at: '2026-10-03T11:00:00.000Z',
+        match_players: [
+          {
+            id: 'mp-1',
+            match_id: 'm-456',
+            player_id: 'p-1',
+            guest_name: null,
+            team_side: 'team_1',
+            rating_before: 1300,
+            rating_after: 1315,
+            players: {
+              id: 'p-1',
+              name: 'Красимир Балъков',
+            },
+          },
+          {
+            id: 'mp-2',
+            match_id: 'm-456',
+            player_id: null,
+            guest_name: 'Иван Гост',
+            team_side: 'team_2',
+            rating_before: null,
+            rating_after: null,
+            players: null,
+          },
+        ],
+      };
+
+      expect(mockSupabaseResponse.id).toBe('m-456');
+      expect(mockSupabaseResponse.match_players).toHaveLength(2);
+      expect(mockSupabaseResponse.match_players[0].players?.name).toBe('Красимир Балъков');
+      expect(mockSupabaseResponse.match_players[1].guest_name).toBe('Иван Гост');
+    });
+  });
+
+  describe('MatchInsert and MatchPlayerInsert type contracts', () => {
+    it('accepts insert payloads', () => {
+      const matchInsert: MatchInsert = {
+        team_1_score: 2,
+        team_2_score: 1,
+        played_at: '2026-10-03T12:00:00.000Z',
+      };
+
+      const matchPlayerInsert: MatchPlayerInsert = {
+        match_id: 'm-1',
+        player_id: 'p-1',
+        guest_name: null,
+        team_side: 'team_1',
+      };
+
+      expect(matchInsert.team_1_score).toBe(2);
+      expect(matchPlayerInsert.team_side).toBe('team_1');
+    });
+  });
+
   describe('Supabase Client Typed Query Builder', () => {
-    it('creates query builder typed for players table', () => {
-      const queryBuilder = supabase.from('players');
-      expect(queryBuilder).toBeDefined();
-      expect(typeof queryBuilder.select).toBe('function');
-      expect(typeof queryBuilder.insert).toBe('function');
-      expect(typeof queryBuilder.update).toBe('function');
-      expect(typeof queryBuilder.delete).toBe('function');
+    it('creates query builder typed for players, matches, and match_players tables', () => {
+      const playersQueryBuilder = supabase.from('players');
+      expect(playersQueryBuilder).toBeDefined();
+      expect(typeof playersQueryBuilder.select).toBe('function');
+
+      const matchesQueryBuilder = supabase.from('matches');
+      expect(matchesQueryBuilder).toBeDefined();
+      expect(typeof matchesQueryBuilder.select).toBe('function');
+      expect(typeof matchesQueryBuilder.insert).toBe('function');
+      expect(typeof matchesQueryBuilder.update).toBe('function');
+      expect(typeof matchesQueryBuilder.delete).toBe('function');
+
+      const matchPlayersQueryBuilder = supabase.from('match_players');
+      expect(matchPlayersQueryBuilder).toBeDefined();
+      expect(typeof matchPlayersQueryBuilder.select).toBe('function');
+      expect(typeof matchPlayersQueryBuilder.insert).toBe('function');
+      expect(typeof matchPlayersQueryBuilder.delete).toBe('function');
     });
   });
 });
+

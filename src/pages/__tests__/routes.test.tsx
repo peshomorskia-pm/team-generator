@@ -24,6 +24,21 @@ vi.mock('../../hooks/usePlayers', () => ({
   }),
 }));
 
+vi.mock('../../hooks/useMatches', () => ({
+  useMatches: () => ({
+    matches: [],
+    loading: false,
+    error: null,
+    alert: null,
+    fetchMatches: vi.fn(),
+    createMatch: vi.fn(),
+    updateMatch: vi.fn(),
+    deleteMatch: vi.fn(),
+    clearAlert: vi.fn(),
+  }),
+}));
+
+
 const renderAppRoute = (initialRoute: string) => {
   return render(
     <ThemeProvider>
@@ -72,8 +87,8 @@ describe('App Route Smoke and Integration Tests', () => {
 
   it('renders MatchesPage on "/matches"', () => {
     renderAppRoute('/matches');
-    expect(screen.getByRole('heading', { name: 'Мачове', level: 2 })).toBeInTheDocument();
-    expect(screen.getByText('Модулът за мачове очаква старт')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Мачове', level: 1 })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /нов мач/i }).length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders RankingsPage on "/rankings"', () => {
