@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '../types/database.types';
 
 /**
  * Checks whether both Supabase URL and Anon Key are present in environment variables.
@@ -23,6 +24,6 @@ if (!isSupabaseConfigured()) {
   );
 }
 
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase: SupabaseClient<Database> = createClient<Database>(supabaseUrl, supabaseAnonKey);
 
 export default supabase;

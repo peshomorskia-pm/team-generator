@@ -46,6 +46,28 @@ npm install
    cp .env.example .env.local
    ```
 2. Populate `.env.local` with your Supabase project URL and anon key (automatically provided when running local Supabase via Docker).
+3. Start local Supabase and apply migrations & seed data:
+   ```bash
+   npm run db:start
+   npm run db:reset
+   ```
+
+### Database Schema & Migrations (`players` Table)
+* **Migration Path:** [`supabase/migrations/20261002000000_create_players_table.sql`](file:///D:/Projects/team-generator/supabase/migrations/20261002000000_create_players_table.sql)
+* **Seed Script:** [`supabase/seed.sql`](file:///D:/Projects/team-generator/supabase/seed.sql) (populates initial sample players with realistic ELO ratings).
+* **TypeScript Types:** [`src/types/database.types.ts`](file:///D:/Projects/team-generator/src/types/database.types.ts) (`Database`, `PlayerRow`, `PlayerInsert`, `PlayerUpdate`).
+
+#### `players` Table Schema Specifications
+| Column | Type | Constraints / Defaults | Description |
+|---|---|---|---|
+| `id` | `UUID` | `DEFAULT gen_random_uuid() PRIMARY KEY` | Unique player identifier |
+| `name` | `TEXT` | `NOT NULL` | Player display name |
+| `rating` | `NUMERIC(7,2)` | `NOT NULL DEFAULT 1200.00` | ELO rating skill score |
+| `created_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT now()` | Record creation timestamp |
+| `updated_at` | `TIMESTAMPTZ` | `NOT NULL DEFAULT now()` | Auto-updated via plpgsql trigger |
+
+* **Row Level Security (RLS):** Enabled on `public.players` with permissive local development policies for `SELECT`, `INSERT`, `UPDATE`, and `DELETE`.
+* **Client Integration:** Strongly typed Supabase client initialized in [`src/lib/supabase.ts`](file:///D:/Projects/team-generator/src/lib/supabase.ts) using `Database`.
 
 ### Available Scripts
 * **`npm run dev`**: Start the local Vite development server with Hot Module Replacement (HMR).
@@ -58,7 +80,7 @@ npm install
 * **`npm run db:start`**: Start local Supabase Docker containers (API, PostgreSQL, Studio, Inbucket).
 * **`npm run db:stop`**: Stop local Supabase Docker containers.
 * **`npm run db:status`**: Check status and access URLs of local Supabase services.
-* **`npm run db:reset`**: Reset local database state and re-run migrations.
+* **`npm run db:reset`**: Reset local database state, re-run migrations, and execute `supabase/seed.sql`.
 * **`npm run db:types`**: Generate TypeScript database types from local Supabase schema.
 
 For detailed operational runbooks and troubleshooting, refer to [.agents/skills/supabase-docker/SKILL.md](file:///D:/Projects/team-generator/.agents/skills/supabase-docker/SKILL.md).
