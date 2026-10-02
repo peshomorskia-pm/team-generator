@@ -33,11 +33,19 @@ A scalable Multi-Page Application (SPA) with a responsive App Shell, client-side
 ### Prerequisites
 * Node.js (v18+ recommended)
 * npm
+* **Docker Desktop** (required for running local Supabase container infrastructure)
 
 ### Installation
 ```bash
 npm install
 ```
+
+### Local Supabase Environment Setup
+1. Copy `.env.example` to `.env.local`:
+   ```bash
+   cp .env.example .env.local
+   ```
+2. Populate `.env.local` with your Supabase project URL and anon key (automatically provided when running local Supabase via Docker).
 
 ### Available Scripts
 * **`npm run dev`**: Start the local Vite development server with Hot Module Replacement (HMR).
@@ -47,6 +55,14 @@ npm install
 * **`npm test`**: Run the Vitest automated test suite (`vitest run`).
 * **`npm run test:coverage`**: Run Vitest with V8 coverage collection (`vitest run --coverage`), achieving >90% test coverage.
 * **`npm run lint`**: Run ESLint across `src/` to enforce code quality standards.
+* **`npm run db:start`**: Start local Supabase Docker containers (API, PostgreSQL, Studio, Inbucket).
+* **`npm run db:stop`**: Stop local Supabase Docker containers.
+* **`npm run db:status`**: Check status and access URLs of local Supabase services.
+* **`npm run db:reset`**: Reset local database state and re-run migrations.
+* **`npm run db:types`**: Generate TypeScript database types from local Supabase schema.
+
+For detailed operational runbooks and troubleshooting, refer to [.agents/skills/supabase-docker/SKILL.md](file:///D:/Projects/team-generator/.agents/skills/supabase-docker/SKILL.md).
+
 
 ---
 
