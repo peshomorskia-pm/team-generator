@@ -252,6 +252,27 @@ describe('MatchesPage Integration Tests', () => {
     expect(screen.getByText('Красимир Балъков')).toBeInTheDocument();
   });
 
+  it('filters matches by custom date range period from calendar', async () => {
+    const user = userEvent.setup();
+    render(<MatchesPage />);
+
+    const periodSelect = screen.getByLabelText('Филтър по период');
+    await user.selectOptions(periodSelect, 'custom');
+
+    // Date inputs appear
+    const startDateInput = screen.getByLabelText('Начална дата');
+    const endDateInput = screen.getByLabelText('Крайна дата');
+    expect(startDateInput).toBeInTheDocument();
+    expect(endDateInput).toBeInTheDocument();
+
+    // Set custom range targeting the 2025 match
+    await user.type(startDateInput, '2025-01-01');
+    await user.type(endDateInput, '2025-12-31');
+
+    expect(screen.getByText('Красимир Балъков')).toBeInTheDocument();
+    expect(screen.queryByText('Иван Иванов')).not.toBeInTheDocument();
+  });
+
   it('applies combined AND filtering logic (Status AND Period AND Search)', async () => {
     const user = userEvent.setup();
     render(<MatchesPage />);

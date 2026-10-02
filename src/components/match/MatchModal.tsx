@@ -156,6 +156,15 @@ export const MatchModal: React.FC<MatchModalProps> = ({
     }
   };
 
+  const handleRemovePlayerById = (teamSide: 'team_1' | 'team_2', playerId: string) => {
+    if (teamSide === 'team_1') {
+      setTeam1Players((prev) => prev.filter((p) => p.player_id !== playerId));
+    } else {
+      setTeam2Players((prev) => prev.filter((p) => p.player_id !== playerId));
+    }
+    setValidationError(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setValidationError(null);
@@ -378,6 +387,7 @@ export const MatchModal: React.FC<MatchModalProps> = ({
                 selectedIds={team1Players.filter((p) => p.player_id).map((p) => p.player_id!)}
                 excludedIds={team2Players.filter((p) => p.player_id).map((p) => p.player_id!)}
                 onSelect={(player) => handleAddPlayer('team_1', player.id)}
+                onRemove={(playerId) => handleRemovePlayerById('team_1', playerId)}
                 ariaLabel="Избери играч за Отбор 1"
                 placeholder="Избери играч..."
                 disabled={isSubmitting}
@@ -447,6 +457,7 @@ export const MatchModal: React.FC<MatchModalProps> = ({
                 selectedIds={team2Players.filter((p) => p.player_id).map((p) => p.player_id!)}
                 excludedIds={team1Players.filter((p) => p.player_id).map((p) => p.player_id!)}
                 onSelect={(player) => handleAddPlayer('team_2', player.id)}
+                onRemove={(playerId) => handleRemovePlayerById('team_2', playerId)}
                 ariaLabel="Избери играч за Отбор 2"
                 placeholder="Избери играч..."
                 disabled={isSubmitting}

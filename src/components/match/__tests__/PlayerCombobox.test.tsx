@@ -53,7 +53,7 @@ describe('PlayerCombobox Component', () => {
     expect(screen.queryByText('Димитър Димитров')).not.toBeInTheDocument();
   });
 
-  it('calls onSelect and closes dropdown when an eligible player is clicked', async () => {
+  it('calls onSelect and keeps dropdown open for multi-selection when an eligible player is clicked', async () => {
     const user = userEvent.setup();
     const handleSelect = vi.fn();
 
@@ -73,7 +73,7 @@ describe('PlayerCombobox Component', () => {
     await user.click(option);
 
     expect(handleSelect).toHaveBeenCalledWith(mockPlayers[0]);
-    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
   });
 
   it('disables opposing team players (excludedIds) and prevents selection', async () => {
@@ -100,9 +100,10 @@ describe('PlayerCombobox Component', () => {
     expect(handleSelect).not.toHaveBeenCalled();
   });
 
-  it('disables already selected players (selectedIds) and prevents duplicate selection', async () => {
+  it('toggles selected player and calls onRemove when already selected player is clicked', async () => {
     const user = userEvent.setup();
     const handleSelect = vi.fn();
+    const handleRemove = vi.fn();
 
     render(
       <PlayerCombobox
@@ -110,6 +111,7 @@ describe('PlayerCombobox Component', () => {
         selectedIds={['p1']}
         excludedIds={[]}
         onSelect={handleSelect}
+        onRemove={handleRemove}
       />
     );
 
@@ -117,10 +119,10 @@ describe('PlayerCombobox Component', () => {
     await user.click(input);
 
     const selectedOption = screen.getByRole('option', { name: /иван иванов/i });
-    expect(selectedOption).toBeDisabled();
     expect(selectedOption).toHaveTextContent(/избран/i);
 
     await user.click(selectedOption);
+    expect(handleRemove).toHaveBeenCalledWith('p1');
     expect(handleSelect).not.toHaveBeenCalled();
   });
 

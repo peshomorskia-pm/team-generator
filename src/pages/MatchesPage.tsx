@@ -11,7 +11,7 @@ import { usePlayers } from '../hooks/usePlayers';
 import type { MatchDetail, MatchFormData } from '../types/matches';
 
 export type StatusFilter = 'all' | 'completed' | 'upcoming';
-export type PeriodFilter = 'all' | 'this_week' | 'this_month';
+export type PeriodFilter = 'all' | 'this_week' | 'this_month' | 'custom';
 
 const isWithinThisWeek = (dateStr: string): boolean => {
   const matchDate = new Date(dateStr);
@@ -55,6 +55,8 @@ export const MatchesPage: React.FC = () => {
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -78,6 +80,18 @@ export const MatchesPage: React.FC = () => {
         if (!isWithinThisWeek(m.played_at)) return false;
       } else if (periodFilter === 'this_month') {
         if (!isWithinThisMonth(m.played_at)) return false;
+      } else if (periodFilter === 'custom') {
+        const matchDate = new Date(m.played_at);
+        if (customStartDate) {
+          const start = new Date(customStartDate);
+          start.setHours(0, 0, 0, 0);
+          if (matchDate < start) return false;
+        }
+        if (customEndDate) {
+          const end = new Date(customEndDate);
+          end.setHours(23, 59, 59, 999);
+          if (matchDate > end) return false;
+        }
       }
 
       // 3. Search Filter
@@ -92,7 +106,7 @@ export const MatchesPage: React.FC = () => {
 
       return true;
     });
-  }, [matches, statusFilter, periodFilter, searchQuery]);
+  }, [matches, statusFilter, periodFilter, searchQuery, customStartDate, customEndDate]);
 
   const handleCreateSave = async (data: MatchFormData) => {
     await createMatch(data);
@@ -188,8 +202,8 @@ export const MatchesPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Period Filter Dropdown */}
-          <div className="flex items-center gap-2 self-start md:self-auto">
+          {/* Period Filter Dropdown & Custom Range */}
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
             <div className="relative">
               <Calendar className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <select
@@ -201,8 +215,34 @@ export const MatchesPage: React.FC = () => {
                 <option value="all">Всички периоди</option>
                 <option value="this_week">Тази седмица</option>
                 <option value="this_month">Този месец</option>
+                <option value="custom">Посочи период...</option>
               </select>
             </div>
+
+            {periodFilter === 'custom' && (
+              <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-2.5 py-1 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xs text-xs">
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-500 dark:text-gray-400 text-[11px] font-medium">От:</span>
+                  <input
+                    type="date"
+                    aria-label="Начална дата"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className="px-2 py-0.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-500 dark:text-gray-400 text-[11px] font-medium">До:</span>
+                  <input
+                    type="date"
+                    aria-label="Крайна дата"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className="px-2 py-0.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

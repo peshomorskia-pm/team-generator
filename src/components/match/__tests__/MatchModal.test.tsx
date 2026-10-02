@@ -299,7 +299,9 @@ describe('MatchModal Component', () => {
     // Clicking option instantly adds to Team 1
     await user.click(screen.getByRole('option', { name: /димитър бербатов/i }));
 
-    expect(screen.getByText('Димитър Бербатов')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /премахни димитър бербатов/i })
+    ).toBeInTheDocument();
   });
 
   it('enforces cross-team selection exclusion in player comboboxes', async () => {

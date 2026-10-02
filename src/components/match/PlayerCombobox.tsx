@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Search, ChevronDown, Check, User, Ban } from 'lucide-react';
+import { Search, ChevronDown, Ban, CheckSquare, Square } from 'lucide-react';
 import type { PlayerRow } from '../../types/database.types';
 
 export interface ComboboxPlayer {
@@ -25,6 +25,7 @@ export const PlayerCombobox: React.FC<PlayerComboboxProps> = ({
   selectedIds,
   excludedIds,
   onSelect,
+  onRemove,
   placeholder = 'Търси и избери играч...',
   ariaLabel = 'Избери играч',
   id,
@@ -51,13 +52,18 @@ export const PlayerCombobox: React.FC<PlayerComboboxProps> = ({
     return players.filter((p) => p.name.toLowerCase().includes(trimmed));
   }, [players, query]);
 
-  const handleSelect = (player: PlayerRow | ComboboxPlayer) => {
-    if (selectedIds.includes(player.id) || excludedIds.includes(player.id)) {
+  const handleItemClick = (player: PlayerRow | ComboboxPlayer) => {
+    if (excludedIds.includes(player.id)) {
       return;
     }
-    onSelect(player);
-    setQuery('');
-    setIsOpen(false);
+    if (selectedIds.includes(player.id)) {
+      if (onRemove) {
+        onRemove(player.id);
+      }
+    } else {
+      onSelect(player);
+    }
+    // Do NOT close dropdown so user can select multiple players in one go
   };
 
   return (
@@ -111,7 +117,6 @@ export const PlayerCombobox: React.FC<PlayerComboboxProps> = ({
             filteredPlayers.map((player) => {
               const isSelected = selectedIds.includes(player.id);
               const isExcluded = excludedIds.includes(player.id);
-              const isDisabled = isSelected || isExcluded;
 
               return (
                 <button
@@ -119,28 +124,36 @@ export const PlayerCombobox: React.FC<PlayerComboboxProps> = ({
                   type="button"
                   role="option"
                   aria-selected={isSelected}
-                  disabled={isDisabled}
-                  onClick={() => handleSelect(player)}
+                  disabled={isExcluded}
+                  onClick={() => handleItemClick(player)}
                   className={`w-full flex items-center justify-between px-3 py-2 text-left text-sm transition-colors ${
-                    isDisabled
+                    isExcluded
                       ? 'opacity-40 cursor-not-allowed bg-gray-50 dark:bg-gray-800/50 text-gray-400'
-                      : 'hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-gray-900 dark:text-gray-100 cursor-pointer'
+                      : isSelected
+                        ? 'bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 cursor-pointer'
+                        : 'hover:bg-emerald-50 dark:hover:bg-emerald-950/30 text-gray-900 dark:text-gray-100 cursor-pointer'
                   }`}
                 >
-                  <div className="flex items-center gap-2 truncate">
-                    <User className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                    <span className="truncate">{player.name}</span>
+                  <div className="flex items-center gap-2.5 truncate">
+                    {isExcluded ? (
+                      <Ban className="w-4 h-4 text-amber-500 shrink-0" />
+                    ) : isSelected ? (
+                      <CheckSquare className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    ) : (
+                      <Square className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
+                    )}
+                    <span className={`truncate ${isSelected ? 'font-semibold text-emerald-900 dark:text-emerald-200' : ''}`}>
+                      {player.name}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs shrink-0">
                     {isExcluded && (
                       <span className="inline-flex items-center gap-0.5 text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-                        <Ban className="w-3 h-3" />
                         в другия отбор
                       </span>
                     )}
                     {isSelected && (
                       <span className="inline-flex items-center gap-0.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-                        <Check className="w-3 h-3" />
                         избран
                       </span>
                     )}
@@ -148,6 +161,20 @@ export const PlayerCombobox: React.FC<PlayerComboboxProps> = ({
                 </button>
               );
             })
+          )}
+          {filteredPlayers.length > 0 && (
+            <div className="sticky bottom-0 bg-gray-50 dark:bg-gray-800/95 backdrop-blur-xs px-3 py-1.5 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-xs">
+              <span className="text-gray-500 dark:text-gray-400">
+                Избрани: {selectedIds.length}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="font-medium text-emerald-600 dark:text-emerald-400 hover:underline px-2 py-0.5 rounded cursor-pointer"
+              >
+                Готово
+              </button>
+            </div>
           )}
         </div>
       )}
