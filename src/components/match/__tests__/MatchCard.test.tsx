@@ -97,4 +97,76 @@ describe('MatchCard Component', () => {
     await user.click(screen.getByRole('button', { name: 'Изтрий' }));
     expect(handleDelete).toHaveBeenCalledWith(sampleMatch);
   });
+
+  it('renders format badge and delta chips for completed matches with ratings', () => {
+    render(<MatchCard match={sampleMatch} onEdit={vi.fn()} onDelete={vi.fn()} />);
+
+    // Format badge defaults to singles
+    expect(screen.getByText('Поединично')).toBeInTheDocument();
+
+    // Rating delta chip for Димитър Бербатов (1215 - 1200 = +15)
+    expect(screen.getByText('+15')).toBeInTheDocument();
+  });
+
+  it('renders doubles format badge when match_format is doubles', () => {
+    const doublesMatch: MatchDetail = {
+      ...sampleMatch,
+      match_format: 'doubles',
+    };
+
+    render(<MatchCard match={doublesMatch} onEdit={vi.fn()} onDelete={vi.fn()} />);
+    expect(screen.getByText('По двойки')).toBeInTheDocument();
+  });
+
+  it('renders "По двойки" as format fallback for a 2v2 match with null/legacy format', () => {
+    const legacy2v2Match: MatchDetail = {
+      ...sampleMatch,
+      match_format: undefined,
+      match_players: [
+        {
+          id: 'mp-1',
+          match_id: 'm-100',
+          player_id: 'p-1',
+          guest_name: null,
+          team_side: 'team_1',
+          rating_before: 1200,
+          rating_after: 1215,
+          players: { id: 'p-1', name: 'Димитър Бербатов' },
+        },
+        {
+          id: 'mp-2',
+          match_id: 'm-100',
+          player_id: 'p-2',
+          guest_name: null,
+          team_side: 'team_1',
+          rating_before: 1200,
+          rating_after: 1215,
+          players: { id: 'p-2', name: 'Христо Стоичков' },
+        },
+        {
+          id: 'mp-3',
+          match_id: 'm-100',
+          player_id: 'p-3',
+          guest_name: null,
+          team_side: 'team_2',
+          rating_before: 1200,
+          rating_after: 1185,
+          players: { id: 'p-3', name: 'Красимир Балъков' },
+        },
+        {
+          id: 'mp-4',
+          match_id: 'm-100',
+          player_id: null,
+          guest_name: 'Спас Делев',
+          team_side: 'team_2',
+          rating_before: null,
+          rating_after: null,
+          players: null,
+        },
+      ],
+    };
+
+    render(<MatchCard match={legacy2v2Match} onEdit={vi.fn()} onDelete={vi.fn()} />);
+    expect(screen.getByText('По двойки')).toBeInTheDocument();
+  });
 });

@@ -93,8 +93,9 @@ describe('App Route Smoke and Integration Tests', () => {
 
   it('renders RankingsPage on "/rankings"', () => {
     renderAppRoute('/rankings');
-    expect(screen.getByRole('heading', { name: 'Класиране', level: 2 })).toBeInTheDocument();
-    expect(screen.getByText('Класирането очаква своите първи шампиони')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Класиране', level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /поединично/i })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Търси играч...')).toBeInTheDocument();
   });
 
   it('renders NotFoundPage on unmapped routes like "/rules", "/tactics", "/history", "/admin", "/not-found"', () => {

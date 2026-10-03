@@ -8,6 +8,14 @@ export interface Database {
           rating: number; // numeric
           created_at: string; // timestamptz
           updated_at: string; // timestamptz
+          singles_rating?: number; // numeric
+          doubles_rating?: number; // numeric
+          singles_matches_played?: number; // integer
+          singles_wins?: number; // integer
+          singles_losses?: number; // integer
+          doubles_matches_played?: number; // integer
+          doubles_wins?: number; // integer
+          doubles_losses?: number; // integer
         };
         Insert: {
           id?: string;
@@ -15,6 +23,14 @@ export interface Database {
           rating?: number;
           created_at?: string;
           updated_at?: string;
+          singles_rating?: number;
+          doubles_rating?: number;
+          singles_matches_played?: number;
+          singles_wins?: number;
+          singles_losses?: number;
+          doubles_matches_played?: number;
+          doubles_wins?: number;
+          doubles_losses?: number;
         };
         Update: {
           id?: string;
@@ -22,12 +38,21 @@ export interface Database {
           rating?: number;
           created_at?: string;
           updated_at?: string;
+          singles_rating?: number;
+          doubles_rating?: number;
+          singles_matches_played?: number;
+          singles_wins?: number;
+          singles_losses?: number;
+          doubles_matches_played?: number;
+          doubles_wins?: number;
+          doubles_losses?: number;
         };
         Relationships: [];
       };
       matches: {
         Row: {
           id: string; // uuid
+          match_format?: 'singles' | 'doubles'; // text
           team_1_score: number | null; // integer
           team_2_score: number | null; // integer
           played_at: string; // timestamptz
@@ -36,6 +61,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
+          match_format?: 'singles' | 'doubles';
           team_1_score?: number | null;
           team_2_score?: number | null;
           played_at?: string;
@@ -44,6 +70,7 @@ export interface Database {
         };
         Update: {
           id?: string;
+          match_format?: 'singles' | 'doubles';
           team_1_score?: number | null;
           team_2_score?: number | null;
           played_at?: string;

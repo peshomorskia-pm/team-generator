@@ -11,7 +11,10 @@ export interface MatchDetail extends MatchRow {
   match_players: MatchPlayerDetail[];
 }
 
+export type MatchFormat = 'singles' | 'doubles';
+
 export interface MatchFormData {
+  match_format?: MatchFormat;
   team_1_score: number | null;
   team_2_score: number | null;
   played_at: string; // ISO date string

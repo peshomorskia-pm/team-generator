@@ -1,6 +1,9 @@
 import React from 'react';
 import { Calendar, Edit2, Trash2, Trophy, User } from 'lucide-react';
+import { Badge } from '../ui/Badge';
 import type { MatchDetail } from '../../types/matches';
+
+import { resolveMatchFormat } from '../../utils/eloRecalculation';
 
 export interface MatchCardProps {
   match: MatchDetail;
@@ -23,6 +26,9 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, onEdit, onDelete })
     year: 'numeric',
   });
 
+  const resolvedFormat = resolveMatchFormat(match);
+  const formatLabel = resolvedFormat === 'doubles' ? 'По двойки' : 'Поединично';
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs hover:shadow-md transition-all overflow-hidden p-5">
       {/* Header with Date and Action Buttons */}
@@ -30,6 +36,9 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, onEdit, onDelete })
         <div className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
           <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           <span>{formattedDate}</span>
+          <Badge variant="indigo" size="sm" className="ml-2 font-semibold">
+            {formatLabel}
+          </Badge>
           {isUpcoming && (
             <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
               Предстоящ
@@ -83,6 +92,10 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, onEdit, onDelete })
               team1Players.map((p) => {
                 const name = p.players?.name ?? p.guest_name ?? 'Играч';
                 const isGuest = !p.player_id;
+                const delta =
+                  p.rating_after !== null && p.rating_before !== null
+                    ? Math.round(p.rating_after - p.rating_before)
+                    : null;
                 return (
                   <span
                     key={p.id}
@@ -95,6 +108,19 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, onEdit, onDelete })
                     <User className="w-3 h-3 opacity-60" />
                     <span>{name}</span>
                     {isGuest && <span className="opacity-75 text-[10px]">(гост)</span>}
+                    {delta !== null && (
+                      <span
+                        className={`ml-1 px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                          delta > 0
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                            : delta < 0
+                            ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
+                            : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        {delta > 0 ? `+${delta}` : delta}
+                      </span>
+                    )}
                   </span>
                 );
               })
@@ -156,6 +182,10 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, onEdit, onDelete })
               team2Players.map((p) => {
                 const name = p.players?.name ?? p.guest_name ?? 'Играч';
                 const isGuest = !p.player_id;
+                const delta =
+                  p.rating_after !== null && p.rating_before !== null
+                    ? Math.round(p.rating_after - p.rating_before)
+                    : null;
                 return (
                   <span
                     key={p.id}
@@ -168,6 +198,19 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, onEdit, onDelete })
                     <User className="w-3 h-3 opacity-60" />
                     <span>{name}</span>
                     {isGuest && <span className="opacity-75 text-[10px]">(гост)</span>}
+                    {delta !== null && (
+                      <span
+                        className={`ml-1 px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                          delta > 0
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                            : delta < 0
+                            ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
+                            : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        {delta > 0 ? `+${delta}` : delta}
+                      </span>
+                    )}
                   </span>
                 );
               })
