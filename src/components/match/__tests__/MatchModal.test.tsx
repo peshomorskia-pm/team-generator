@@ -410,4 +410,67 @@ describe('MatchModal Component', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
+
+  describe('Prefill from Generator Integration', () => {
+    const initialTeam1 = [
+      { player_id: 'p-1', name: 'Христо Стоичков' },
+      { guest_name: 'Гост Георги', name: 'Гост Георги' },
+    ];
+    const initialTeam2 = [
+      { player_id: 'p-2', name: 'Димитър Бербатов' },
+      { guest_name: 'Гост Мартин', name: 'Гост Мартин' },
+    ];
+
+    it('Scenario 1 (Prefill): renders prefilled participants for both teams in Create mode without a match prop', () => {
+      render(
+        <MatchModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSave={vi.fn()}
+          availablePlayers={availablePlayers}
+          initialTeam1={initialTeam1}
+          initialTeam2={initialTeam2}
+        />
+      );
+
+      // Verify header is "Нов мач"
+      expect(screen.getByRole('heading', { name: 'Нов мач' })).toBeInTheDocument();
+
+      // Team 1 participants
+      expect(screen.getByText('Христо Стоичков')).toBeInTheDocument();
+      expect(screen.getByText('Гост Георги')).toBeInTheDocument();
+
+      // Team 2 participants
+      expect(screen.getByText('Димитър Бербатов')).toBeInTheDocument();
+      expect(screen.getByText('Гост Мартин')).toBeInTheDocument();
+
+      // Guest tags
+      const guestBadges = screen.getAllByText('(гост)');
+      expect(guestBadges).toHaveLength(2);
+
+      // Participant counts in team headers (both teams have 2 players)
+      expect(screen.getAllByText('(2 играчи)')).toHaveLength(2);
+    });
+
+    it('Scenario 2 (Date/Score): defaults date to today and leaves scores empty when prefilled in Create mode', () => {
+      const todayFormatted = new Date().toISOString().slice(0, 10);
+
+      render(
+        <MatchModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSave={vi.fn()}
+          availablePlayers={availablePlayers}
+          initialTeam1={initialTeam1}
+          initialTeam2={initialTeam2}
+        />
+      );
+
+      const dateInput = screen.getByLabelText('Дата на мача') as HTMLInputElement;
+      expect(dateInput.value).toBe(todayFormatted);
+
+      expect(screen.getByLabelText('Резултат Отбор 1')).toHaveValue(null);
+      expect(screen.getByLabelText('Резултат Отбор 2')).toHaveValue(null);
+    });
+  });
 });

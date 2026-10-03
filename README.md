@@ -93,7 +93,7 @@ This project enforces a strict [Mandatory Automated Testing Protocol](.agents/pr
 
 ### Running Tests
 ```bash
-# Run all automated test suites (235 tests across 30 files)
+# Run all automated test suites (245 tests across 31 files)
 npm test
 
 # Run tests with V8 coverage report (>90% overall coverage)

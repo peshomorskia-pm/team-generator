@@ -6,18 +6,20 @@ import { PlayerCombobox } from './PlayerCombobox';
 import type { PlayerRow } from '../../types/database.types';
 import type { MatchDetail, MatchFormData } from '../../types/matches';
 
+export interface MatchParticipant {
+  player_id?: string;
+  guest_name?: string;
+  name: string;
+}
+
 export interface MatchModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: MatchFormData) => Promise<void>;
   match?: MatchDetail;
   availablePlayers?: PlayerRow[];
-}
-
-interface Participant {
-  player_id?: string;
-  guest_name?: string;
-  name: string;
+  initialTeam1?: MatchParticipant[];
+  initialTeam2?: MatchParticipant[];
 }
 
 const getTodayFormatted = () => {
@@ -34,6 +36,8 @@ export const MatchModal: React.FC<MatchModalProps> = ({
   onSave,
   match,
   availablePlayers = [],
+  initialTeam1,
+  initialTeam2,
 }) => {
   const isEditMode = Boolean(match);
 
@@ -44,15 +48,23 @@ export const MatchModal: React.FC<MatchModalProps> = ({
     return getTodayFormatted();
   };
 
-  const getInitialParticipants = (side: 'team_1' | 'team_2'): Participant[] => {
-    if (!match) return [];
-    return match.match_players
-      .filter((p) => p.team_side === side)
-      .map((p) => ({
-        player_id: p.player_id ?? undefined,
-        guest_name: p.guest_name ?? undefined,
-        name: p.players?.name ?? p.guest_name ?? 'Играч',
-      }));
+  const getInitialParticipants = (side: 'team_1' | 'team_2'): MatchParticipant[] => {
+    if (match) {
+      return match.match_players
+        .filter((p) => p.team_side === side)
+        .map((p) => ({
+          player_id: p.player_id ?? undefined,
+          guest_name: p.guest_name ?? undefined,
+          name: p.players?.name ?? p.guest_name ?? 'Играч',
+        }));
+    }
+    if (side === 'team_1' && initialTeam1) {
+      return initialTeam1;
+    }
+    if (side === 'team_2' && initialTeam2) {
+      return initialTeam2;
+    }
+    return [];
   };
 
   const [date, setDate] = useState(getInitialDate);
@@ -62,10 +74,10 @@ export const MatchModal: React.FC<MatchModalProps> = ({
   const [team2Score, setTeam2Score] = useState(
     match && match.team_2_score !== null ? String(match.team_2_score) : ''
   );
-  const [team1Players, setTeam1Players] = useState<Participant[]>(() =>
+  const [team1Players, setTeam1Players] = useState<MatchParticipant[]>(() =>
     getInitialParticipants('team_1')
   );
-  const [team2Players, setTeam2Players] = useState<Participant[]>(() =>
+  const [team2Players, setTeam2Players] = useState<MatchParticipant[]>(() =>
     getInitialParticipants('team_2')
   );
 
@@ -77,10 +89,19 @@ export const MatchModal: React.FC<MatchModalProps> = ({
 
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
   const [prevMatch, setPrevMatch] = useState(match);
+  const [prevInitialTeam1, setPrevInitialTeam1] = useState(initialTeam1);
+  const [prevInitialTeam2, setPrevInitialTeam2] = useState(initialTeam2);
 
-  if (isOpen !== prevIsOpen || match !== prevMatch) {
+  if (
+    isOpen !== prevIsOpen ||
+    match !== prevMatch ||
+    initialTeam1 !== prevInitialTeam1 ||
+    initialTeam2 !== prevInitialTeam2
+  ) {
     setPrevIsOpen(isOpen);
     setPrevMatch(match);
+    setPrevInitialTeam1(initialTeam1);
+    setPrevInitialTeam2(initialTeam2);
     setDate(getInitialDate());
     setTeam1Score(match && match.team_1_score !== null ? String(match.team_1_score) : '');
     setTeam2Score(match && match.team_2_score !== null ? String(match.team_2_score) : '');
@@ -114,7 +135,7 @@ export const MatchModal: React.FC<MatchModalProps> = ({
     const playerObj = availablePlayers.find((p) => p.id === playerId);
     if (!playerObj) return;
 
-    const participant: Participant = {
+    const participant: MatchParticipant = {
       player_id: playerObj.id,
       name: playerObj.name,
     };
@@ -133,7 +154,7 @@ export const MatchModal: React.FC<MatchModalProps> = ({
     const trimmed = name.trim();
     if (!trimmed) return;
 
-    const participant: Participant = {
+    const participant: MatchParticipant = {
       guest_name: trimmed,
       name: trimmed,
     };

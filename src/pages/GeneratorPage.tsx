@@ -1,21 +1,43 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { GeneratorHeader } from '../components/team/GeneratorHeader';
 import { Card } from '../components/ui/Card';
 import { Alert } from '../components/ui/Alert';
 import { TeamSettings } from '../components/team/TeamSettings';
 import { TeamList } from '../components/team/TeamList';
+import { MatchModal, type MatchParticipant } from '../components/match/MatchModal';
 import { PlayerSelector } from '../components/generator/PlayerSelector';
 import { GuestInput } from '../components/generator/GuestInput';
 import { ActivePool } from '../components/generator/ActivePool';
 import { useTeamGenerator } from '../hooks/useTeamGenerator';
 import { usePlayers } from '../hooks/usePlayers';
+import { useMatches } from '../hooks/useMatches';
+import type { Team } from '../types';
+import type { MatchFormData } from '../types/matches';
+import type { GeneratorPlayer } from '../types/generator';
+
+const mapTeamToParticipants = (team?: Team): MatchParticipant[] => {
+  if (!team) return [];
+  return team.players.map((p) => {
+    const isGuest = (p as Partial<GeneratorPlayer>).source === 'guest';
+    return {
+      player_id: isGuest ? undefined : p.id,
+      guest_name: isGuest ? p.name : undefined,
+      name: p.name,
+    };
+  });
+};
 
 export const GeneratorPage: React.FC = () => {
+  const navigate = useNavigate();
+
   const {
     players: dbPlayers,
     loading: dbLoading,
     error: dbError,
   } = usePlayers();
+
+  const { createMatch, alert: matchAlert, clearAlert: clearMatchAlert } = useMatches();
 
   const {
     activePool,
@@ -37,9 +59,10 @@ export const GeneratorPage: React.FC = () => {
     copyResults,
   } = useTeamGenerator();
 
-  const selectedIds = useMemo(() => new Set(activePool.map((p) => p.id)), [activePool]);
-
+  const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const selectedIds = useMemo(() => new Set(activePool.map((p) => p.id)), [activePool]);
 
   const handleClearPool = useCallback(() => {
     clearPool();
@@ -65,6 +88,34 @@ export const GeneratorPage: React.FC = () => {
     [activePool]
   );
 
+  const initialTeam1 = useMemo(() => {
+    if (teams.length >= 2) {
+      return mapTeamToParticipants(teams[0]);
+    }
+    return undefined;
+  }, [teams]);
+
+  const initialTeam2 = useMemo(() => {
+    if (teams.length >= 2) {
+      return mapTeamToParticipants(teams[1]);
+    }
+    return undefined;
+  }, [teams]);
+
+  const handleSaveMatch = useCallback(
+    async (data: MatchFormData) => {
+      const success = await createMatch(data);
+      if (!success) {
+        throw new Error('Failed to create match');
+      }
+      setIsMatchModalOpen(false);
+      navigate('/matches');
+    },
+    [createMatch, navigate]
+  );
+
+  const activeAlert = alert || matchAlert;
+
   return (
     <div className="w-full max-w-6xl mx-auto px-4 py-6 sm:py-8 flex flex-col items-center">
       <div className="w-full">
@@ -73,10 +124,11 @@ export const GeneratorPage: React.FC = () => {
 
           <div className="p-6 sm:p-8 space-y-6">
             {/* Custom Notification Alert */}
-            {alert && (
+            {activeAlert && (
               <Alert
-                type={alert.type}
-                message={alert.message}
+                type={activeAlert.type}
+                message={activeAlert.message}
+                onDismiss={matchAlert ? clearMatchAlert : undefined}
                 className="mb-4"
               />
             )}
@@ -136,6 +188,17 @@ export const GeneratorPage: React.FC = () => {
         onShuffleTeam={shuffleSingleTeam}
         onCopy={copyResults}
         isCopied={isCopied}
+        onSaveAsMatch={() => setIsMatchModalOpen(true)}
+      />
+
+      {/* Match Modal Integration */}
+      <MatchModal
+        isOpen={isMatchModalOpen}
+        onClose={() => setIsMatchModalOpen(false)}
+        onSave={handleSaveMatch}
+        availablePlayers={dbPlayers}
+        initialTeam1={initialTeam1}
+        initialTeam2={initialTeam2}
       />
     </div>
   );

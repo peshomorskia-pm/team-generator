@@ -37,6 +37,7 @@ export interface TeamListProps {
   onShuffleTeam?: (teamId: string) => void;
   onCopy?: () => void;
   isCopied?: boolean;
+  onSaveAsMatch?: () => void;
 }
 
 export interface TeamCardProps {

@@ -9,7 +9,7 @@ export interface UseMatchesReturn {
   error: string | null;
   alert: AlertNotification | null;
   fetchMatches: () => Promise<void>;
-  createMatch: (data: MatchFormData) => Promise<void>;
+  createMatch: (data: MatchFormData) => Promise<boolean>;
   updateMatch: (id: string, data: MatchFormData) => Promise<void>;
   deleteMatch: (id: string) => Promise<void>;
   clearAlert: () => void;
@@ -79,7 +79,7 @@ export function useMatches(): UseMatchesReturn {
     }
   }, []);
 
-  const createMatch = useCallback(async (data: MatchFormData) => {
+  const createMatch = useCallback(async (data: MatchFormData): Promise<boolean> => {
     setLoading(true);
     setError(null);
     try {
@@ -87,7 +87,7 @@ export function useMatches(): UseMatchesReturn {
         const msg = 'Supabase не е конфигуриран.';
         setError(msg);
         setAlert({ type: 'error', message: msg });
-        return;
+        return false;
       }
 
       const { data: matchData, error: matchError } = await supabase
@@ -148,10 +148,12 @@ export function useMatches(): UseMatchesReturn {
         type: 'success',
         message: 'Мачът е записан успешно.',
       });
+      return true;
     } catch (err: unknown) {
       const msg = getErrorMessage(err, 'Грешка при записване на мач.');
       setError(msg);
       setAlert({ type: 'error', message: msg });
+      return false;
     } finally {
       setLoading(false);
     }
