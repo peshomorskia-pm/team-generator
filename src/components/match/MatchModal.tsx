@@ -338,38 +338,6 @@ export const MatchModal: React.FC<MatchModalProps> = ({
             />
           </div>
 
-          {/* Scores */}
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              id="team-1-score"
-              type="number"
-              min="0"
-              step="1"
-              label="Резултат Отбор 1"
-              placeholder="-"
-              value={team1Score}
-              onChange={(e) => {
-                setTeam1Score(e.target.value);
-                setValidationError(null);
-              }}
-              disabled={isSubmitting}
-            />
-            <Input
-              id="team-2-score"
-              type="number"
-              min="0"
-              step="1"
-              label="Резултат Отбор 2"
-              placeholder="-"
-              value={team2Score}
-              onChange={(e) => {
-                setTeam2Score(e.target.value);
-                setValidationError(null);
-              }}
-              disabled={isSubmitting}
-            />
-          </div>
-
           {/* Teams Rosters Selection */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
             {/* Team 1 Section */}
@@ -510,6 +478,48 @@ export const MatchModal: React.FC<MatchModalProps> = ({
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+
+          {/* Scores Section */}
+          <div className="p-4 rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-700/20 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+              <span className="font-bold text-gray-900 dark:text-white text-sm">
+                Краен резултат
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                (незадължителен за днес и бъдещи мачове)
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                id="team-1-score"
+                type="number"
+                min="0"
+                step="1"
+                label="Резултат Отбор 1"
+                placeholder="-"
+                value={team1Score}
+                onChange={(e) => {
+                  setTeam1Score(e.target.value);
+                  setValidationError(null);
+                }}
+                disabled={isSubmitting}
+              />
+              <Input
+                id="team-2-score"
+                type="number"
+                min="0"
+                step="1"
+                label="Резултат Отбор 2"
+                placeholder="-"
+                value={team2Score}
+                onChange={(e) => {
+                  setTeam2Score(e.target.value);
+                  setValidationError(null);
+                }}
+                disabled={isSubmitting}
+              />
             </div>
           </div>
 
