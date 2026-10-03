@@ -29,7 +29,7 @@ DECLARE
     act2 NUMERIC;
     delta1 NUMERIC;
     delta2 NUMERIC;
-    mp RECORD;
+    p_item RECORD;
     cur_rating NUMERIC;
     new_rating NUMERIC;
 BEGIN
@@ -72,9 +72,9 @@ BEGIN
                 1200.00
             )
         INTO t1_count, t1_avg
-        FROM public.match_players mp
-        LEFT JOIN public.players p ON mp.player_id = p.id
-        WHERE mp.match_id = m.id AND mp.team_side = 'team_1';
+        FROM public.match_players t1_mp
+        LEFT JOIN public.players p ON t1_mp.player_id = p.id
+        WHERE t1_mp.match_id = m.id AND t1_mp.team_side = 'team_1';
 
         -- Calculate team 2 average rating
         SELECT 
@@ -89,9 +89,9 @@ BEGIN
                 1200.00
             )
         INTO t2_count, t2_avg
-        FROM public.match_players mp
-        LEFT JOIN public.players p ON mp.player_id = p.id
-        WHERE mp.match_id = m.id AND mp.team_side = 'team_2';
+        FROM public.match_players t2_mp
+        LEFT JOIN public.players p ON t2_mp.player_id = p.id
+        WHERE t2_mp.match_id = m.id AND t2_mp.team_side = 'team_2';
 
         IF t1_count = 0 THEN t1_avg := 1200.00; END IF;
         IF t2_count = 0 THEN t2_avg := 1200.00; END IF;
@@ -117,20 +117,20 @@ BEGIN
         delta2 := ROUND(32.0 * (act2 - exp2));
 
         -- Update Team 1 players
-        FOR mp IN 
-            SELECT mp.id, mp.player_id
-            FROM public.match_players mp
-            WHERE mp.match_id = m.id AND mp.team_side = 'team_1'
+        FOR p_item IN 
+            SELECT pmp.id, pmp.player_id
+            FROM public.match_players pmp
+            WHERE pmp.match_id = m.id AND pmp.team_side = 'team_1'
         LOOP
-            IF mp.player_id IS NOT NULL THEN
+            IF p_item.player_id IS NOT NULL THEN
                 IF m.match_format = 'doubles' THEN
-                    SELECT doubles_rating INTO cur_rating FROM public.players WHERE id = mp.player_id;
+                    SELECT doubles_rating INTO cur_rating FROM public.players WHERE id = p_item.player_id;
                     cur_rating := COALESCE(cur_rating, 1200.00);
                     new_rating := cur_rating + delta1;
 
                     UPDATE public.match_players
                     SET rating_before = cur_rating, rating_after = new_rating
-                    WHERE id = mp.id;
+                    WHERE id = p_item.id;
 
                     UPDATE public.players
                     SET 
@@ -138,15 +138,15 @@ BEGIN
                         doubles_matches_played = doubles_matches_played + 1,
                         doubles_wins = doubles_wins + (CASE WHEN act1 = 1.0 THEN 1 ELSE 0 END),
                         doubles_losses = doubles_losses + (CASE WHEN act1 = 0.0 THEN 1 ELSE 0 END)
-                    WHERE id = mp.player_id;
+                    WHERE id = p_item.player_id;
                 ELSE
-                    SELECT singles_rating INTO cur_rating FROM public.players WHERE id = mp.player_id;
+                    SELECT singles_rating INTO cur_rating FROM public.players WHERE id = p_item.player_id;
                     cur_rating := COALESCE(cur_rating, 1200.00);
                     new_rating := cur_rating + delta1;
 
                     UPDATE public.match_players
                     SET rating_before = cur_rating, rating_after = new_rating
-                    WHERE id = mp.id;
+                    WHERE id = p_item.id;
 
                     UPDATE public.players
                     SET 
@@ -155,26 +155,26 @@ BEGIN
                         singles_matches_played = singles_matches_played + 1,
                         singles_wins = singles_wins + (CASE WHEN act1 = 1.0 THEN 1 ELSE 0 END),
                         singles_losses = singles_losses + (CASE WHEN act1 = 0.0 THEN 1 ELSE 0 END)
-                    WHERE id = mp.player_id;
+                    WHERE id = p_item.player_id;
                 END IF;
             END IF;
         END LOOP;
 
         -- Update Team 2 players
-        FOR mp IN 
-            SELECT mp.id, mp.player_id
-            FROM public.match_players mp
-            WHERE mp.match_id = m.id AND mp.team_side = 'team_2'
+        FOR p_item IN 
+            SELECT pmp.id, pmp.player_id
+            FROM public.match_players pmp
+            WHERE pmp.match_id = m.id AND pmp.team_side = 'team_2'
         LOOP
-            IF mp.player_id IS NOT NULL THEN
+            IF p_item.player_id IS NOT NULL THEN
                 IF m.match_format = 'doubles' THEN
-                    SELECT doubles_rating INTO cur_rating FROM public.players WHERE id = mp.player_id;
+                    SELECT doubles_rating INTO cur_rating FROM public.players WHERE id = p_item.player_id;
                     cur_rating := COALESCE(cur_rating, 1200.00);
                     new_rating := cur_rating + delta2;
 
                     UPDATE public.match_players
                     SET rating_before = cur_rating, rating_after = new_rating
-                    WHERE id = mp.id;
+                    WHERE id = p_item.id;
 
                     UPDATE public.players
                     SET 
@@ -182,15 +182,15 @@ BEGIN
                         doubles_matches_played = doubles_matches_played + 1,
                         doubles_wins = doubles_wins + (CASE WHEN act2 = 1.0 THEN 1 ELSE 0 END),
                         doubles_losses = doubles_losses + (CASE WHEN act2 = 0.0 THEN 1 ELSE 0 END)
-                    WHERE id = mp.player_id;
+                    WHERE id = p_item.player_id;
                 ELSE
-                    SELECT singles_rating INTO cur_rating FROM public.players WHERE id = mp.player_id;
+                    SELECT singles_rating INTO cur_rating FROM public.players WHERE id = p_item.player_id;
                     cur_rating := COALESCE(cur_rating, 1200.00);
                     new_rating := cur_rating + delta2;
 
                     UPDATE public.match_players
                     SET rating_before = cur_rating, rating_after = new_rating
-                    WHERE id = mp.id;
+                    WHERE id = p_item.id;
 
                     UPDATE public.players
                     SET 
@@ -199,7 +199,7 @@ BEGIN
                         singles_matches_played = singles_matches_played + 1,
                         singles_wins = singles_wins + (CASE WHEN act2 = 1.0 THEN 1 ELSE 0 END),
                         singles_losses = singles_losses + (CASE WHEN act2 = 0.0 THEN 1 ELSE 0 END)
-                    WHERE id = mp.player_id;
+                    WHERE id = p_item.player_id;
                 END IF;
             END IF;
         END LOOP;
