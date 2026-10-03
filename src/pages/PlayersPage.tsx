@@ -43,12 +43,23 @@ export const PlayersPage: React.FC = () => {
     return players.filter((player) => player.name.toLowerCase().includes(query));
   }, [players, searchQuery]);
 
-  const handleSavePlayer = async (name: string, rating: number) => {
+  const handleSavePlayer = async (
+    name: string,
+    rating: number,
+    singlesRating?: number,
+    doublesRating?: number
+  ) => {
     if (editingPlayer) {
-      await updatePlayer(editingPlayer.id, name, rating);
+      await updatePlayer(
+        editingPlayer.id,
+        name,
+        rating,
+        singlesRating,
+        doublesRating
+      );
       setEditingPlayer(undefined);
     } else {
-      await createPlayer(name, rating);
+      await createPlayer(name, rating, singlesRating, doublesRating);
       setIsCreateModalOpen(false);
     }
   };
@@ -200,12 +211,24 @@ export const PlayersPage: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge
-                          variant={getRatingBadgeVariant(player.rating)}
-                          size="md"
-                        >
-                          {player.rating} ELO
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={getRatingBadgeVariant(
+                              player.singles_rating ?? player.rating
+                            )}
+                            size="md"
+                          >
+                            🎾 {player.singles_rating ?? player.rating} ELO
+                          </Badge>
+                          <Badge
+                            variant={getRatingBadgeVariant(
+                              player.doubles_rating ?? player.rating
+                            )}
+                            size="md"
+                          >
+                            👥 {player.doubles_rating ?? player.rating} ELO
+                          </Badge>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -248,12 +271,22 @@ export const PlayersPage: React.FC = () => {
                       <p className="font-semibold text-gray-900 dark:text-white truncate">
                         {player.name}
                       </p>
-                      <div className="mt-1">
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
                         <Badge
-                          variant={getRatingBadgeVariant(player.rating)}
+                          variant={getRatingBadgeVariant(
+                            player.singles_rating ?? player.rating
+                          )}
                           size="sm"
                         >
-                          {player.rating} ELO
+                          🎾 {player.singles_rating ?? player.rating} ELO
+                        </Badge>
+                        <Badge
+                          variant={getRatingBadgeVariant(
+                            player.doubles_rating ?? player.rating
+                          )}
+                          size="sm"
+                        >
+                          👥 {player.doubles_rating ?? player.rating} ELO
                         </Badge>
                       </div>
                     </div>

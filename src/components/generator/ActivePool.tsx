@@ -7,12 +7,14 @@ export interface ActivePoolProps {
   activePool: GeneratorPlayer[];
   onRemovePlayer: (id: string) => void;
   onClearPool?: () => void;
+  format?: 'singles' | 'doubles';
 }
 
 export const ActivePool: React.FC<ActivePoolProps> = ({
   activePool,
   onRemovePlayer,
   onClearPool,
+  format,
 }) => {
   const registeredCount = useMemo(
     () => activePool.filter((p) => p.source === 'registered').length,
@@ -69,6 +71,12 @@ export const ActivePool: React.FC<ActivePoolProps> = ({
         >
           {activePool.map((player) => {
             const isRegistered = player.source === 'registered';
+            const displayRating =
+              format === 'singles'
+                ? (player.singles_rating ?? player.rating)
+                : format === 'doubles'
+                  ? (player.doubles_rating ?? player.rating)
+                  : (player.rating ?? player.singles_rating ?? player.doubles_rating);
 
             return (
               <Badge
@@ -86,10 +94,10 @@ export const ActivePool: React.FC<ActivePoolProps> = ({
                 <span className="max-w-[130px] truncate font-medium">{player.name}</span>
 
                 {isRegistered ? (
-                  player.rating !== undefined && (
+                  displayRating !== undefined && (
                     <span className="ml-1.5 inline-flex items-center text-xs text-amber-600 dark:text-amber-400 font-semibold">
                       <Star className="w-3 h-3 fill-current inline mr-0.5" />
-                      {player.rating}
+                      {displayRating}
                     </span>
                   )
                 ) : (

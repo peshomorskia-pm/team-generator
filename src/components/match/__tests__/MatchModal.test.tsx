@@ -682,6 +682,40 @@ describe('MatchModal Component', () => {
       ).toBeInTheDocument();
       expect(handleSave).not.toHaveBeenCalled();
     });
+
+    it('initializes format toggle to doubles when initialFormat="doubles" is provided', () => {
+      render(
+        <MatchModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSave={vi.fn()}
+          initialFormat="doubles"
+        />
+      );
+
+      const singlesBtn = screen.getByRole('button', { name: /поединично/i });
+      const doublesBtn = screen.getByRole('button', { name: /по двойки/i });
+
+      expect(doublesBtn).toHaveAttribute('aria-pressed', 'true');
+      expect(singlesBtn).toHaveAttribute('aria-pressed', 'false');
+    });
+
+    it('initializes format toggle to singles when initialFormat="singles" is provided', () => {
+      render(
+        <MatchModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSave={vi.fn()}
+          initialFormat="singles"
+        />
+      );
+
+      const singlesBtn = screen.getByRole('button', { name: /поединично/i });
+      const doublesBtn = screen.getByRole('button', { name: /по двойки/i });
+
+      expect(singlesBtn).toHaveAttribute('aria-pressed', 'true');
+      expect(doublesBtn).toHaveAttribute('aria-pressed', 'false');
+    });
   });
 });
 

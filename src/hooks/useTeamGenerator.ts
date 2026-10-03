@@ -16,6 +16,17 @@ export function generateGuestId(): string {
   });
 }
 
+const resolvePlayerRating = (
+  player: GeneratorPlayer,
+  fmt: 'singles' | 'doubles'
+): number | undefined => {
+  if (player.source === 'guest') return undefined;
+  if (fmt === 'singles') {
+    return player.singles_rating ?? player.rating;
+  }
+  return player.doubles_rating ?? player.rating;
+};
+
 export function useTeamGenerator() {
   const [activePool, setActivePool] = useState<GeneratorPlayer[]>([]);
   const [numberOfTeams, setNumberOfTeams] = useState<number | null>(null);
@@ -25,6 +36,7 @@ export function useTeamGenerator() {
   const [alert, setAlert] = useState<AlertNotification | null>(null);
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [balanceByRating, setBalanceByRating] = useState<boolean>(false);
+  const [format, setFormat] = useState<'singles' | 'doubles'>('singles');
   const lastTeamsRef = useRef<Team[] | null>(null);
   const lastFingerprintRef = useRef<string>('');
 
@@ -54,7 +66,17 @@ export function useTeamGenerator() {
   }, []);
 
   const toggleRegisteredPlayer = useCallback(
-    (player: DatabasePlayer | { id: string; name: string; rating?: number }) => {
+    (
+      player:
+        | DatabasePlayer
+        | {
+            id: string;
+            name: string;
+            rating?: number;
+            singles_rating?: number;
+            doubles_rating?: number;
+          }
+    ) => {
       setActivePool((prev) => {
         const exists = prev.some((p) => p.id === player.id);
         if (exists) {
@@ -65,6 +87,8 @@ export function useTeamGenerator() {
           name: player.name,
           source: 'registered',
           rating: player.rating,
+          singles_rating: player.singles_rating,
+          doubles_rating: player.doubles_rating,
         };
         return [...prev, newPlayer];
       });
@@ -134,19 +158,27 @@ export function useTeamGenerator() {
         return;
       }
 
+      const targetNumTeams = hasNumTeams
+        ? effectiveNumTeams
+        : hasPpt
+          ? Math.ceil(activePool.length / pptInt)
+          : null;
+
       const lastTeams = lastTeamsRef.current;
       let generatedTeams: Team[] = [];
       let attempts = 0;
       const maxAttempts = 15;
 
-      const hasRatings = activePool.some((p) => p.rating !== undefined);
+      const hasRatings = activePool.some(
+        (p) => resolvePlayerRating(p, format) !== undefined || p.rating !== undefined
+      );
 
       do {
         generatedTeams = [];
 
-        if (effectiveBalance && hasRatings && hasNumTeams) {
+        if (effectiveBalance && hasRatings && targetNumTeams) {
           const shuffled = fisherYatesShuffle(activePool);
-          generatedTeams = balanceTeams(shuffled, effectiveNumTeams);
+          generatedTeams = balanceTeams(shuffled, targetNumTeams, format);
         } else {
           const shuffled = fisherYatesShuffle(activePool);
 
@@ -162,16 +194,20 @@ export function useTeamGenerator() {
             shuffled.forEach((player, index) => {
               const teamIdx = index % effectiveNumTeams;
               generatedTeams[teamIdx].players.push(player);
-              if (player.rating !== undefined) {
+              const pRating = resolvePlayerRating(player, format);
+              if (pRating !== undefined) {
                 generatedTeams[teamIdx].totalRating =
-                  (generatedTeams[teamIdx].totalRating ?? 0) + player.rating;
+                  (generatedTeams[teamIdx].totalRating ?? 0) + pRating;
               }
             });
           } else if (hasPpt) {
             let teamIndex = 1;
             for (let i = 0; i < shuffled.length; i += pptInt) {
               const chunk = shuffled.slice(i, i + pptInt);
-              const total = chunk.reduce((sum, p) => sum + (p.rating ?? 0), 0);
+              const total = chunk.reduce(
+                (sum, p) => sum + (resolvePlayerRating(p, format) ?? 0),
+                0
+              );
               generatedTeams.push({
                 id: `team-${teamIndex}`,
                 name: `Отбор ${teamIndex}`,
@@ -197,7 +233,7 @@ export function useTeamGenerator() {
       setHistory((prev) => [fingerprint, ...prev]);
       setTeams(generatedTeams);
     },
-    [activePool, numberOfTeams, playersPerTeam, balanceByRating, showAlert]
+    [activePool, numberOfTeams, playersPerTeam, balanceByRating, showAlert, format]
   );
 
   const shuffleSingleTeam = useCallback((teamId: string) => {
@@ -267,6 +303,8 @@ export function useTeamGenerator() {
     isCopied,
     balanceByRating,
     setBalanceByRating,
+    format,
+    setFormat,
     addGuest,
     toggleRegisteredPlayer,
     removePlayer,

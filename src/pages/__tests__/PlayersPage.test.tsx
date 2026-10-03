@@ -97,7 +97,22 @@ describe('PlayersPage', () => {
       expect(screen.getByText('1 играч')).toBeInTheDocument();
     });
 
-    it('renders both desktop table and mobile cards', () => {
+    it('renders both desktop table and mobile cards with dual ELO badges', () => {
+      const dualPlayer: PlayerRow = {
+        id: 'p-dual',
+        name: 'Григор Димитров',
+        rating: 1800,
+        singles_rating: 1950,
+        doubles_rating: 1650,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      };
+
+      vi.mocked(usePlayersHook.usePlayers).mockReturnValue({
+        ...defaultMockReturn,
+        players: [dualPlayer],
+      });
+
       render(<PlayersPage />);
 
       // Table presence
@@ -107,11 +122,14 @@ describe('PlayersPage', () => {
       expect(screen.getByRole('columnheader', { name: 'Действия' })).toBeInTheDocument();
 
       // Check player rows (each player appears in table and mobile card)
-      const player1Elements = screen.getAllByText('Христо Стоичков');
-      expect(player1Elements.length).toBeGreaterThanOrEqual(2);
+      const playerElements = screen.getAllByText('Григор Димитров');
+      expect(playerElements.length).toBeGreaterThanOrEqual(2);
 
-      const player2Elements = screen.getAllByText('Димитър Бербатов');
-      expect(player2Elements.length).toBeGreaterThanOrEqual(2);
+      // Verify dual badges (🎾 and 👥) on both desktop and mobile
+      const singlesBadges = screen.getAllByText('🎾 1950 ELO');
+      const doublesBadges = screen.getAllByText('👥 1650 ELO');
+      expect(singlesBadges.length).toBeGreaterThanOrEqual(2);
+      expect(doublesBadges.length).toBeGreaterThanOrEqual(2);
     });
 
     it('renders loading state when loading is true and players array is empty', () => {
@@ -210,13 +228,23 @@ describe('PlayersPage', () => {
       expect(screen.getByRole('heading', { name: 'Нов играч' })).toBeInTheDocument();
 
       const nameInput = screen.getByLabelText(/име на играча/i);
+      const ratingInput = screen.getByLabelText(/общ рейтинг/i);
+      const singlesInput = screen.getByLabelText(/рейтинг поединично/i);
+      const doublesInput = screen.getByLabelText(/рейтинг по двойки/i);
+
       await user.type(nameInput, 'Стилиян Петров');
+      await user.clear(ratingInput);
+      await user.type(ratingInput, '1400');
+      await user.clear(singlesInput);
+      await user.type(singlesInput, '1450');
+      await user.clear(doublesInput);
+      await user.type(doublesInput, '1350');
 
       const submitBtn = screen.getByRole('button', { name: /създай/i });
       await user.click(submitBtn);
 
       await waitFor(() => {
-        expect(createPlayerMock).toHaveBeenCalledWith('Стилиян Петров', 1200);
+        expect(createPlayerMock).toHaveBeenCalledWith('Стилиян Петров', 1400, 1450, 1350);
       });
     });
 
@@ -235,15 +263,28 @@ describe('PlayersPage', () => {
       await user.click(editButtons[0]);
 
       expect(screen.getByRole('heading', { name: 'Редактиране на играч' })).toBeInTheDocument();
-      const ratingInput = screen.getByLabelText(/рейтинг/i);
+      const ratingInput = screen.getByLabelText(/общ рейтинг/i);
+      const singlesInput = screen.getByLabelText(/рейтинг поединично/i);
+      const doublesInput = screen.getByLabelText(/рейтинг по двойки/i);
+
       await user.clear(ratingInput);
       await user.type(ratingInput, '2050');
+      await user.clear(singlesInput);
+      await user.type(singlesInput, '2100');
+      await user.clear(doublesInput);
+      await user.type(doublesInput, '2000');
 
       const saveBtn = screen.getByRole('button', { name: /запази/i });
       await user.click(saveBtn);
 
       await waitFor(() => {
-        expect(updatePlayerMock).toHaveBeenCalledWith('p-1', 'Христо Стоичков', 2050);
+        expect(updatePlayerMock).toHaveBeenCalledWith(
+          'p-1',
+          'Христо Стоичков',
+          2050,
+          2100,
+          2000
+        );
       });
     });
 

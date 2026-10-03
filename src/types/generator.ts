@@ -5,10 +5,14 @@ export interface GeneratorPlayer {
   name: string;
   source: PlayerSource;
   rating?: number; // DB ELO for registered, undefined for guests
+  singles_rating?: number;
+  doubles_rating?: number;
 }
 
 export interface DatabasePlayer {
   id: string;
   name: string;
   rating: number;
+  singles_rating?: number;
+  doubles_rating?: number;
 }

@@ -79,4 +79,40 @@ describe('ActivePool Component', () => {
 
     expect(onClear).toHaveBeenCalledTimes(1);
   });
+
+  it('renders rating badge corresponding to the active format context', () => {
+    const dualPool: GeneratorPlayer[] = [
+      {
+        id: 'reg-dual',
+        name: 'Димитър',
+        source: 'registered',
+        rating: 1500,
+        singles_rating: 1750,
+        doubles_rating: 1350,
+      },
+    ];
+
+    const { rerender } = render(
+      <ActivePool
+        activePool={dualPool}
+        onRemovePlayer={vi.fn()}
+        format="singles"
+      />
+    );
+
+    const badge = screen.getByTestId('player-badge-reg-dual');
+    expect(badge).toHaveTextContent('1750');
+    expect(badge).not.toHaveTextContent('1350');
+
+    rerender(
+      <ActivePool
+        activePool={dualPool}
+        onRemovePlayer={vi.fn()}
+        format="doubles"
+      />
+    );
+
+    expect(badge).toHaveTextContent('1350');
+    expect(badge).not.toHaveTextContent('1750');
+  });
 });
