@@ -220,6 +220,8 @@ describe('usePlayers hook', () => {
       expect(insertMock).toHaveBeenCalledWith({
         name: 'Мартин Петров',
         rating: 1600,
+        singles_rating: 1600,
+        doubles_rating: 1600,
       });
       expect(result.current.players).toHaveLength(2);
       expect(result.current.players[0].name).toBe('Димитър Бербатов'); // 1800 > 1600
@@ -238,6 +240,8 @@ describe('usePlayers hook', () => {
         id: 'new-2',
         name: 'Новак',
         rating: 1200,
+        singles_rating: 1200,
+        doubles_rating: 1200,
         created_at: '2026-01-02T00:00:00Z',
         updated_at: '2026-01-02T00:00:00Z',
       };
@@ -261,6 +265,46 @@ describe('usePlayers hook', () => {
       expect(insertMock).toHaveBeenCalledWith({
         name: 'Новак',
         rating: 1200,
+        singles_rating: 1200,
+        doubles_rating: 1200,
+      });
+    });
+
+    it('creates player with explicit singles and doubles ratings in payload', async () => {
+      const orderMock = vi.fn().mockResolvedValue({ data: [], error: null });
+      const fetchSelect = vi.fn().mockReturnValue({ order: orderMock });
+
+      const newPlayer: PlayerRow = {
+        id: 'new-3',
+        name: 'Григор Димитров',
+        rating: 1900,
+        singles_rating: 2100,
+        doubles_rating: 1800,
+        created_at: '2026-01-02T00:00:00Z',
+        updated_at: '2026-01-02T00:00:00Z',
+      };
+
+      const singleMock = vi.fn().mockResolvedValue({ data: newPlayer, error: null });
+      const insertSelect = vi.fn().mockReturnValue({ single: singleMock });
+      const insertMock = vi.fn().mockReturnValue({ select: insertSelect });
+
+      mockFrom.mockReturnValue({
+        select: fetchSelect,
+        insert: insertMock,
+      });
+
+      const { result } = renderHook(() => usePlayers());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await act(async () => {
+        await result.current.createPlayer('Григор Димитров', 1900, 2100, 1800);
+      });
+
+      expect(insertMock).toHaveBeenCalledWith({
+        name: 'Григор Димитров',
+        rating: 1900,
+        singles_rating: 2100,
+        doubles_rating: 1800,
       });
     });
 
@@ -350,6 +394,8 @@ describe('usePlayers hook', () => {
       expect(updateMock).toHaveBeenCalledWith({
         name: 'Красимир Балъков',
         rating: 2000,
+        singles_rating: 2000,
+        doubles_rating: 2000,
       });
       expect(eqMock).toHaveBeenCalledWith('id', '3');
       expect(result.current.players[0].name).toBe('Красимир Балъков'); // 2000 is now highest
@@ -357,6 +403,44 @@ describe('usePlayers hook', () => {
         type: 'success',
         message: 'Играчът "Красимир Балъков" е обновен успешно.',
       });
+    });
+
+    it('updates player with explicit singles and doubles ratings in payload', async () => {
+      const orderMock = vi.fn().mockResolvedValue({ data: samplePlayers, error: null });
+      const fetchSelect = vi.fn().mockReturnValue({ order: orderMock });
+
+      const updatedRow: PlayerRow = {
+        ...samplePlayers[2],
+        name: 'Красимир Балъков',
+        rating: 2000,
+        singles_rating: 1950,
+        doubles_rating: 2050,
+      };
+
+      const singleMock = vi.fn().mockResolvedValue({ data: updatedRow, error: null });
+      const updateSelect = vi.fn().mockReturnValue({ single: singleMock });
+      const eqMock = vi.fn().mockReturnValue({ select: updateSelect });
+      const updateMock = vi.fn().mockReturnValue({ eq: eqMock });
+
+      mockFrom.mockReturnValue({
+        select: fetchSelect,
+        update: updateMock,
+      });
+
+      const { result } = renderHook(() => usePlayers());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await act(async () => {
+        await result.current.updatePlayer('3', 'Красимир Балъков', 2000, 1950, 2050);
+      });
+
+      expect(updateMock).toHaveBeenCalledWith({
+        name: 'Красимир Балъков',
+        rating: 2000,
+        singles_rating: 1950,
+        doubles_rating: 2050,
+      });
+      expect(eqMock).toHaveBeenCalledWith('id', '3');
     });
 
     it('handles update failure and updates error and alert states gracefully', async () => {

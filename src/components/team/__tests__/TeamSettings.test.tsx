@@ -126,4 +126,48 @@ describe('TeamSettings', () => {
 
     expect(handleGenerate).toHaveBeenCalledTimes(1);
   });
+
+  describe('format selector', () => {
+    it('renders format selector pills with "singles" active by default and handles toggling', async () => {
+      const user = userEvent.setup();
+      const handleFormatChange = vi.fn();
+
+      const { rerender } = render(
+        <TeamSettings
+          numberOfTeams={2}
+          onSettingsChange={vi.fn()}
+          onGenerate={vi.fn()}
+          format="singles"
+          onFormatChange={handleFormatChange}
+        />
+      );
+
+      const singlesBtn = screen.getByRole('button', { name: 'Поединично' });
+      const doublesBtn = screen.getByRole('button', { name: 'По двойки' });
+
+      expect(singlesBtn).toBeInTheDocument();
+      expect(doublesBtn).toBeInTheDocument();
+      expect(singlesBtn).toHaveAttribute('aria-pressed', 'true');
+      expect(doublesBtn).toHaveAttribute('aria-pressed', 'false');
+
+      await user.click(doublesBtn);
+      expect(handleFormatChange).toHaveBeenCalledWith('doubles');
+
+      rerender(
+        <TeamSettings
+          numberOfTeams={2}
+          onSettingsChange={vi.fn()}
+          onGenerate={vi.fn()}
+          format="doubles"
+          onFormatChange={handleFormatChange}
+        />
+      );
+
+      expect(singlesBtn).toHaveAttribute('aria-pressed', 'false');
+      expect(doublesBtn).toHaveAttribute('aria-pressed', 'true');
+
+      await user.click(singlesBtn);
+      expect(handleFormatChange).toHaveBeenCalledWith('singles');
+    });
+  });
 });

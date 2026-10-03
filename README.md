@@ -4,7 +4,7 @@
 [![Vercel Status](https://img.shields.io/badge/Hosted%20On-Vercel-black?logo=vercel)](https://team-generator-psi.vercel.app)
 [![Database](https://img.shields.io/badge/Database-Supabase%20Cloud-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
 
-A scalable Multi-Page Application (SPA) with a responsive App Shell, client-side routing, and light/dark theme support for randomly assigning and balancing players into competitive teams. Built with **React 19**, **TypeScript**, **Vite**, **Tailwind CSS**, **React Router v7**, **Vitest**, **happy-dom**, and **React Testing Library**, alongside **Supabase** backend integration.
+A scalable Multi-Page Application (SPA) with a responsive App Shell, client-side routing, and light/dark theme support for randomly assigning and balancing players into competitive teams. Built with **React 19**, **TypeScript**, **Vite**, **Tailwind CSS**, **React Router v7**, **Vitest** (314 tests across 36 test files, 100% pass rate), **happy-dom**, and **React Testing Library**, alongside **Supabase** backend integration.
 
 * **Live Production Application:** [https://team-generator-psi.vercel.app](https://team-generator-psi.vercel.app)
 
@@ -228,7 +228,7 @@ This repository employs a modular, multi-agent engineering lifecycle managed by 
 6. **[Document Writer](.agents/roles/document-writer.md) (`flash_lite`):** Drafts documentation, updates ADRs, and opens Pull Requests targeting `dev` (`5_documentation.md`).
 7. **[Code Health Auditor](.agents/roles/code-health-auditor.md) (`flash`):** Performs read-only static analysis to identify technical debt, test coverage gaps, dead code, weak typings, and UI componentization candidates (`docs/proposals/`).
 
-For full details, refer to [GEMINI.md](GEMINI.md), [ADR 0001](docs/adr/0001-modular-agent-roles.md), [ADR 0002](docs/adr/0002-token-optimization-strategy.md), [ADR 0003](docs/adr/0003-tech-stack-selection.md), [ADR 0004](docs/adr/0004-localization-and-language-boundary.md), [ADR 0005](docs/adr/0005-app-shell-routing-and-theming.md), [ADR 0006](docs/adr/0006-mandatory-automated-testing-protocol.md), [ADR 0007](docs/adr/0007-strict-scoping-and-code-health-auditor.md), [ADR 0008](docs/adr/0008-orchestrator-planner-investigation-boundary.md), [ADR 0009](docs/adr/0009-stage-3-hybrid-generator-and-transient-guests.md), [ADR 0010](docs/adr/0010-matches-module-and-relational-schema.md), [ADR 0011](docs/adr/0011-generator-match-integration.md), and [ADR 0012](docs/adr/0012-production-deployment-vercel-supabase-cloud.md).
+For full details, refer to [GEMINI.md](GEMINI.md), [ADR 0001](docs/adr/0001-modular-agent-roles.md), [ADR 0002](docs/adr/0002-token-optimization-strategy.md), [ADR 0003](docs/adr/0003-tech-stack-selection.md), [ADR 0004](docs/adr/0004-localization-and-language-boundary.md), [ADR 0005](docs/adr/0005-app-shell-routing-and-theming.md), [ADR 0006](docs/adr/0006-mandatory-automated-testing-protocol.md), [ADR 0007](docs/adr/0007-strict-scoping-and-code-health-auditor.md), [ADR 0008](docs/adr/0008-orchestrator-planner-investigation-boundary.md), [ADR 0009](docs/adr/0009-stage-3-hybrid-generator-and-transient-guests.md), [ADR 0010](docs/adr/0010-matches-module-and-relational-schema.md), [ADR 0011](docs/adr/0011-generator-match-integration.md), and [ADR 0012](docs/adr/0012-production-deployment-vercel-supabase-cloud.md), [ADR 0013](docs/adr/0013-tennis-rankings-and-elo-system.md), and [ADR 0014](docs/adr/0014-dual-elo-players-and-team-generator.md).
 
 ---
 

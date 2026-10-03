@@ -381,4 +381,81 @@ describe('GeneratorPage Integration Tests', () => {
     // Modal stays open
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
+
+  it('handles format toggle interaction and passes active format into MatchModal', async () => {
+    const user = userEvent.setup();
+    mockCreateMatch.mockResolvedValue(true);
+
+    renderComponent();
+
+    // Select format "По двойки"
+    const doublesFormatBtn = screen.getByRole('button', { name: 'По двойки' });
+    const singlesFormatBtn = screen.getByRole('button', { name: 'Поединично' });
+
+    expect(singlesFormatBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(doublesFormatBtn).toHaveAttribute('aria-pressed', 'false');
+
+    await user.click(doublesFormatBtn);
+    expect(doublesFormatBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(singlesFormatBtn).toHaveAttribute('aria-pressed', 'false');
+
+    // Add players and generate teams
+    await user.click(screen.getByRole('checkbox', { name: 'Иван Иванов' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Георги Димитров' }));
+
+    const numTeamsInput = screen.getByLabelText(/брой отбори/i);
+    await user.clear(numTeamsInput);
+    await user.type(numTeamsInput, '2');
+
+    await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+
+    // Click "Запиши като мач"
+    await user.click(screen.getByRole('button', { name: /запиши като мач/i }));
+
+    const modalDialog = screen.getByRole('dialog');
+    expect(modalDialog).toBeInTheDocument();
+
+    // Verify MatchModal initialized with doubles format
+    const modalDoublesBtn = within(modalDialog).getByRole('button', { name: 'По двойки' });
+    expect(modalDoublesBtn).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('updates PlayerSelector badges when format toggles and respects format-aware ratings', async () => {
+    vi.spyOn(usePlayersModule, 'usePlayers').mockReturnValue({
+      players: [
+        {
+          id: 'db-format-1',
+          name: 'Красимир',
+          rating: 1200,
+          singles_rating: 1750,
+          doubles_rating: 1450,
+          created_at: '2026-01-01',
+          updated_at: '2026-01-01',
+        },
+      ],
+      loading: false,
+      error: null,
+      alert: null,
+      fetchPlayers: mockFetchPlayers,
+      createPlayer: mockCreatePlayer,
+      updatePlayer: mockUpdatePlayer,
+      deletePlayer: mockDeletePlayer,
+      clearAlert: vi.fn(),
+    });
+
+    const user = userEvent.setup();
+    renderComponent();
+
+    // Default singles format: displays 1750
+    expect(screen.getByText('1750')).toBeInTheDocument();
+    expect(screen.queryByText('1450')).not.toBeInTheDocument();
+
+    // Toggle format to doubles: displays 1450
+    const doublesFormatBtn = screen.getByRole('button', { name: 'По двойки' });
+    await user.click(doublesFormatBtn);
+
+    expect(screen.getByText('1450')).toBeInTheDocument();
+    expect(screen.queryByText('1750')).not.toBeInTheDocument();
+  });
 });
+

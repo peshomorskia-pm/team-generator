@@ -20,6 +20,7 @@ export interface MatchModalProps {
   availablePlayers?: PlayerRow[];
   initialTeam1?: MatchParticipant[];
   initialTeam2?: MatchParticipant[];
+  initialFormat?: MatchFormat;
 }
 
 const getTodayFormatted = () => {
@@ -38,6 +39,7 @@ export const MatchModal: React.FC<MatchModalProps> = ({
   availablePlayers = [],
   initialTeam1,
   initialTeam2,
+  initialFormat,
 }) => {
   const isEditMode = Boolean(match);
 
@@ -68,6 +70,9 @@ export const MatchModal: React.FC<MatchModalProps> = ({
   };
 
   const getInitialFormat = (): MatchFormat => {
+    if (initialFormat) {
+      return initialFormat;
+    }
     const t1 = initialTeam1?.length ?? (match ? match.match_players.filter((p) => p.team_side === 'team_1').length : 0);
     const t2 = initialTeam2?.length ?? (match ? match.match_players.filter((p) => p.team_side === 'team_2').length : 0);
     if (t1 > 1 || t2 > 1) {
@@ -104,17 +109,20 @@ export const MatchModal: React.FC<MatchModalProps> = ({
   const [prevMatch, setPrevMatch] = useState(match);
   const [prevInitialTeam1, setPrevInitialTeam1] = useState(initialTeam1);
   const [prevInitialTeam2, setPrevInitialTeam2] = useState(initialTeam2);
+  const [prevInitialFormat, setPrevInitialFormat] = useState(initialFormat);
 
   if (
     isOpen !== prevIsOpen ||
     match !== prevMatch ||
     initialTeam1 !== prevInitialTeam1 ||
-    initialTeam2 !== prevInitialTeam2
+    initialTeam2 !== prevInitialTeam2 ||
+    initialFormat !== prevInitialFormat
   ) {
     setPrevIsOpen(isOpen);
     setPrevMatch(match);
     setPrevInitialTeam1(initialTeam1);
     setPrevInitialTeam2(initialTeam2);
+    setPrevInitialFormat(initialFormat);
     setFormat(getInitialFormat());
     setDate(getInitialDate());
     setTeam1Score(match && match.team_1_score !== null ? String(match.team_1_score) : '');
