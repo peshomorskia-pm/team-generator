@@ -260,9 +260,12 @@ describe('useMatches hook', () => {
         team_2_players: [{ guest_name: 'Стоян' }],
       };
 
+      let resultSuccess: boolean | undefined;
       await act(async () => {
-        await result.current.createMatch(newMatchData);
+        resultSuccess = await result.current.createMatch(newMatchData);
       });
+
+      expect(resultSuccess).toBe(true);
 
       expect(matchInsertMock).toHaveBeenCalledWith({
         team_1_score: 4,
@@ -370,8 +373,9 @@ describe('useMatches hook', () => {
       const { result } = renderHook(() => useMatches());
       await waitFor(() => expect(result.current.loading).toBe(false));
 
+      let resultSuccess: boolean | undefined;
       await act(async () => {
-        await result.current.createMatch({
+        resultSuccess = await result.current.createMatch({
           team_1_score: 2,
           team_2_score: 0,
           played_at: '2026-10-03T10:00:00Z',
@@ -380,6 +384,7 @@ describe('useMatches hook', () => {
         });
       });
 
+      expect(resultSuccess).toBe(false);
       expect(result.current.error).toBe('Insert score failed');
       expect(result.current.alert).toEqual({
         type: 'error',

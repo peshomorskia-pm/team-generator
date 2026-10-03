@@ -5,6 +5,30 @@ import { GeneratorPage } from '../GeneratorPage';
 import { ThemeProvider } from '../../context/ThemeContext';
 import * as usePlayersModule from '../../hooks/usePlayers';
 
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
+const mockCreateMatch = vi.fn();
+vi.mock('../../hooks/useMatches', () => ({
+  useMatches: () => ({
+    matches: [],
+    loading: false,
+    error: null,
+    alert: null,
+    createMatch: mockCreateMatch,
+    updateMatch: vi.fn(),
+    deleteMatch: vi.fn(),
+    clearAlert: vi.fn(),
+    fetchMatches: vi.fn(),
+  }),
+}));
+
 describe('GeneratorPage Integration Tests', () => {
   const mockCreatePlayer = vi.fn();
   const mockUpdatePlayer = vi.fn();
@@ -31,6 +55,8 @@ describe('GeneratorPage Integration Tests', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.restoreAllMocks();
+    mockNavigate.mockReset();
+    mockCreateMatch.mockReset();
 
     vi.spyOn(usePlayersModule, 'usePlayers').mockReturnValue({
       players: dummyDbPlayers,
@@ -227,5 +253,132 @@ describe('GeneratorPage Integration Tests', () => {
 
     // Verify search filter is also cleared
     expect(searchInput.value).toBe('');
+  });
+
+  it('Scenario 1 (Integration): generates 2 teams -> opens MatchModal prefilled -> cancels modal without affecting generator teams', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    // Select 1 registered player
+    await user.click(screen.getByRole('checkbox', { name: 'Иван Иванов' }));
+
+    // Add 1 guest player
+    const guestInput = screen.getByPlaceholderText('напр. Иван, Петър, Георги');
+    await user.type(guestInput, 'Гост Стоян');
+    await user.click(screen.getByRole('button', { name: /добави/i }));
+
+    // Set number of teams = 2
+    const numTeamsInput = screen.getByLabelText(/брой отбори/i);
+    await user.clear(numTeamsInput);
+    await user.type(numTeamsInput, '2');
+
+    // Generate teams
+    await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+
+    // Assert results are rendered
+    expect(screen.getByRole('heading', { level: 2, name: 'Резултати' })).toBeInTheDocument();
+    expect(screen.getByText('Отбор 1')).toBeInTheDocument();
+    expect(screen.getByText('Отбор 2')).toBeInTheDocument();
+
+    // Assert 'Запиши като мач' button is rendered
+    const saveAsMatchBtn = screen.getByRole('button', { name: /запиши като мач/i });
+    expect(saveAsMatchBtn).toBeInTheDocument();
+
+    // Click 'Запиши като мач'
+    await user.click(saveAsMatchBtn);
+
+    // Assert MatchModal appears
+    const modalDialog = screen.getByRole('dialog');
+    expect(modalDialog).toBeInTheDocument();
+    expect(within(modalDialog).getByRole('heading', { name: 'Нов мач' })).toBeInTheDocument();
+
+    // Assert players are mapped into the modal rosters
+    expect(within(modalDialog).getByText('Иван Иванов')).toBeInTheDocument();
+    expect(within(modalDialog).getByText('Гост Стоян')).toBeInTheDocument();
+    expect(within(modalDialog).getByText('(гост)')).toBeInTheDocument();
+
+    // Cancel modal
+    const cancelBtn = within(modalDialog).getByRole('button', { name: 'Отказ' });
+    await user.click(cancelBtn);
+
+    // Assert modal closes
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    // Assert generator state and teams remain intact
+    expect(screen.getByRole('heading', { level: 2, name: 'Резултати' })).toBeInTheDocument();
+    expect(screen.getByText('Отбор 1')).toBeInTheDocument();
+    expect(screen.getByText('Отбор 2')).toBeInTheDocument();
+  });
+
+  it('Scenario 2 (Submission & Navigation): generates 2 teams -> submits MatchModal -> navigates to /matches', async () => {
+    const user = userEvent.setup();
+    mockCreateMatch.mockResolvedValue(true);
+
+    renderComponent();
+
+    // Select 2 registered players
+    await user.click(screen.getByRole('checkbox', { name: 'Иван Иванов' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Георги Димитров' }));
+
+    // Set number of teams = 2
+    const numTeamsInput = screen.getByLabelText(/брой отбори/i);
+    await user.clear(numTeamsInput);
+    await user.type(numTeamsInput, '2');
+
+    // Generate teams
+    await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+
+    // Open MatchModal
+    await user.click(screen.getByRole('button', { name: /запиши като мач/i }));
+
+    const modalDialog = screen.getByRole('dialog');
+    expect(modalDialog).toBeInTheDocument();
+
+    // Submit modal (Create button)
+    const submitBtn = within(modalDialog).getByRole('button', { name: /създай/i });
+    await user.click(submitBtn);
+
+    // Verify createMatch was invoked with mapped team players
+    expect(mockCreateMatch).toHaveBeenCalledTimes(1);
+    expect(mockCreateMatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        team_1_score: null,
+        team_2_score: null,
+      })
+    );
+
+    // Verify navigation to /matches was triggered
+    expect(mockNavigate).toHaveBeenCalledWith('/matches');
+
+    // Verify modal is closed
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('leaves modal open when createMatch fails', async () => {
+    const user = userEvent.setup();
+    mockCreateMatch.mockResolvedValue(false);
+
+    renderComponent();
+
+    await user.click(screen.getByRole('checkbox', { name: 'Иван Иванов' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Георги Димитров' }));
+
+    const numTeamsInput = screen.getByLabelText(/брой отбори/i);
+    await user.clear(numTeamsInput);
+    await user.type(numTeamsInput, '2');
+
+    await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+    await user.click(screen.getByRole('button', { name: /запиши като мач/i }));
+
+    const modalDialog = screen.getByRole('dialog');
+    expect(modalDialog).toBeInTheDocument();
+
+    const submitBtn = within(modalDialog).getByRole('button', { name: /създай/i });
+    await user.click(submitBtn);
+
+    expect(mockCreateMatch).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).not.toHaveBeenCalled();
+    // Modal stays open
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 });
