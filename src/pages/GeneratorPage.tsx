@@ -86,8 +86,12 @@ export const GeneratorPage: React.FC = () => {
   );
 
   const hasRatings = useMemo(
-    () => activePool.some((p) => p.rating !== undefined),
-    [activePool]
+    () =>
+      activePool.some(
+        (p) =>
+          ((format === 'doubles' ? p.doubles_rating : p.singles_rating) ?? p.rating) !== undefined
+      ),
+    [activePool, format]
   );
 
   const initialTeam1 = useMemo(() => {
@@ -148,6 +152,7 @@ export const GeneratorPage: React.FC = () => {
                     error={dbError}
                     searchTerm={searchQuery}
                     onSearchChange={setSearchQuery}
+                    format={format}
                   />
 
                   <div className="border-t border-gray-200 dark:border-slate-700 pt-5">

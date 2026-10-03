@@ -158,6 +158,12 @@ export function useTeamGenerator() {
         return;
       }
 
+      const targetNumTeams = hasNumTeams
+        ? effectiveNumTeams
+        : hasPpt
+          ? Math.ceil(activePool.length / pptInt)
+          : null;
+
       const lastTeams = lastTeamsRef.current;
       let generatedTeams: Team[] = [];
       let attempts = 0;
@@ -170,9 +176,9 @@ export function useTeamGenerator() {
       do {
         generatedTeams = [];
 
-        if (effectiveBalance && hasRatings && hasNumTeams) {
+        if (effectiveBalance && hasRatings && targetNumTeams) {
           const shuffled = fisherYatesShuffle(activePool);
-          generatedTeams = balanceTeams(shuffled, effectiveNumTeams, format);
+          generatedTeams = balanceTeams(shuffled, targetNumTeams, format);
         } else {
           const shuffled = fisherYatesShuffle(activePool);
 

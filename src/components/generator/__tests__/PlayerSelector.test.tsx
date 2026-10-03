@@ -167,4 +167,53 @@ describe('PlayerSelector Component', () => {
     await user.type(searchInput, 'а');
     expect(onSearchChange).toHaveBeenCalled();
   });
+
+  it('displays format-specific ratings based on format prop with fallback to rating', () => {
+    const playersWithDualRatings: PlayerRow[] = [
+      {
+        id: 'p-1',
+        name: 'Димитър',
+        rating: 1200,
+        singles_rating: 1600,
+        doubles_rating: 1400,
+        created_at: '2026-01-01',
+        updated_at: '2026-01-01',
+      },
+      {
+        id: 'p-2',
+        name: 'Елена',
+        rating: 1350,
+        created_at: '2026-01-01',
+        updated_at: '2026-01-01',
+      },
+    ];
+
+    const { rerender } = render(
+      <PlayerSelector
+        players={playersWithDualRatings}
+        selectedIds={new Set()}
+        onTogglePlayer={vi.fn()}
+        format="singles"
+      />
+    );
+
+    // Singles: Димитър has 1600, Елена falls back to 1350
+    expect(screen.getByText('1600')).toBeInTheDocument();
+    expect(screen.getByText('1350')).toBeInTheDocument();
+
+    // Rerender with doubles format
+    rerender(
+      <PlayerSelector
+        players={playersWithDualRatings}
+        selectedIds={new Set()}
+        onTogglePlayer={vi.fn()}
+        format="doubles"
+      />
+    );
+
+    // Doubles: Димитър has 1400, Елена falls back to 1350
+    expect(screen.getByText('1400')).toBeInTheDocument();
+    expect(screen.getByText('1350')).toBeInTheDocument();
+  });
 });
+

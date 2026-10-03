@@ -419,4 +419,43 @@ describe('GeneratorPage Integration Tests', () => {
     const modalDoublesBtn = within(modalDialog).getByRole('button', { name: 'По двойки' });
     expect(modalDoublesBtn).toHaveAttribute('aria-pressed', 'true');
   });
+
+  it('updates PlayerSelector badges when format toggles and respects format-aware ratings', async () => {
+    vi.spyOn(usePlayersModule, 'usePlayers').mockReturnValue({
+      players: [
+        {
+          id: 'db-format-1',
+          name: 'Красимир',
+          rating: 1200,
+          singles_rating: 1750,
+          doubles_rating: 1450,
+          created_at: '2026-01-01',
+          updated_at: '2026-01-01',
+        },
+      ],
+      loading: false,
+      error: null,
+      alert: null,
+      fetchPlayers: mockFetchPlayers,
+      createPlayer: mockCreatePlayer,
+      updatePlayer: mockUpdatePlayer,
+      deletePlayer: mockDeletePlayer,
+      clearAlert: vi.fn(),
+    });
+
+    const user = userEvent.setup();
+    renderComponent();
+
+    // Default singles format: displays 1750
+    expect(screen.getByText('1750')).toBeInTheDocument();
+    expect(screen.queryByText('1450')).not.toBeInTheDocument();
+
+    // Toggle format to doubles: displays 1450
+    const doublesFormatBtn = screen.getByRole('button', { name: 'По двойки' });
+    await user.click(doublesFormatBtn);
+
+    expect(screen.getByText('1450')).toBeInTheDocument();
+    expect(screen.queryByText('1750')).not.toBeInTheDocument();
+  });
 });
+

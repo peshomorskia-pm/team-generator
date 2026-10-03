@@ -467,5 +467,75 @@ describe('useTeamGenerator', () => {
       const doublesRatings = result.current.teams.map((t) => t.totalRating);
       expect(doublesRatings.sort()).toEqual([1300, 1700]);
     });
+
+    it('balances teams evenly by rating when playersPerTeam is specified', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.toggleRegisteredPlayer({ id: 'p1', name: 'P1', rating: 1800 });
+        result.current.toggleRegisteredPlayer({ id: 'p2', name: 'P2', rating: 1600 });
+        result.current.toggleRegisteredPlayer({ id: 'p3', name: 'P3', rating: 1400 });
+        result.current.toggleRegisteredPlayer({ id: 'p4', name: 'P4', rating: 1200 });
+        result.current.setPlayersPerTeam(2);
+        result.current.setBalanceByRating(true);
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(2);
+      expect(result.current.teams[0].players).toHaveLength(2);
+      expect(result.current.teams[1].players).toHaveLength(2);
+      // Perfect balance: 1800+1200=3000 and 1600+1400=3000
+      expect(result.current.teams[0].totalRating).toBe(3000);
+      expect(result.current.teams[1].totalRating).toBe(3000);
+    });
+
+    it('balances teams by format-specific rating when playersPerTeam is set and format is doubles', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.setFormat('doubles');
+        result.current.toggleRegisteredPlayer({
+          id: 'p1',
+          name: 'P1',
+          rating: 1000,
+          doubles_rating: 1800,
+        });
+        result.current.toggleRegisteredPlayer({
+          id: 'p2',
+          name: 'P2',
+          rating: 1000,
+          doubles_rating: 1600,
+        });
+        result.current.toggleRegisteredPlayer({
+          id: 'p3',
+          name: 'P3',
+          rating: 1000,
+          doubles_rating: 1400,
+        });
+        result.current.toggleRegisteredPlayer({
+          id: 'p4',
+          name: 'P4',
+          rating: 1000,
+          doubles_rating: 1200,
+        });
+        result.current.setPlayersPerTeam(2);
+        result.current.setBalanceByRating(true);
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(2);
+      expect(result.current.teams[0].players).toHaveLength(2);
+      expect(result.current.teams[1].players).toHaveLength(2);
+      // Balanced by doubles rating: 1800+1200=3000, 1600+1400=3000
+      expect(result.current.teams[0].totalRating).toBe(3000);
+      expect(result.current.teams[1].totalRating).toBe(3000);
+    });
   });
 });
+
