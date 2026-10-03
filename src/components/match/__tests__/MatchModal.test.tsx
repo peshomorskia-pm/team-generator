@@ -549,6 +549,139 @@ describe('MatchModal Component', () => {
       const doublesBtn = screen.getByRole('button', { name: /по двойки/i });
       expect(doublesBtn).toHaveAttribute('aria-pressed', 'true');
     });
+
+    it('automatically maps legacy match with 2v2 labeled as singles to doubles when opening edit modal', () => {
+      const legacySingles2v2Match: MatchDetail = {
+        id: 'legacy-m1',
+        match_format: 'singles', // mislabeled legacy
+        team_1_score: 6,
+        team_2_score: 4,
+        played_at: '2026-10-02T15:00:00.000Z',
+        created_at: '2026-10-02T15:00:00.000Z',
+        updated_at: '2026-10-02T15:00:00.000Z',
+        match_players: [
+          {
+            id: 'mp-1',
+            match_id: 'legacy-m1',
+            player_id: 'p-1',
+            guest_name: null,
+            team_side: 'team_1',
+            rating_before: 1200,
+            rating_after: 1215,
+            players: { id: 'p-1', name: 'Христо Стоичков' },
+          },
+          {
+            id: 'mp-2',
+            match_id: 'legacy-m1',
+            player_id: 'p-2',
+            guest_name: null,
+            team_side: 'team_1',
+            rating_before: 1200,
+            rating_after: 1215,
+            players: { id: 'p-2', name: 'Димитър Бербатов' },
+          },
+          {
+            id: 'mp-3',
+            match_id: 'legacy-m1',
+            player_id: 'p-3',
+            guest_name: null,
+            team_side: 'team_2',
+            rating_before: 1200,
+            rating_after: 1185,
+            players: { id: 'p-3', name: 'Красимир Балъков' },
+          },
+          {
+            id: 'mp-4',
+            match_id: 'legacy-m1',
+            player_id: null,
+            guest_name: 'Гост Играч',
+            team_side: 'team_2',
+            rating_before: null,
+            rating_after: null,
+            players: null,
+          },
+        ],
+      };
+
+      render(
+        <MatchModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSave={vi.fn()}
+          match={legacySingles2v2Match}
+          availablePlayers={availablePlayers}
+        />
+      );
+
+      const doublesBtn = screen.getByRole('button', { name: /по двойки/i });
+      expect(doublesBtn).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('auto-toggles format to doubles when adding a second participant to a team', async () => {
+      const user = userEvent.setup();
+      render(
+        <MatchModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSave={vi.fn()}
+          availablePlayers={availablePlayers}
+        />
+      );
+
+      // Initially singles
+      const singlesBtn = screen.getByRole('button', { name: /поединично/i });
+      const doublesBtn = screen.getByRole('button', { name: /по двойки/i });
+      expect(singlesBtn).toHaveAttribute('aria-pressed', 'true');
+
+      // Add 1st player to Team 1
+      const comboboxT1 = screen.getByLabelText('Избери играч за Отбор 1');
+      await user.click(comboboxT1);
+      await user.click(screen.getByRole('option', { name: /христо стоичков/i }));
+      expect(singlesBtn).toHaveAttribute('aria-pressed', 'true');
+
+      // Add 2nd player to Team 1
+      await user.click(comboboxT1);
+      await user.click(screen.getByRole('option', { name: /димитър бербатов/i }));
+
+      // Format should auto-toggle to doubles!
+      expect(doublesBtn).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('blocks saving singles match when 2 players are on a team', async () => {
+      const user = userEvent.setup();
+      const handleSave = vi.fn();
+
+      render(
+        <MatchModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSave={handleSave}
+          availablePlayers={availablePlayers}
+        />
+      );
+
+      // Add 2 players to Team 1
+      const comboboxT1 = screen.getByLabelText('Избери играч за Отбор 1');
+      await user.click(comboboxT1);
+      await user.click(screen.getByRole('option', { name: /христо стоичков/i }));
+      await user.click(comboboxT1);
+      await user.click(screen.getByRole('option', { name: /димитър бербатов/i }));
+
+      // Add 1 player to Team 2
+      const comboboxT2 = screen.getByLabelText('Избери играч за Отбор 2');
+      await user.click(comboboxT2);
+      await user.click(screen.getByRole('option', { name: /красимир балъков/i }));
+
+      // Manually force format back to singles
+      await user.click(screen.getByRole('button', { name: /поединично/i }));
+
+      await user.click(screen.getByRole('button', { name: /създай/i }));
+
+      expect(
+        screen.getByText('За поединичен мач всеки отбор трябва да има точно по 1 играч.')
+      ).toBeInTheDocument();
+      expect(handleSave).not.toHaveBeenCalled();
+    });
   });
 });
 

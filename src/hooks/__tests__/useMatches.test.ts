@@ -1015,5 +1015,202 @@ describe('useMatches hook', () => {
       });
       expect(playerUpdateEqMock).toHaveBeenCalledWith('id', 'p-3');
     });
+
+    it('updateMatch is idempotent and does not drift rating values or inflate match counts on repeated updates', async () => {
+      const existingMatch: MatchDetail = {
+        id: 'match-idempotent-1',
+        match_format: 'singles',
+        team_1_score: 6,
+        team_2_score: 4,
+        played_at: '2026-10-03T12:00:00Z',
+        created_at: '2026-10-03T12:00:00Z',
+        updated_at: '2026-10-03T12:00:00Z',
+        match_players: [
+          {
+            id: 'mp-i1',
+            match_id: 'match-idempotent-1',
+            player_id: 'p-1',
+            guest_name: null,
+            team_side: 'team_1',
+            rating_before: 1200,
+            rating_after: 1216,
+            players: { id: 'p-1', name: 'Иван' },
+          },
+          {
+            id: 'mp-i2',
+            match_id: 'match-idempotent-1',
+            player_id: 'p-2',
+            guest_name: null,
+            team_side: 'team_2',
+            rating_before: 1200,
+            rating_after: 1184,
+            players: { id: 'p-2', name: 'Георги' },
+          },
+        ],
+      };
+
+      const orderMock = vi.fn().mockResolvedValue({ data: [existingMatch], error: null });
+      const initialSelect = vi.fn().mockReturnValue({ order: orderMock });
+
+      const matchUpdateSelect = vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({
+          data: {
+            id: 'match-idempotent-1',
+            match_format: 'singles',
+            team_1_score: 6,
+            team_2_score: 4,
+            played_at: '2026-10-03T12:00:00Z',
+          },
+          error: null,
+        }),
+      });
+      const matchUpdateEq = vi.fn().mockReturnValue({ select: matchUpdateSelect });
+      const matchUpdateMock = vi.fn().mockReturnValue({ eq: matchUpdateEq });
+
+      const deleteEqMock = vi.fn().mockResolvedValue({ error: null });
+      const deleteMock = vi.fn().mockReturnValue({ eq: deleteEqMock });
+
+      const playersInsertSelectMock = vi.fn().mockResolvedValue({
+        data: [
+          { id: 'mp-i1', match_id: 'match-idempotent-1', player_id: 'p-1', rating_before: 1200, rating_after: 1216 },
+          { id: 'mp-i2', match_id: 'match-idempotent-1', player_id: 'p-2', rating_before: 1200, rating_after: 1184 },
+        ],
+        error: null,
+      });
+      const playersInsertMock = vi.fn().mockReturnValue({ select: playersInsertSelectMock });
+
+      const mockDbPlayers = [
+        { id: 'p-1', name: 'Иван', singles_rating: 1200, singles_matches_played: 0, singles_wins: 0, singles_losses: 0 },
+        { id: 'p-2', name: 'Георги', singles_rating: 1200, singles_matches_played: 0, singles_wins: 0, singles_losses: 0 },
+      ];
+      const playersInMock = vi.fn().mockResolvedValue({ data: mockDbPlayers, error: null });
+      const playersSelectMock = vi.fn().mockReturnValue({ in: playersInMock });
+
+      const playerUpdateEqMock = vi.fn().mockResolvedValue({ data: null, error: null });
+      const playerUpdateMock = vi.fn().mockReturnValue({ eq: playerUpdateEqMock });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'matches') return { select: initialSelect, update: matchUpdateMock };
+        if (table === 'match_players') return { delete: deleteMock, insert: playersInsertMock };
+        if (table === 'players') return { select: playersSelectMock, update: playerUpdateMock };
+        return {};
+      });
+
+      const { result } = renderHook(() => useMatches());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      const updateData: MatchFormData = {
+        match_format: 'singles',
+        team_1_score: 6,
+        team_2_score: 4,
+        played_at: '2026-10-03T12:00:00Z',
+        team_1_players: [{ player_id: 'p-1' }],
+        team_2_players: [{ player_id: 'p-2' }],
+      };
+
+      // Call updateMatch 1st time
+      await act(async () => {
+        await result.current.updateMatch('match-idempotent-1', updateData);
+      });
+
+      expect(playerUpdateMock).toHaveBeenLastCalledWith({
+        singles_rating: 1184,
+        singles_matches_played: 1,
+        singles_wins: 0,
+        singles_losses: 1,
+        rating: 1184,
+      });
+
+      // Call updateMatch 2nd time with exact same data
+      await act(async () => {
+        await result.current.updateMatch('match-idempotent-1', updateData);
+      });
+
+      // Assert that matches_played is STILL 1 and rating did not drift
+      expect(playerUpdateMock).toHaveBeenLastCalledWith({
+        singles_rating: 1184,
+        singles_matches_played: 1,
+        singles_wins: 0,
+        singles_losses: 1,
+        rating: 1184,
+      });
+    });
+
+    it('deleteMatch rolls back ratings and match records cleanly to pre-match state', async () => {
+      const matchToDelete: MatchDetail = {
+        id: 'match-del-1',
+        match_format: 'singles',
+        team_1_score: 6,
+        team_2_score: 4,
+        played_at: '2026-10-03T12:00:00Z',
+        created_at: '2026-10-03T12:00:00Z',
+        updated_at: '2026-10-03T12:00:00Z',
+        match_players: [
+          {
+            id: 'mp-d1',
+            match_id: 'match-del-1',
+            player_id: 'p-1',
+            guest_name: null,
+            team_side: 'team_1',
+            rating_before: 1200,
+            rating_after: 1216,
+            players: { id: 'p-1', name: 'Иван' },
+          },
+          {
+            id: 'mp-d2',
+            match_id: 'match-del-1',
+            player_id: 'p-2',
+            guest_name: null,
+            team_side: 'team_2',
+            rating_before: 1200,
+            rating_after: 1184,
+            players: { id: 'p-2', name: 'Георги' },
+          },
+        ],
+      };
+
+      const orderMock = vi.fn().mockResolvedValue({ data: [matchToDelete], error: null });
+      const initialSelect = vi.fn().mockReturnValue({ order: orderMock });
+
+      const deleteEqMock = vi.fn().mockResolvedValue({ error: null });
+      const deleteMock = vi.fn().mockReturnValue({ eq: deleteEqMock });
+
+      const mockDbPlayers = [
+        { id: 'p-1', name: 'Иван', singles_rating: 1216, singles_matches_played: 1, singles_wins: 1, singles_losses: 0 },
+        { id: 'p-2', name: 'Георги', singles_rating: 1184, singles_matches_played: 1, singles_wins: 0, singles_losses: 1 },
+      ];
+      const playersInMock = vi.fn().mockResolvedValue({ data: mockDbPlayers, error: null });
+      const playersSelectMock = vi.fn().mockReturnValue({ in: playersInMock });
+
+      const playerUpdateEqMock = vi.fn().mockResolvedValue({ data: null, error: null });
+      const playerUpdateMock = vi.fn().mockReturnValue({ eq: playerUpdateEqMock });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'matches') return { select: initialSelect, delete: deleteMock };
+        if (table === 'players') return { select: playersSelectMock, update: playerUpdateMock };
+        return {};
+      });
+
+      const { result } = renderHook(() => useMatches());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await act(async () => {
+        await result.current.deleteMatch('match-del-1');
+      });
+
+      expect(deleteEqMock).toHaveBeenCalledWith('id', 'match-del-1');
+      expect(result.current.matches).toHaveLength(0);
+
+      // Verify players were reset to baseline 1200 / 0 matches
+      expect(playerUpdateMock).toHaveBeenCalledWith({
+        singles_rating: 1200,
+        singles_matches_played: 0,
+        singles_wins: 0,
+        singles_losses: 0,
+        rating: 1200,
+      });
+      expect(playerUpdateEqMock).toHaveBeenCalledWith('id', 'p-1');
+      expect(playerUpdateEqMock).toHaveBeenCalledWith('id', 'p-2');
+    });
   });
 });

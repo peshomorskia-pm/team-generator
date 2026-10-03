@@ -3,6 +3,8 @@ import { Calendar, Edit2, Trash2, Trophy, User } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 import type { MatchDetail } from '../../types/matches';
 
+import { resolveMatchFormat } from '../../utils/eloRecalculation';
+
 export interface MatchCardProps {
   match: MatchDetail;
   onEdit: (match: MatchDetail) => void;
@@ -24,7 +26,8 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, onEdit, onDelete })
     year: 'numeric',
   });
 
-  const formatLabel = match.match_format === 'doubles' ? 'По двойки' : 'Поединично';
+  const resolvedFormat = resolveMatchFormat(match);
+  const formatLabel = resolvedFormat === 'doubles' ? 'По двойки' : 'Поединично';
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs hover:shadow-md transition-all overflow-hidden p-5">

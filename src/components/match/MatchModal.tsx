@@ -68,13 +68,13 @@ export const MatchModal: React.FC<MatchModalProps> = ({
   };
 
   const getInitialFormat = (): MatchFormat => {
-    if (match && (match as { match_format?: MatchFormat }).match_format) {
-      return (match as { match_format: MatchFormat }).match_format;
-    }
     const t1 = initialTeam1?.length ?? (match ? match.match_players.filter((p) => p.team_side === 'team_1').length : 0);
     const t2 = initialTeam2?.length ?? (match ? match.match_players.filter((p) => p.team_side === 'team_2').length : 0);
     if (t1 > 1 || t2 > 1) {
       return 'doubles';
+    }
+    if (match && (match as { match_format?: MatchFormat }).match_format) {
+      return (match as { match_format: MatchFormat }).match_format;
     }
     return 'singles';
   };
@@ -156,10 +156,18 @@ export const MatchModal: React.FC<MatchModalProps> = ({
 
     if (teamSide === 'team_1') {
       if (team1Players.some((p) => p.player_id === playerId)) return;
-      setTeam1Players((prev) => [...prev, participant]);
+      const nextT1 = [...team1Players, participant];
+      setTeam1Players(nextT1);
+      if (nextT1.length > 1) {
+        setFormat('doubles');
+      }
     } else {
       if (team2Players.some((p) => p.player_id === playerId)) return;
-      setTeam2Players((prev) => [...prev, participant]);
+      const nextT2 = [...team2Players, participant];
+      setTeam2Players(nextT2);
+      if (nextT2.length > 1) {
+        setFormat('doubles');
+      }
     }
     setValidationError(null);
   };
@@ -174,11 +182,19 @@ export const MatchModal: React.FC<MatchModalProps> = ({
     };
 
     if (teamSide === 'team_1') {
-      setTeam1Players((prev) => [...prev, participant]);
+      const nextT1 = [...team1Players, participant];
+      setTeam1Players(nextT1);
       setGuestNameT1('');
+      if (nextT1.length > 1) {
+        setFormat('doubles');
+      }
     } else {
-      setTeam2Players((prev) => [...prev, participant]);
+      const nextT2 = [...team2Players, participant];
+      setTeam2Players(nextT2);
       setGuestNameT2('');
+      if (nextT2.length > 1) {
+        setFormat('doubles');
+      }
     }
     setValidationError(null);
   };

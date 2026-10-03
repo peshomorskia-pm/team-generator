@@ -117,4 +117,56 @@ describe('MatchCard Component', () => {
     render(<MatchCard match={doublesMatch} onEdit={vi.fn()} onDelete={vi.fn()} />);
     expect(screen.getByText('По двойки')).toBeInTheDocument();
   });
+
+  it('renders "По двойки" as format fallback for a 2v2 match with null/legacy format', () => {
+    const legacy2v2Match: MatchDetail = {
+      ...sampleMatch,
+      match_format: undefined,
+      match_players: [
+        {
+          id: 'mp-1',
+          match_id: 'm-100',
+          player_id: 'p-1',
+          guest_name: null,
+          team_side: 'team_1',
+          rating_before: 1200,
+          rating_after: 1215,
+          players: { id: 'p-1', name: 'Димитър Бербатов' },
+        },
+        {
+          id: 'mp-2',
+          match_id: 'm-100',
+          player_id: 'p-2',
+          guest_name: null,
+          team_side: 'team_1',
+          rating_before: 1200,
+          rating_after: 1215,
+          players: { id: 'p-2', name: 'Христо Стоичков' },
+        },
+        {
+          id: 'mp-3',
+          match_id: 'm-100',
+          player_id: 'p-3',
+          guest_name: null,
+          team_side: 'team_2',
+          rating_before: 1200,
+          rating_after: 1185,
+          players: { id: 'p-3', name: 'Красимир Балъков' },
+        },
+        {
+          id: 'mp-4',
+          match_id: 'm-100',
+          player_id: null,
+          guest_name: 'Спас Делев',
+          team_side: 'team_2',
+          rating_before: null,
+          rating_after: null,
+          players: null,
+        },
+      ],
+    };
+
+    render(<MatchCard match={legacy2v2Match} onEdit={vi.fn()} onDelete={vi.fn()} />);
+    expect(screen.getByText('По двойки')).toBeInTheDocument();
+  });
 });
