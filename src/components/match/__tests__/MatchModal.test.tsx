@@ -472,5 +472,83 @@ describe('MatchModal Component', () => {
       expect(screen.getByLabelText('Резултат Отбор 1')).toHaveValue(null);
       expect(screen.getByLabelText('Резултат Отбор 2')).toHaveValue(null);
     });
+
+    it('Scenario 3 (Stage 5 Validation): prevents submitting Singles format with 2 players per team', async () => {
+      const user = userEvent.setup();
+      const handleSave = vi.fn();
+
+      render(
+        <MatchModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSave={handleSave}
+          availablePlayers={availablePlayers}
+          initialTeam1={initialTeam1} // 2 players
+          initialTeam2={initialTeam2} // 2 players
+        />
+      );
+
+      // Explicitly switch to Singles
+      const singlesBtn = screen.getByRole('button', { name: /поединично/i });
+      await user.click(singlesBtn);
+
+      await user.click(screen.getByRole('button', { name: /създай/i }));
+
+      expect(
+        screen.getByText('За поединичен мач всеки отбор трябва да има точно по 1 играч.')
+      ).toBeInTheDocument();
+      expect(handleSave).not.toHaveBeenCalled();
+    });
+
+    it('Scenario 4 (Stage 5 Validation): prevents submitting Doubles format with 1 player per team', async () => {
+      const user = userEvent.setup();
+      const handleSave = vi.fn();
+
+      render(
+        <MatchModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSave={handleSave}
+          availablePlayers={availablePlayers}
+        />
+      );
+
+      // Switch to Doubles
+      const doublesBtn = screen.getByRole('button', { name: /по двойки/i });
+      await user.click(doublesBtn);
+
+      // Add only 1 player to team 1 and 1 player to team 2
+      const comboboxT1 = screen.getByLabelText('Избери играч за Отбор 1');
+      await user.click(comboboxT1);
+      await user.click(screen.getByRole('option', { name: /христо стоичков/i }));
+
+      const comboboxT2 = screen.getByLabelText('Избери играч за Отбор 2');
+      await user.click(comboboxT2);
+      await user.click(screen.getByRole('option', { name: /димитър бербатов/i }));
+
+      await user.click(screen.getByRole('button', { name: /създай/i }));
+
+      expect(
+        screen.getByText('За мач по двойки всеки отбор трябва да има точно по 2 играчи.')
+      ).toBeInTheDocument();
+      expect(handleSave).not.toHaveBeenCalled();
+    });
+
+    it('Scenario 5 (Stage 5 Auto-detection): auto-selects Doubles when initialized with 2 players per team', () => {
+      render(
+        <MatchModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSave={vi.fn()}
+          availablePlayers={availablePlayers}
+          initialTeam1={initialTeam1} // 2 players
+          initialTeam2={initialTeam2} // 2 players
+        />
+      );
+
+      const doublesBtn = screen.getByRole('button', { name: /по двойки/i });
+      expect(doublesBtn).toHaveAttribute('aria-pressed', 'true');
+    });
   });
 });
+

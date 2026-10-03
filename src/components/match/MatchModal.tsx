@@ -4,7 +4,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { PlayerCombobox } from './PlayerCombobox';
 import type { PlayerRow } from '../../types/database.types';
-import type { MatchDetail, MatchFormData } from '../../types/matches';
+import type { MatchDetail, MatchFormData, MatchFormat } from '../../types/matches';
 
 export interface MatchParticipant {
   player_id?: string;
@@ -67,6 +67,19 @@ export const MatchModal: React.FC<MatchModalProps> = ({
     return [];
   };
 
+  const getInitialFormat = (): MatchFormat => {
+    if (match && (match as { match_format?: MatchFormat }).match_format) {
+      return (match as { match_format: MatchFormat }).match_format;
+    }
+    const t1 = initialTeam1?.length ?? (match ? match.match_players.filter((p) => p.team_side === 'team_1').length : 0);
+    const t2 = initialTeam2?.length ?? (match ? match.match_players.filter((p) => p.team_side === 'team_2').length : 0);
+    if (t1 > 1 || t2 > 1) {
+      return 'doubles';
+    }
+    return 'singles';
+  };
+
+  const [format, setFormat] = useState<MatchFormat>(getInitialFormat);
   const [date, setDate] = useState(getInitialDate);
   const [team1Score, setTeam1Score] = useState(
     match && match.team_1_score !== null ? String(match.team_1_score) : ''
@@ -102,6 +115,7 @@ export const MatchModal: React.FC<MatchModalProps> = ({
     setPrevMatch(match);
     setPrevInitialTeam1(initialTeam1);
     setPrevInitialTeam2(initialTeam2);
+    setFormat(getInitialFormat());
     setDate(getInitialDate());
     setTeam1Score(match && match.team_1_score !== null ? String(match.team_1_score) : '');
     setTeam2Score(match && match.team_2_score !== null ? String(match.team_2_score) : '');
@@ -195,6 +209,18 @@ export const MatchModal: React.FC<MatchModalProps> = ({
       return;
     }
 
+    if (format === 'singles') {
+      if (team1Players.length !== 1 || team2Players.length !== 1) {
+        setValidationError('За поединичен мач всеки отбор трябва да има точно по 1 играч.');
+        return;
+      }
+    } else if (format === 'doubles') {
+      if (team1Players.length !== 2 || team2Players.length !== 2) {
+        setValidationError('За мач по двойки всеки отбор трябва да има точно по 2 играчи.');
+        return;
+      }
+    }
+
     // Check player overlap between team 1 and team 2
     const team1PlayerIds = new Set(
       team1Players.filter((p) => p.player_id).map((p) => p.player_id)
@@ -272,6 +298,7 @@ export const MatchModal: React.FC<MatchModalProps> = ({
     }
 
     const formData: MatchFormData = {
+      match_format: format,
       team_1_score: parsedScore1,
       team_2_score: parsedScore2,
       played_at: new Date(date).toISOString(),
@@ -341,6 +368,45 @@ export const MatchModal: React.FC<MatchModalProps> = ({
         )}
 
         <form onSubmit={handleSubmit} noValidate className="mt-4 space-y-6">
+          {/* Format Selector Toggle */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Формат на мача
+            </label>
+            <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 dark:bg-gray-700/60 rounded-xl">
+              <button
+                type="button"
+                onClick={() => {
+                  setFormat('singles');
+                  setValidationError(null);
+                }}
+                className={`py-2 px-3 text-sm font-semibold rounded-lg transition-all ${
+                  format === 'singles'
+                    ? 'bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+                aria-pressed={format === 'singles'}
+              >
+                Поединично
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFormat('doubles');
+                  setValidationError(null);
+                }}
+                className={`py-2 px-3 text-sm font-semibold rounded-lg transition-all ${
+                  format === 'doubles'
+                    ? 'bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+                aria-pressed={format === 'doubles'}
+              >
+                По двойки
+              </button>
+            </div>
+          </div>
+
           {/* Date Picker */}
           <div>
             <label
