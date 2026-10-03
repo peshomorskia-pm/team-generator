@@ -268,6 +268,7 @@ describe('useMatches hook', () => {
       expect(resultSuccess).toBe(true);
 
       expect(matchInsertMock).toHaveBeenCalledWith({
+        match_format: 'singles',
         team_1_score: 4,
         team_2_score: 1,
         played_at: '2026-10-03T19:00:00Z',
@@ -278,12 +279,16 @@ describe('useMatches hook', () => {
           player_id: 'p-2',
           guest_name: null,
           team_side: 'team_1',
+          rating_before: 1200,
+          rating_after: 1216,
         },
         {
           match_id: 'match-2',
           player_id: null,
           guest_name: 'Стоян',
           team_side: 'team_2',
+          rating_before: 1200,
+          rating_after: 1184,
         },
       ]);
       expect(result.current.matches).toHaveLength(2);
@@ -345,6 +350,7 @@ describe('useMatches hook', () => {
       });
 
       expect(matchInsertMock).toHaveBeenCalledWith({
+        match_format: 'singles',
         team_1_score: null,
         team_2_score: null,
         played_at: '2026-10-10T19:00:00Z',
@@ -534,6 +540,7 @@ describe('useMatches hook', () => {
       });
 
       expect(updateMock).toHaveBeenCalledWith({
+        match_format: 'singles',
         team_1_score: 6,
         team_2_score: 4,
         played_at: '2026-10-02T19:00:00Z',
@@ -602,6 +609,7 @@ describe('useMatches hook', () => {
       });
 
       expect(updateMock).toHaveBeenCalledWith({
+        match_format: 'singles',
         team_1_score: null,
         team_2_score: null,
         played_at: '2026-10-02T19:00:00Z',
@@ -767,6 +775,442 @@ describe('useMatches hook', () => {
       });
 
       expect(result.current.alert).toBeNull();
+    });
+  });
+
+  describe('Stage 5: ELO Calculations and Dual Format Support', () => {
+    it('complete singles match computes ELO deltas, stores match_players snapshot, and updates players ratings and stats', async () => {
+      const orderMock = vi.fn().mockResolvedValue({ data: [], error: null });
+      const initialSelect = vi.fn().mockReturnValue({ order: orderMock });
+
+      const createdMatchRow = {
+        id: 'match-singles-1',
+        match_format: 'singles',
+        team_1_score: 6,
+        team_2_score: 4,
+        played_at: '2026-10-03T12:00:00Z',
+      };
+
+      const matchSingleMock = vi.fn().mockResolvedValue({ data: createdMatchRow, error: null });
+      const matchInsertSelect = vi.fn().mockReturnValue({ single: matchSingleMock });
+      const matchInsertMock = vi.fn().mockReturnValue({ select: matchInsertSelect });
+
+      const playersInsertSelectMock = vi.fn().mockResolvedValue({
+        data: [
+          { id: 'mp-s1', match_id: 'match-singles-1', player_id: 'p-1', rating_before: 1200, rating_after: 1216 },
+          { id: 'mp-s2', match_id: 'match-singles-1', player_id: 'p-2', rating_before: 1200, rating_after: 1184 },
+        ],
+        error: null,
+      });
+      const playersInsertMock = vi.fn().mockReturnValue({ select: playersInsertSelectMock });
+
+      const mockDbPlayers = [
+        { id: 'p-1', name: 'Иван', singles_rating: 1200, singles_matches_played: 0, singles_wins: 0, singles_losses: 0 },
+        { id: 'p-2', name: 'Петър', singles_rating: 1200, singles_matches_played: 0, singles_wins: 0, singles_losses: 0 },
+      ];
+
+      const playersInMock = vi.fn().mockResolvedValue({ data: mockDbPlayers, error: null });
+      const playersSelectMock = vi.fn().mockReturnValue({ in: playersInMock });
+
+      const playerUpdateEqMock = vi.fn().mockResolvedValue({ data: null, error: null });
+      const playerUpdateMock = vi.fn().mockReturnValue({ eq: playerUpdateEqMock });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'matches') {
+          return { select: initialSelect, insert: matchInsertMock };
+        }
+        if (table === 'match_players') {
+          return { insert: playersInsertMock };
+        }
+        if (table === 'players') {
+          return {
+            select: playersSelectMock,
+            update: playerUpdateMock,
+          };
+        }
+        return {};
+      });
+
+      const { result } = renderHook(() => useMatches());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      const matchData: MatchFormData = {
+        match_format: 'singles',
+        team_1_score: 6,
+        team_2_score: 4,
+        played_at: '2026-10-03T12:00:00Z',
+        team_1_players: [{ player_id: 'p-1' }],
+        team_2_players: [{ player_id: 'p-2' }],
+      };
+
+      await act(async () => {
+        await result.current.createMatch(matchData);
+      });
+
+      // Verify match_players snapshot
+      expect(playersInsertMock).toHaveBeenCalledWith([
+        {
+          match_id: 'match-singles-1',
+          player_id: 'p-1',
+          guest_name: null,
+          team_side: 'team_1',
+          rating_before: 1200,
+          rating_after: 1216,
+        },
+        {
+          match_id: 'match-singles-1',
+          player_id: 'p-2',
+          guest_name: null,
+          team_side: 'team_2',
+          rating_before: 1200,
+          rating_after: 1184,
+        },
+      ]);
+
+      // Verify player updates in players table
+      expect(playerUpdateMock).toHaveBeenCalledWith({
+        singles_rating: 1216,
+        singles_matches_played: 1,
+        singles_wins: 1,
+        singles_losses: 0,
+        rating: 1216,
+      });
+      expect(playerUpdateEqMock).toHaveBeenCalledWith('id', 'p-1');
+
+      expect(playerUpdateMock).toHaveBeenCalledWith({
+        singles_rating: 1184,
+        singles_matches_played: 1,
+        singles_wins: 0,
+        singles_losses: 1,
+        rating: 1184,
+      });
+      expect(playerUpdateEqMock).toHaveBeenCalledWith('id', 'p-2');
+    });
+
+    it('upcoming match ignores ELO calculation and leaves ratings null', async () => {
+      const orderMock = vi.fn().mockResolvedValue({ data: [], error: null });
+      const initialSelect = vi.fn().mockReturnValue({ order: orderMock });
+
+      const createdMatchRow = {
+        id: 'match-upcoming-1',
+        match_format: 'singles',
+        team_1_score: null,
+        team_2_score: null,
+        played_at: '2026-10-15T12:00:00Z',
+      };
+
+      const matchSingleMock = vi.fn().mockResolvedValue({ data: createdMatchRow, error: null });
+      const matchInsertMock = vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ single: matchSingleMock }) });
+
+      const playersInsertSelectMock = vi.fn().mockResolvedValue({ data: [], error: null });
+      const playersInsertMock = vi.fn().mockReturnValue({ select: playersInsertSelectMock });
+
+      const playerUpdateMock = vi.fn();
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'matches') return { select: initialSelect, insert: matchInsertMock };
+        if (table === 'match_players') return { insert: playersInsertMock };
+        if (table === 'players') return { update: playerUpdateMock };
+        return {};
+      });
+
+      const { result } = renderHook(() => useMatches());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await act(async () => {
+        await result.current.createMatch({
+          match_format: 'singles',
+          team_1_score: null,
+          team_2_score: null,
+          played_at: '2026-10-15T12:00:00Z',
+          team_1_players: [{ player_id: 'p-1' }],
+          team_2_players: [{ player_id: 'p-2' }],
+        });
+      });
+
+      expect(playersInsertMock).toHaveBeenCalledWith([
+        expect.objectContaining({ rating_before: null, rating_after: null }),
+        expect.objectContaining({ rating_before: null, rating_after: null }),
+      ]);
+      expect(playerUpdateMock).not.toHaveBeenCalled();
+    });
+
+    it('doubles match calculates ELO with partner averaging and updates doubles stats', async () => {
+      const orderMock = vi.fn().mockResolvedValue({ data: [], error: null });
+      const initialSelect = vi.fn().mockReturnValue({ order: orderMock });
+
+      const createdMatchRow = {
+        id: 'match-doubles-1',
+        match_format: 'doubles',
+        team_1_score: 6,
+        team_2_score: 4,
+        played_at: '2026-10-03T12:00:00Z',
+      };
+
+      const matchSingleMock = vi.fn().mockResolvedValue({ data: createdMatchRow, error: null });
+      const matchInsertMock = vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue({ single: matchSingleMock }) });
+
+      const playersInsertSelectMock = vi.fn().mockResolvedValue({ data: [], error: null });
+      const playersInsertMock = vi.fn().mockReturnValue({ select: playersInsertSelectMock });
+
+      const mockDbPlayers = [
+        { id: 'p-1', name: 'Иван', doubles_rating: 1200, doubles_matches_played: 2, doubles_wins: 1, doubles_losses: 1 },
+        { id: 'p-2', name: 'Георги', doubles_rating: 1200, doubles_matches_played: 0, doubles_wins: 0, doubles_losses: 0 },
+        { id: 'p-3', name: 'Димитър', doubles_rating: 1200, doubles_matches_played: 4, doubles_wins: 2, doubles_losses: 2 },
+      ];
+
+      const playersInMock = vi.fn().mockResolvedValue({ data: mockDbPlayers, error: null });
+      const playersSelectMock = vi.fn().mockReturnValue({ in: playersInMock });
+
+      const playerUpdateEqMock = vi.fn().mockResolvedValue({ data: null, error: null });
+      const playerUpdateMock = vi.fn().mockReturnValue({ eq: playerUpdateEqMock });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'matches') return { select: initialSelect, insert: matchInsertMock };
+        if (table === 'match_players') return { insert: playersInsertMock };
+        if (table === 'players') return { select: playersSelectMock, update: playerUpdateMock };
+        return {};
+      });
+
+      const { result } = renderHook(() => useMatches());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      // Team 1: p-1 + p-2 (both 1200 -> avg 1200)
+      // Team 2: p-3 + guest (p-3 1200 + guest 1200 -> avg 1200)
+      // Team 1 wins 6 - 4: delta is +16 for Team 1, -16 for Team 2
+      await act(async () => {
+        await result.current.createMatch({
+          match_format: 'doubles',
+          team_1_score: 6,
+          team_2_score: 4,
+          played_at: '2026-10-03T12:00:00Z',
+          team_1_players: [{ player_id: 'p-1' }, { player_id: 'p-2' }],
+          team_2_players: [{ player_id: 'p-3' }, { guest_name: 'Гост Александър' }],
+        });
+      });
+
+      // Verify doubles rating was updated on both Team 1 players
+      expect(playerUpdateMock).toHaveBeenCalledWith({
+        doubles_rating: 1216,
+        doubles_matches_played: 3,
+        doubles_wins: 2,
+        doubles_losses: 1,
+      });
+      expect(playerUpdateEqMock).toHaveBeenCalledWith('id', 'p-1');
+
+      expect(playerUpdateMock).toHaveBeenCalledWith({
+        doubles_rating: 1216,
+        doubles_matches_played: 1,
+        doubles_wins: 1,
+        doubles_losses: 0,
+      });
+      expect(playerUpdateEqMock).toHaveBeenCalledWith('id', 'p-2');
+
+      // Verify Team 2 player updated with loss
+      expect(playerUpdateMock).toHaveBeenCalledWith({
+        doubles_rating: 1184,
+        doubles_matches_played: 5,
+        doubles_wins: 2,
+        doubles_losses: 3,
+      });
+      expect(playerUpdateEqMock).toHaveBeenCalledWith('id', 'p-3');
+    });
+
+    it('updateMatch is idempotent and does not drift rating values or inflate match counts on repeated updates', async () => {
+      const existingMatch: MatchDetail = {
+        id: 'match-idempotent-1',
+        match_format: 'singles',
+        team_1_score: 6,
+        team_2_score: 4,
+        played_at: '2026-10-03T12:00:00Z',
+        created_at: '2026-10-03T12:00:00Z',
+        updated_at: '2026-10-03T12:00:00Z',
+        match_players: [
+          {
+            id: 'mp-i1',
+            match_id: 'match-idempotent-1',
+            player_id: 'p-1',
+            guest_name: null,
+            team_side: 'team_1',
+            rating_before: 1200,
+            rating_after: 1216,
+            players: { id: 'p-1', name: 'Иван' },
+          },
+          {
+            id: 'mp-i2',
+            match_id: 'match-idempotent-1',
+            player_id: 'p-2',
+            guest_name: null,
+            team_side: 'team_2',
+            rating_before: 1200,
+            rating_after: 1184,
+            players: { id: 'p-2', name: 'Георги' },
+          },
+        ],
+      };
+
+      const orderMock = vi.fn().mockResolvedValue({ data: [existingMatch], error: null });
+      const initialSelect = vi.fn().mockReturnValue({ order: orderMock });
+
+      const matchUpdateSelect = vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({
+          data: {
+            id: 'match-idempotent-1',
+            match_format: 'singles',
+            team_1_score: 6,
+            team_2_score: 4,
+            played_at: '2026-10-03T12:00:00Z',
+          },
+          error: null,
+        }),
+      });
+      const matchUpdateEq = vi.fn().mockReturnValue({ select: matchUpdateSelect });
+      const matchUpdateMock = vi.fn().mockReturnValue({ eq: matchUpdateEq });
+
+      const deleteEqMock = vi.fn().mockResolvedValue({ error: null });
+      const deleteMock = vi.fn().mockReturnValue({ eq: deleteEqMock });
+
+      const playersInsertSelectMock = vi.fn().mockResolvedValue({
+        data: [
+          { id: 'mp-i1', match_id: 'match-idempotent-1', player_id: 'p-1', rating_before: 1200, rating_after: 1216 },
+          { id: 'mp-i2', match_id: 'match-idempotent-1', player_id: 'p-2', rating_before: 1200, rating_after: 1184 },
+        ],
+        error: null,
+      });
+      const playersInsertMock = vi.fn().mockReturnValue({ select: playersInsertSelectMock });
+
+      const mockDbPlayers = [
+        { id: 'p-1', name: 'Иван', singles_rating: 1200, singles_matches_played: 0, singles_wins: 0, singles_losses: 0 },
+        { id: 'p-2', name: 'Георги', singles_rating: 1200, singles_matches_played: 0, singles_wins: 0, singles_losses: 0 },
+      ];
+      const playersInMock = vi.fn().mockResolvedValue({ data: mockDbPlayers, error: null });
+      const playersSelectMock = vi.fn().mockReturnValue({ in: playersInMock });
+
+      const playerUpdateEqMock = vi.fn().mockResolvedValue({ data: null, error: null });
+      const playerUpdateMock = vi.fn().mockReturnValue({ eq: playerUpdateEqMock });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'matches') return { select: initialSelect, update: matchUpdateMock };
+        if (table === 'match_players') return { delete: deleteMock, insert: playersInsertMock };
+        if (table === 'players') return { select: playersSelectMock, update: playerUpdateMock };
+        return {};
+      });
+
+      const { result } = renderHook(() => useMatches());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      const updateData: MatchFormData = {
+        match_format: 'singles',
+        team_1_score: 6,
+        team_2_score: 4,
+        played_at: '2026-10-03T12:00:00Z',
+        team_1_players: [{ player_id: 'p-1' }],
+        team_2_players: [{ player_id: 'p-2' }],
+      };
+
+      // Call updateMatch 1st time
+      await act(async () => {
+        await result.current.updateMatch('match-idempotent-1', updateData);
+      });
+
+      expect(playerUpdateMock).toHaveBeenLastCalledWith({
+        singles_rating: 1184,
+        singles_matches_played: 1,
+        singles_wins: 0,
+        singles_losses: 1,
+        rating: 1184,
+      });
+
+      // Call updateMatch 2nd time with exact same data
+      await act(async () => {
+        await result.current.updateMatch('match-idempotent-1', updateData);
+      });
+
+      // Assert that matches_played is STILL 1 and rating did not drift
+      expect(playerUpdateMock).toHaveBeenLastCalledWith({
+        singles_rating: 1184,
+        singles_matches_played: 1,
+        singles_wins: 0,
+        singles_losses: 1,
+        rating: 1184,
+      });
+    });
+
+    it('deleteMatch rolls back ratings and match records cleanly to pre-match state', async () => {
+      const matchToDelete: MatchDetail = {
+        id: 'match-del-1',
+        match_format: 'singles',
+        team_1_score: 6,
+        team_2_score: 4,
+        played_at: '2026-10-03T12:00:00Z',
+        created_at: '2026-10-03T12:00:00Z',
+        updated_at: '2026-10-03T12:00:00Z',
+        match_players: [
+          {
+            id: 'mp-d1',
+            match_id: 'match-del-1',
+            player_id: 'p-1',
+            guest_name: null,
+            team_side: 'team_1',
+            rating_before: 1200,
+            rating_after: 1216,
+            players: { id: 'p-1', name: 'Иван' },
+          },
+          {
+            id: 'mp-d2',
+            match_id: 'match-del-1',
+            player_id: 'p-2',
+            guest_name: null,
+            team_side: 'team_2',
+            rating_before: 1200,
+            rating_after: 1184,
+            players: { id: 'p-2', name: 'Георги' },
+          },
+        ],
+      };
+
+      const orderMock = vi.fn().mockResolvedValue({ data: [matchToDelete], error: null });
+      const initialSelect = vi.fn().mockReturnValue({ order: orderMock });
+
+      const deleteEqMock = vi.fn().mockResolvedValue({ error: null });
+      const deleteMock = vi.fn().mockReturnValue({ eq: deleteEqMock });
+
+      const mockDbPlayers = [
+        { id: 'p-1', name: 'Иван', singles_rating: 1216, singles_matches_played: 1, singles_wins: 1, singles_losses: 0 },
+        { id: 'p-2', name: 'Георги', singles_rating: 1184, singles_matches_played: 1, singles_wins: 0, singles_losses: 1 },
+      ];
+      const playersInMock = vi.fn().mockResolvedValue({ data: mockDbPlayers, error: null });
+      const playersSelectMock = vi.fn().mockReturnValue({ in: playersInMock });
+
+      const playerUpdateEqMock = vi.fn().mockResolvedValue({ data: null, error: null });
+      const playerUpdateMock = vi.fn().mockReturnValue({ eq: playerUpdateEqMock });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'matches') return { select: initialSelect, delete: deleteMock };
+        if (table === 'players') return { select: playersSelectMock, update: playerUpdateMock };
+        return {};
+      });
+
+      const { result } = renderHook(() => useMatches());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await act(async () => {
+        await result.current.deleteMatch('match-del-1');
+      });
+
+      expect(deleteEqMock).toHaveBeenCalledWith('id', 'match-del-1');
+      expect(result.current.matches).toHaveLength(0);
+
+      // Verify players were reset to baseline 1200 / 0 matches
+      expect(playerUpdateMock).toHaveBeenCalledWith({
+        singles_rating: 1200,
+        singles_matches_played: 0,
+        singles_wins: 0,
+        singles_losses: 0,
+        rating: 1200,
+      });
+      expect(playerUpdateEqMock).toHaveBeenCalledWith('id', 'p-1');
+      expect(playerUpdateEqMock).toHaveBeenCalledWith('id', 'p-2');
     });
   });
 });
