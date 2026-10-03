@@ -47,6 +47,8 @@ export const GeneratorPage: React.FC = () => {
     balanceByRating,
     numberOfTeams,
     playersPerTeam,
+    format,
+    setFormat,
     setNumberOfTeams,
     setPlayersPerTeam,
     setBalanceByRating,
@@ -161,6 +163,7 @@ export const GeneratorPage: React.FC = () => {
                     activePool={activePool}
                     onRemovePlayer={removePlayer}
                     onClearPool={handleClearPool}
+                    format={format}
                   />
 
                   <div className="border-t border-gray-200 dark:border-slate-700 pt-5">
@@ -173,6 +176,8 @@ export const GeneratorPage: React.FC = () => {
                       balanceByRating={balanceByRating}
                       onBalanceToggle={setBalanceByRating}
                       hasRatings={hasRatings}
+                      format={format}
+                      onFormatChange={setFormat}
                     />
                   </div>
                 </div>
@@ -189,6 +194,7 @@ export const GeneratorPage: React.FC = () => {
         onCopy={copyResults}
         isCopied={isCopied}
         onSaveAsMatch={() => setIsMatchModalOpen(true)}
+        format={format}
       />
 
       {/* Match Modal Integration */}
@@ -199,6 +205,7 @@ export const GeneratorPage: React.FC = () => {
         availablePlayers={dbPlayers}
         initialTeam1={initialTeam1}
         initialTeam2={initialTeam2}
+        initialFormat={format}
       />
     </div>
   );

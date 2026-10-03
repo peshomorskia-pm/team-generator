@@ -9,6 +9,7 @@ export const TeamList = memo(function TeamList({
   onCopy,
   isCopied = false,
   onSaveAsMatch,
+  format,
 }: TeamListProps) {
   if (teams.length === 0) {
     return null;
@@ -60,6 +61,7 @@ export const TeamList = memo(function TeamList({
             team={team}
             index={index}
             onShuffleTeam={onShuffleTeam}
+            format={format}
           />
         ))}
       </div>

@@ -4,6 +4,8 @@ export interface Player {
   id: string;
   name: string;
   rating?: number;
+  singles_rating?: number;
+  doubles_rating?: number;
 }
 
 export interface Team {
@@ -30,6 +32,8 @@ export interface TeamSettingsProps {
   balanceByRating?: boolean;
   onBalanceToggle?: (checked: boolean) => void;
   hasRatings?: boolean;
+  format?: 'singles' | 'doubles';
+  onFormatChange?: (format: 'singles' | 'doubles') => void;
 }
 
 export interface TeamListProps {
@@ -38,12 +42,14 @@ export interface TeamListProps {
   onCopy?: () => void;
   isCopied?: boolean;
   onSaveAsMatch?: () => void;
+  format?: 'singles' | 'doubles';
 }
 
 export interface TeamCardProps {
   team: Team;
   index?: number;
   onShuffleTeam?: (teamId: string) => void;
+  format?: 'singles' | 'doubles';
 }
 
 export interface AlertNotification {

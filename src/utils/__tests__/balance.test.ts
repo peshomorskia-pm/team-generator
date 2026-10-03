@@ -139,4 +139,58 @@ describe('balanceTeams', () => {
     expect(superstarOnTeam1).toBeGreaterThan(0);
     expect(superstarOnTeam2).toBeGreaterThan(0);
   });
+
+  describe('Dual ELO format-aware balancing', () => {
+    const players: Player[] = [
+      { id: '1', name: 'P1', rating: 1200, singles_rating: 2000, doubles_rating: 1000 },
+      { id: '2', name: 'P2', rating: 1200, singles_rating: 1900, doubles_rating: 1100 },
+      { id: '3', name: 'P3', rating: 1200, singles_rating: 1000, doubles_rating: 2000 },
+      { id: '4', name: 'P4', rating: 1200, singles_rating: 1100, doubles_rating: 1900 },
+    ];
+
+    it('balances accurately by singles_rating when format is "singles"', () => {
+      const teams = balanceTeams(players, 2, 'singles');
+      expect(teams).toHaveLength(2);
+      expect(teams[0].players).toHaveLength(2);
+      expect(teams[1].players).toHaveLength(2);
+
+      // In singles, P1(2000) and P2(1900) should be split across teams
+      const totalRatings = teams.map((t) => t.totalRating ?? 0);
+      const diff = Math.abs(totalRatings[0] - totalRatings[1]);
+      // (2000 + 1000 = 3000) vs (1900 + 1100 = 3000) -> diff 0
+      expect(diff).toBeLessThanOrEqual(100);
+      expect(totalRatings[0] + totalRatings[1]).toBe(6000);
+    });
+
+    it('balances accurately by doubles_rating when format is "doubles"', () => {
+      const teams = balanceTeams(players, 2, 'doubles');
+      expect(teams).toHaveLength(2);
+      expect(teams[0].players).toHaveLength(2);
+      expect(teams[1].players).toHaveLength(2);
+
+      // In doubles, P3(2000) and P4(1900) should be split across teams
+      const totalRatings = teams.map((t) => t.totalRating ?? 0);
+      const diff = Math.abs(totalRatings[0] - totalRatings[1]);
+      expect(diff).toBeLessThanOrEqual(100);
+      expect(totalRatings[0] + totalRatings[1]).toBe(6000);
+    });
+
+    it('falls back gracefully to general rating or 0 if format rating is missing', () => {
+      const mixedPlayers: Player[] = [
+        { id: '1', name: 'M1', rating: 1500 }, // missing singles_rating
+        { id: '2', name: 'M2', singles_rating: 1500 },
+        { id: '3', name: 'M3' }, // missing all ratings -> 0
+        { id: '4', name: 'M4', rating: 0 },
+      ];
+
+      const teams = balanceTeams(mixedPlayers, 2, 'singles');
+      expect(teams).toHaveLength(2);
+      expect(teams[0].players).toHaveLength(2);
+      expect(teams[1].players).toHaveLength(2);
+      const totalRatings = teams.map((t) => t.totalRating ?? 0);
+      // M1 falls back to 1500, M2 is 1500, M3 is 0, M4 is 0 -> sum 3000, 1500 per team
+      expect(totalRatings[0]).toBe(1500);
+      expect(totalRatings[1]).toBe(1500);
+    });
+  });
 });

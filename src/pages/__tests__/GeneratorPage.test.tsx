@@ -381,4 +381,42 @@ describe('GeneratorPage Integration Tests', () => {
     // Modal stays open
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
+
+  it('handles format toggle interaction and passes active format into MatchModal', async () => {
+    const user = userEvent.setup();
+    mockCreateMatch.mockResolvedValue(true);
+
+    renderComponent();
+
+    // Select format "По двойки"
+    const doublesFormatBtn = screen.getByRole('button', { name: 'По двойки' });
+    const singlesFormatBtn = screen.getByRole('button', { name: 'Поединично' });
+
+    expect(singlesFormatBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(doublesFormatBtn).toHaveAttribute('aria-pressed', 'false');
+
+    await user.click(doublesFormatBtn);
+    expect(doublesFormatBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(singlesFormatBtn).toHaveAttribute('aria-pressed', 'false');
+
+    // Add players and generate teams
+    await user.click(screen.getByRole('checkbox', { name: 'Иван Иванов' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Георги Димитров' }));
+
+    const numTeamsInput = screen.getByLabelText(/брой отбори/i);
+    await user.clear(numTeamsInput);
+    await user.type(numTeamsInput, '2');
+
+    await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+
+    // Click "Запиши като мач"
+    await user.click(screen.getByRole('button', { name: /запиши като мач/i }));
+
+    const modalDialog = screen.getByRole('dialog');
+    expect(modalDialog).toBeInTheDocument();
+
+    // Verify MatchModal initialized with doubles format
+    const modalDoublesBtn = within(modalDialog).getByRole('button', { name: 'По двойки' });
+    expect(modalDoublesBtn).toHaveAttribute('aria-pressed', 'true');
+  });
 });

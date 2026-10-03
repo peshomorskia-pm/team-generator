@@ -12,9 +12,44 @@ export const TeamSettings = memo(function TeamSettings({
   balanceByRating = false,
   onBalanceToggle,
   hasRatings = false,
+  format = 'singles',
+  onFormatChange,
 }: TeamSettingsProps) {
   return (
     <div className="space-y-6">
+      {/* Format Selector Pills */}
+      <div className="flex flex-col space-y-1.5">
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Формат на мача
+        </span>
+        <div className="flex items-center rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700 self-start">
+          <button
+            type="button"
+            onClick={() => onFormatChange?.('singles')}
+            className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+              format === 'singles'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+            aria-pressed={format === 'singles'}
+          >
+            Поединично
+          </button>
+          <button
+            type="button"
+            onClick={() => onFormatChange?.('doubles')}
+            className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+              format === 'doubles'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+            aria-pressed={format === 'doubles'}
+          >
+            По двойки
+          </button>
+        </div>
+      </div>
+
       {/* Settings Inputs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input

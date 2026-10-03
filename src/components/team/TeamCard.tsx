@@ -3,7 +3,28 @@ import { User, Shuffle, Star } from 'lucide-react';
 import { TeamCardProps } from '../../types';
 import { Badge } from '../ui/Badge';
 
-export const TeamCard: React.FC<TeamCardProps> = ({ team, index = 0, onShuffleTeam }) => {
+export const TeamCard: React.FC<TeamCardProps> = ({
+  team,
+  index = 0,
+  onShuffleTeam,
+  format,
+}) => {
+  const displayTotalRating = React.useMemo(() => {
+    if (team.totalRating !== undefined && team.totalRating > 0 && !format) {
+      return team.totalRating;
+    }
+    const sum = team.players.reduce((acc, p) => {
+      const r =
+        format === 'singles'
+          ? (p.singles_rating ?? p.rating ?? 0)
+          : format === 'doubles'
+            ? (p.doubles_rating ?? p.rating ?? 0)
+            : (p.rating ?? 0);
+      return acc + r;
+    }, 0);
+    return sum > 0 ? sum : team.totalRating;
+  }, [team, format]);
+
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden transform transition-all duration-300 hover:shadow-md">
       {/* Header */}
@@ -15,9 +36,9 @@ export const TeamCard: React.FC<TeamCardProps> = ({ team, index = 0, onShuffleTe
           {team.name}
         </h3>
         <div className="flex items-center space-x-2">
-          {team.totalRating !== undefined && team.totalRating > 0 && (
+          {displayTotalRating !== undefined && displayTotalRating > 0 && (
             <Badge variant="amber" size="sm" icon={Star}>
-              {team.totalRating}
+              {displayTotalRating}
             </Badge>
           )}
           <Badge variant="slate" size="sm">
@@ -40,19 +61,31 @@ export const TeamCard: React.FC<TeamCardProps> = ({ team, index = 0, onShuffleTe
       {/* Body */}
       <div className="p-5">
         <ul className="space-y-2">
-          {team.players.map((player) => (
-            <li key={player.id} className="flex items-center justify-between text-gray-700 dark:text-gray-200 text-sm">
-              <div className="flex items-center min-w-0">
-                <User className="w-4 h-4 mr-2 text-indigo-400 shrink-0" />
-                <span className="truncate">{player.name}</span>
-              </div>
-              {player.rating !== undefined && (
-                <span className="text-xs text-amber-500 font-medium ml-2 shrink-0">
-                  ★ {player.rating}
-                </span>
-              )}
-            </li>
-          ))}
+          {team.players.map((player) => {
+            const playerRating =
+              format === 'singles'
+                ? (player.singles_rating ?? player.rating)
+                : format === 'doubles'
+                  ? (player.doubles_rating ?? player.rating)
+                  : player.rating;
+
+            return (
+              <li
+                key={player.id}
+                className="flex items-center justify-between text-gray-700 dark:text-gray-200 text-sm"
+              >
+                <div className="flex items-center min-w-0">
+                  <User className="w-4 h-4 mr-2 text-indigo-400 shrink-0" />
+                  <span className="truncate">{player.name}</span>
+                </div>
+                {playerRating !== undefined && (
+                  <span className="text-xs text-amber-500 font-medium ml-2 shrink-0">
+                    ★ {playerRating}
+                  </span>
+                )}
+              </li>
+            );
+          })}
           {team.players.length === 0 && (
             <li className="text-xs text-gray-400 italic text-center py-2">
               Няма разпределени играчи
