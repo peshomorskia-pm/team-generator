@@ -57,6 +57,16 @@ All incoming deep route requests are routed to `index.html`, allowing React Rout
 ### Supabase Cloud Datastore
 Persistent relational data (`players`, `matches`, and `match_players` tables) is hosted in a production **Supabase Cloud (PostgreSQL)** project. Database schema migrations stored in `supabase/migrations/` maintain exact schema parity between local Docker containers and the cloud environment.
 
+### Automated Database Migrations CI/CD Pipeline
+Continuous delivery of database schema migrations is automated via GitHub Actions in [`.github/workflows/supabase-migrations.yml`](.github/workflows/supabase-migrations.yml):
+* **Target Project:** `ctmusfnyftdrjopumwcw` (Supabase Cloud).
+* **Automatic Trigger:** Runs on every `push` to the `main` branch when changes are detected within `supabase/migrations/**`.
+* **Manual Execution (`workflow_dispatch`):** Can be triggered on-demand via the GitHub Actions UI (**Actions** tab → **Supabase Migrations CI/CD** → **Run workflow**).
+* **Required GitHub Repository Secrets:**
+  * `SUPABASE_ACCESS_TOKEN`: Personal Access Token generated from the Supabase dashboard for CLI authorization.
+  * `SUPABASE_DB_PASSWORD`: PostgreSQL database password for the target Supabase cloud project (`ctmusfnyftdrjopumwcw`).
+* **Architecture Decision:** For details, see [ADR 0015](docs/adr/0015-automated-supabase-migrations-cicd.md).
+
 ### Environment Configuration: Local vs. Production
 Runtime credentials are isolated across environments:
 
@@ -170,6 +180,9 @@ team-generator/
 ├── .agents/                # Modular agent roles, protocols, and execution skills
 │   ├── protocols/          # Global system protocols (testing, language, git, handoffs)
 │   └── roles/              # Specialist agent role definitions
+├── .github/                # GitHub Actions CI/CD workflows
+│   └── workflows/
+│       └── supabase-migrations.yml
 ├── docs/                   # Documentation and Architecture Decision Records (ADRs)
 │   └── adr/
 │       ├── 0001-modular-agent-roles.md
@@ -183,7 +196,10 @@ team-generator/
 │       ├── 0009-stage-3-hybrid-generator-and-transient-guests.md
 │       ├── 0010-matches-module-and-relational-schema.md
 │       ├── 0011-generator-match-integration.md
-│       └── 0012-production-deployment-vercel-supabase-cloud.md
+│       ├── 0012-production-deployment-vercel-supabase-cloud.md
+│       ├── 0013-tennis-rankings-and-elo-system.md
+│       ├── 0014-dual-elo-players-and-team-generator.md
+│       └── 0015-automated-supabase-migrations-cicd.md
 ├── src/                    # React application source code
 │   ├── assets/styles/      # Tailwind CSS entry points
 │   ├── components/         # Modular UI components
@@ -228,7 +244,7 @@ This repository employs a modular, multi-agent engineering lifecycle managed by 
 6. **[Document Writer](.agents/roles/document-writer.md) (`flash_lite`):** Drafts documentation, updates ADRs, and opens Pull Requests targeting `dev` (`5_documentation.md`).
 7. **[Code Health Auditor](.agents/roles/code-health-auditor.md) (`flash`):** Performs read-only static analysis to identify technical debt, test coverage gaps, dead code, weak typings, and UI componentization candidates (`docs/proposals/`).
 
-For full details, refer to [GEMINI.md](GEMINI.md), [ADR 0001](docs/adr/0001-modular-agent-roles.md), [ADR 0002](docs/adr/0002-token-optimization-strategy.md), [ADR 0003](docs/adr/0003-tech-stack-selection.md), [ADR 0004](docs/adr/0004-localization-and-language-boundary.md), [ADR 0005](docs/adr/0005-app-shell-routing-and-theming.md), [ADR 0006](docs/adr/0006-mandatory-automated-testing-protocol.md), [ADR 0007](docs/adr/0007-strict-scoping-and-code-health-auditor.md), [ADR 0008](docs/adr/0008-orchestrator-planner-investigation-boundary.md), [ADR 0009](docs/adr/0009-stage-3-hybrid-generator-and-transient-guests.md), [ADR 0010](docs/adr/0010-matches-module-and-relational-schema.md), [ADR 0011](docs/adr/0011-generator-match-integration.md), and [ADR 0012](docs/adr/0012-production-deployment-vercel-supabase-cloud.md), [ADR 0013](docs/adr/0013-tennis-rankings-and-elo-system.md), and [ADR 0014](docs/adr/0014-dual-elo-players-and-team-generator.md).
+For full details, refer to [GEMINI.md](GEMINI.md), [ADR 0001](docs/adr/0001-modular-agent-roles.md), [ADR 0002](docs/adr/0002-token-optimization-strategy.md), [ADR 0003](docs/adr/0003-tech-stack-selection.md), [ADR 0004](docs/adr/0004-localization-and-language-boundary.md), [ADR 0005](docs/adr/0005-app-shell-routing-and-theming.md), [ADR 0006](docs/adr/0006-mandatory-automated-testing-protocol.md), [ADR 0007](docs/adr/0007-strict-scoping-and-code-health-auditor.md), [ADR 0008](docs/adr/0008-orchestrator-planner-investigation-boundary.md), [ADR 0009](docs/adr/0009-stage-3-hybrid-generator-and-transient-guests.md), [ADR 0010](docs/adr/0010-matches-module-and-relational-schema.md), [ADR 0011](docs/adr/0011-generator-match-integration.md), [ADR 0012](docs/adr/0012-production-deployment-vercel-supabase-cloud.md), [ADR 0013](docs/adr/0013-tennis-rankings-and-elo-system.md), [ADR 0014](docs/adr/0014-dual-elo-players-and-team-generator.md), and [ADR 0015](docs/adr/0015-automated-supabase-migrations-cicd.md).
 
 ---
 
