@@ -20,6 +20,8 @@ jobs:
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
+        with:
+          version: latest
 
       - name: Link Project
         run: supabase link --project-ref ctmusfnyftdrjopumwcw --password "${{ secrets.SUPABASE_DB_PASSWORD }}"
