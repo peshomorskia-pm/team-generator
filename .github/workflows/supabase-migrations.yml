@@ -26,6 +26,8 @@ jobs:
       - name: Push Database Schema
         run: |
           ENCODED_PASSWORD=$(node -e "console.log(encodeURIComponent(process.env.SUPABASE_DB_PASSWORD))")
-          supabase db push --db-url "postgresql://postgres.ctmusfnyftdrjopumwcw:${ENCODED_PASSWORD}@aws-1-eu-central-1.pooler.supabase.com:5432/postgres"
+          DB_URL="postgresql://postgres.ctmusfnyftdrjopumwcw:${ENCODED_PASSWORD}@aws-1-eu-central-1.pooler.supabase.com:5432/postgres"
+          supabase migration repair --status applied 20261002000000 20261003000000 20261003010000 20261003120000 20261003140000 --db-url "$DB_URL"
+          supabase db push --db-url "$DB_URL"
         env:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
