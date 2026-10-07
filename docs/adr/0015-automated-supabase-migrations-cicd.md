@@ -53,8 +53,8 @@ We decided to implement an automated Continuous Delivery pipeline via GitHub Act
 
 1. **Target Project & Secrets Contract:**
    * **Project Reference:** `ctmusfnyftdrjopumwcw` (Supabase Cloud).
-   * **`SUPABASE_ACCESS_TOKEN`:** Personal Access Token stored as a GitHub Actions encrypted repository secret for CLI authentication.
-   * **`SUPABASE_DB_PASSWORD`:** PostgreSQL database password stored as an encrypted secret for direct database connection.
+   * **`SUPABASE_DB_PASSWORD`:** PostgreSQL database password stored as an encrypted GitHub Actions secret.
+   * *Note on Tokens:* Personal access tokens (`SUPABASE_ACCESS_TOKEN`) and `supabase link` were eliminated in favor of direct connection via the Supabase Session Pooler (`--db-url`), completely bypassing Management API permission constraints and rate limits.
 
 2. **Trigger Configuration:**
    * **`push` to `main`**: Path-filtered strictly to `supabase/migrations/**` to avoid redundant runner execution for frontend-only commits.
@@ -66,9 +66,9 @@ We decided to implement an automated Continuous Delivery pipeline via GitHub Act
 
 4. **Pipeline Steps:**
    * Checkout repository via `actions/checkout@v4`.
-   * Setup official CLI via `supabase/setup-cli@v1`.
-   * Link cloud project via `supabase link --project-ref ctmusfnyftdrjopumwcw --password "${{ secrets.SUPABASE_DB_PASSWORD }}"`.
-   * Push schema migrations via `supabase db push --password "${{ secrets.SUPABASE_DB_PASSWORD }}"`.
+   * Setup official CLI via `supabase/setup-cli@v1` pinned to version `2.118.0`.
+   * Repair baseline migration history if needed (`supabase migration repair --status applied ... --db-url "$DB_URL"`).
+   * Push schema migrations via `supabase db push --db-url "$DB_URL"`.
 
 ---
 
@@ -81,6 +81,6 @@ We decided to implement an automated Continuous Delivery pipeline via GitHub Act
 * **Controlled Access:** Eliminates the need to distribute production database passwords to all developers' workstations.
 
 ### Negative / Operational Caveats
-* **Secret Management:** Requires configuring and rotating `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD` in repository settings.
+* **Secret Management:** Requires configuring and rotating `SUPABASE_DB_PASSWORD` in repository secrets.
 * **Destructive Migration Risk:** Requires rigorous code review for destructive schema migrations (e.g., column drops or table alterations) before merging to `main`.
 * **Runner Dependency:** Depends on GitHub Actions and Supabase API availability during merges.
