@@ -26,6 +26,6 @@ jobs:
       - name: Push Database Schema
         run: |
           ENCODED_PASSWORD=$(node -e "console.log(encodeURIComponent(process.env.SUPABASE_DB_PASSWORD))")
-          supabase db push --db-url "postgresql://postgres:${ENCODED_PASSWORD}@db.ctmusfnyftdrjopumwcw.supabase.co:5432/postgres"
+          supabase db push --db-url "postgresql://postgres.ctmusfnyftdrjopumwcw:${ENCODED_PASSWORD}@aws-1-eu-central-1.pooler.supabase.com:5432/postgres"
         env:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
