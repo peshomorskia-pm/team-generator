@@ -68,49 +68,56 @@ The engineering lifecycle follows a sequential chain of specialized roles optimi
 
 ```mermaid
 flowchart LR
-    User["User Prompt"] --> Orch0["Orchestrator<br/>(0_context.md)"]
-    Orch0 --> Plan["Planner<br/>(1_plan.md)"]
-    Plan --> Arch["Architect<br/>(2_architecture.md)"]
+    User["User Prompt (PO)"] --> Orch0["Orchestrator<br/>(0_context.md)"]
+    Orch0 --> Intake["Intake Gate<br/>(1_intake_gate.md)"]
+    Intake -->|Green / Cleared| Arch["Architect<br/>(2_architecture.md)"]
     Arch --> Dev["Senior Dev<br/>(3_implementation.md)"]
     Dev --> Rev["Code Reviewer<br/>(4_review.md)"]
     Rev -->|Fixes Requested| Dev
-    Rev -->|Approved| Doc["Document Writer<br/>(5_documentation.md)"]
+    Rev -->|Approved| Accept["Acceptance Gate<br/>(5_acceptance_gate.md)"]
+    Accept -->|Defects Found| Dev
+    Accept -->|Accepted| Doc["Document Writer<br/>(6_documentation.md)"]
     Doc --> OrchFinal["Orchestrator<br/>(PR & User Consent)"]
 ```
 
 ### Model Tiering Policy & Roles Directory
 | Role | Model Tier | Responsibility | Specification Link | Output Artifact |
 |---|---|---|---|---|
-| **Orchestrator** | `pro` / `flash` | Agile PM & Release Gatekeeper. Zero source code access. Git branch setup, handoff initiation, final review | [.agents/roles/orchestrator.md](file:///D:/Projects/team-generator/.agents/roles/orchestrator.md) | `0_context.md` |
-| **Planner** | `flash` | Technical Lead. First-responder codebase inspector. Scopes features and triages bugs | [.agents/roles/planner.md](file:///D:/Projects/team-generator/.agents/roles/planner.md) | `1_plan.md` |
+| **Orchestrator** | `pro` / `flash` | Agile PM & Release Gatekeeper. Zero source code access. Git branch setup, handoff initiation, triage decisions, final review | [.agents/roles/orchestrator.md](file:///D:/Projects/team-generator/.agents/roles/orchestrator.md) | `0_context.md` |
+| **Intake Gatekeeper** | `flash` | Tech Lead & Feasibility Auditor. First-responder codebase inspector. Validates feasibility, issues 🟢/🟡/🔴 verdict | [.agents/roles/intake-gate.md](file:///D:/Projects/team-generator/.agents/roles/intake-gate.md) | `1_intake_gate.md` |
 | **Architect** | `pro` | Technical specifications, schemas, interfaces, file tree blueprint | [.agents/roles/architect.md](file:///D:/Projects/team-generator/.agents/roles/architect.md) | `2_architecture.md` |
 | **Senior Dev** | `inherit` / `flash` | Code implementation, test/lint execution, architecture compliance | [.agents/roles/senior-dev.md](file:///D:/Projects/team-generator/.agents/roles/senior-dev.md) | `3_implementation.md` |
 | **Code Reviewer** | `flash` | Diff-based audit, compliance checks, defect detection, verdict | [.agents/roles/code-reviewer.md](file:///D:/Projects/team-generator/.agents/roles/code-reviewer.md) | `4_review.md` |
-| **Document Writer** | `flash_lite` | Docs management, ADRs (`docs/adr/`), README updates, PR creation targeting `dev` | [.agents/roles/document-writer.md](file:///D:/Projects/team-generator/.agents/roles/document-writer.md) | `5_documentation.md` |
+| **Acceptance Gatekeeper** | `flash` | Autonomous QA & UAT Lead. Verifies PO acceptance criteria, Bulgarian UI, and user flows against implementation | [.agents/roles/acceptance-gate.md](file:///D:/Projects/team-generator/.agents/roles/acceptance-gate.md) | `5_acceptance_gate.md` |
+| **Document Writer** | `flash_lite` | Docs management, ADRs (`docs/adr/`), README updates, PR creation targeting `dev` | [.agents/roles/document-writer.md](file:///D:/Projects/team-generator/.agents/roles/document-writer.md) | `6_documentation.md` |
 | **Code Health Auditor** | `flash` | Read-only static analysis, debt & test coverage inspection, proposal generation (Zero prod edits) | [.agents/roles/code-health-auditor.md](file:///D:/Projects/team-generator/.agents/roles/code-health-auditor.md) | `docs/proposals/code-health-YYYY-MM-DD.md` |
 
 ---
 
 ## 4. Execution Protocol & User Interaction Guardrails
 
-### User-as-PO & Planner-as-Tech-Lead Investigation Boundary
-To prevent token bloat, context pollution, and role ambiguity:
+### User-as-PO & Minimum Overhead Guardrail
+To prevent token bloat, context pollution, and excessive PO involvement:
 - **User as Product Owner (PO):** Defines business goals, user stories, acceptance criteria, and defect reports.
-- **Orchestrator as Agile PM & Gatekeeper:** Strictly enforces workflow, sets up branches, initializes `0_context.md`, and gates releases. Under the **Zero Source Code Inspection Rule**, the Orchestrator NEVER reads, greps, or inspects application files in `src/**`.
-- **Planner as Technical Lead & First Responder:** The first role authorized to inspect `src/**`. Operates the investigation boundary for both feature scoping and defect triage.
+- **Minimum PO Overhead Principle:** When technical constraints, trade-offs, or blockers arise, the agent team MUST NOT present open-ended questions. The Orchestrator evaluates the problem first. If PO input is necessary, the Orchestrator MUST present the **Problem alongside 2-3 Evaluated Solution Proposals (with a Recommended Option and Trade-offs)** so the PO only has to make a strategic decision.
+- **Orchestrator as Agile PM & Gatekeeper:** Strictly enforces workflow, sets up branches, initializes `0_context.md`, coordinates gates, and releases. Under the **Zero Source Code Inspection Rule**, the Orchestrator NEVER reads, greps, or inspects application files in `src/**`.
+- **Intake Gatekeeper as Tech Lead & First Responder:** The first role authorized to inspect `src/**`. Operates the investigation boundary for both feature scoping and defect triage.
 
 ### Investigation Workflows (Bug vs. Feature)
-- **Feature Investigation:** Planner inspects directory layouts, existing components, and state structures; identifies extension points; and decomposes functional goals into sequenced milestones.
-- **Bug Triage & Root Cause Exploration:** Planner traces stack traces and symptoms directly to source files in `src/**`, analyzes dependencies and blast radius, defines reproduction preconditions, and formulates strict test requirements for Senior Dev.
+- **Feature Investigation:** Intake Gatekeeper inspects directory layouts, existing components, and state structures; identifies extension points; and assigns a 🟢/🟡/🔴 verdict.
+- **Bug Triage & Root Cause Exploration:** Intake Gatekeeper traces stack traces and symptoms directly to source files in `src/**`, analyzes dependencies and blast radius, defines reproduction preconditions, and formulates strict test requirements for Senior Dev.
 
 ### Standard Linear Feature/Fix Lifecycle
 1. **Initiation:** The **Orchestrator** intercepts the user prompt (User as PO), verifies environment cleanliness, creates the feature/fix/chore branch from `dev`, initializes `.agent_handoffs/<branch_name>/`, and writes `0_context.md` (ceiling: 1,500 tokens) without inspecting application source code.
-2. **Planning & Investigation:** The Orchestrator summons the **Planner** (`flash`), who consumes `0_context.md`, performs first-responder codebase inspection (`src/**`), triages defects or scopes features, and generates `1_plan.md` (ceiling: 2,000 tokens).
-3. **Architecture:** The **Architect** (`pro`) consumes `1_plan.md` and designs technical contracts in `2_architecture.md` (ceiling: 3,000 tokens).
+2. **Intake Feasibility & Triage:** The Orchestrator summons the **Intake Gatekeeper** (`flash`), who consumes `0_context.md`, inspects `src/**`, validates business criteria, and generates `1_intake_gate.md` (ceiling: 2,000 tokens) with a 🟢 GREEN, 🟡 YELLOW, or 🔴 RED verdict.
+   - If 🟢 GREEN: Workflow proceeds autonomously to Architect.
+   - If 🟡 YELLOW / 🔴 RED: Orchestrator assesses whether it can resolve autonomously; if PO input is required, presents Problem + Evaluated Solutions.
+3. **Architecture:** The **Architect** (`pro`) consumes `1_intake_gate.md` and designs technical contracts in `2_architecture.md` (ceiling: 3,000 tokens).
 4. **Implementation:** The **Senior Dev** (`inherit`/`flash`) consumes `2_architecture.md`, delivers conforming code, runs verification, and logs changes in `3_implementation.md` (ceiling: 2,500 tokens).
-5. **Review:** The **Code Reviewer** (`flash`) consumes `3_implementation.md`, conducts a diff-based audit (`git diff`), and outputs `4_review.md` (ceiling: 1,500 tokens). If fixes are requested, control returns to Senior Dev.
-6. **Documentation & PR:** Upon approval, the **Document Writer** (`flash_lite`) consumes `4_review.md`, drafts docs/ADRs (`docs/adr/`), creates `5_documentation.md` (ceiling: 2,000 tokens), and opens a PR targeting `dev`.
-7. **Hard Stop for Consent:** The Orchestrator presents the completed PR and execution summary to the user. The Orchestrator **MUST halt execution and request explicit user permission before merging** or proceeding if a critical blocker is found.
+5. **Technical Review:** The **Code Reviewer** (`flash`) consumes `3_implementation.md`, conducts a diff-based audit (`git diff`), and outputs `4_review.md` (ceiling: 1,500 tokens). If fixes are requested, control returns to Senior Dev.
+6. **Business Acceptance & UAT:** The **Acceptance Gatekeeper** (`flash`) consumes `1_intake_gate.md` and `4_review.md`, verifies implementation against initial PO acceptance criteria, audits Bulgarian UI localization, and outputs `5_acceptance_gate.md` (ceiling: 2,000 tokens). If business defects are found, control returns to Senior Dev autonomously.
+7. **Documentation & PR:** Upon acceptance, the **Document Writer** (`flash_lite`) consumes `5_acceptance_gate.md`, drafts docs/ADRs (`docs/adr/`), creates `6_documentation.md` (ceiling: 2,000 tokens), and opens a PR targeting `dev`.
+8. **Hard Stop for Consent:** The Orchestrator presents the verified PR, UAT audit summary, and execution metrics to the user. The Orchestrator **MUST halt execution and request explicit user permission before merging**.
 
 ### On-Demand Code Health Audit Workflow
 - **Manual Trigger Only:** The `code-health-auditor` operates independently outside the standard linear feature lifecycle. It must never be triggered automatically during feature runs.
