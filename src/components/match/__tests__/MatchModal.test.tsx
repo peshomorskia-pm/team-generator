@@ -453,7 +453,8 @@ describe('MatchModal Component', () => {
     });
 
     it('Scenario 2 (Date/Score): defaults date to today and leaves scores empty when prefilled in Create mode', () => {
-      const todayFormatted = new Date().toISOString().slice(0, 10);
+      const now = new Date();
+      const todayFormatted = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
       render(
         <MatchModal
