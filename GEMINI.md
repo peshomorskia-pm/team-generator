@@ -20,7 +20,7 @@ All agents, workflows, and tools must strictly adhere to the following core prot
     1. `git status`
     2. `git checkout dev`
     3. `git pull origin dev`
-    4. `git checkout -b <branch_name>` (e.g., `feature/xxxx` or `fix/xxxx`)
+    4. `git checkout -b <branch_name>` (Just-In-Time after Intake Gate green light, before architecture/implementation)
   - Pull Requests MUST target `dev`.
   - Parallel work must use `git worktree add <path> <branch>`.
   - Detailed Specification: [.agents/protocols/git-workflow.md](file:///D:/Projects/team-generator/.agents/protocols/git-workflow.md)
@@ -108,16 +108,18 @@ To prevent token bloat, context pollution, and excessive PO involvement:
 - **Bug Triage & Root Cause Exploration:** Intake Gatekeeper traces stack traces and symptoms directly to source files in `src/**`, analyzes dependencies and blast radius, defines reproduction preconditions, and formulates strict test requirements for Senior Dev.
 
 ### Standard Linear Feature/Fix Lifecycle
-1. **Initiation:** The **Orchestrator** intercepts the user prompt (User as PO), verifies environment cleanliness, creates the feature/fix/chore branch from `dev`, initializes `.agent_handoffs/<branch_name>/`, and writes `0_context.md` (ceiling: 1,500 tokens) without inspecting application source code.
-2. **Intake Feasibility & Triage:** The Orchestrator summons the **Intake Gatekeeper** (`flash`), who consumes `0_context.md`, inspects `src/**`, validates business criteria, and generates `1_intake_gate.md` (ceiling: 2,000 tokens) with a 🟢 GREEN, 🟡 YELLOW, or 🔴 RED verdict.
-   - If 🟢 GREEN: Workflow proceeds autonomously to Architect.
+1. **Initiation:** The **Orchestrator** intercepts the user prompt (User as PO), verifies environment cleanliness on `dev` (`git checkout dev && git pull origin dev`), and writes initial triage context `0_context.md` (ceiling: 1,500 tokens) without inspecting application source code. **No Git feature branch is created at this step** to prevent dangling phantom branches.
+2. **Intake Feasibility & Triage (Read-Only on `dev`):** The Orchestrator summons the **Intake Gatekeeper** (`flash`), who consumes `0_context.md`, inspects `src/**` in read-only mode, validates business criteria, and generates `1_intake_gate.md` (ceiling: 2,000 tokens) with a 🟢 GREEN, 🟡 YELLOW, or 🔴 RED verdict.
+   - If 🟢 GREEN: Workflow proceeds directly to JIT branch creation.
    - If 🟡 YELLOW / 🔴 RED: Orchestrator assesses whether it can resolve autonomously; if PO input is required, presents Problem + Evaluated Solutions.
-3. **Architecture:** The **Architect** (`pro`) consumes `1_intake_gate.md` and designs technical contracts in `2_architecture.md` (ceiling: 3,000 tokens).
-4. **Implementation:** The **Senior Dev** (`inherit`/`flash`) consumes `2_architecture.md`, delivers conforming code, runs verification, and logs changes in `3_implementation.md` (ceiling: 2,500 tokens).
-5. **Technical Review:** The **Code Reviewer** (`flash`) consumes `3_implementation.md`, conducts a diff-based audit (`git diff`), and outputs `4_review.md` (ceiling: 1,500 tokens). If fixes are requested, control returns to Senior Dev.
-6. **Business Acceptance & UAT:** The **Acceptance Gatekeeper** (`flash`) consumes `1_intake_gate.md` and `4_review.md`, verifies implementation against initial PO acceptance criteria, audits Bulgarian UI localization, and outputs `5_acceptance_gate.md` (ceiling: 2,000 tokens). If business defects are found, control returns to Senior Dev autonomously.
-7. **Documentation & PR:** Upon acceptance, the **Document Writer** (`flash_lite`) consumes `5_acceptance_gate.md`, drafts docs/ADRs (`docs/adr/`), creates `6_documentation.md` (ceiling: 2,000 tokens), and opens a PR targeting `dev`.
-8. **Hard Stop for Consent:** The Orchestrator presents the verified PR, UAT audit summary, and execution metrics to the user. The Orchestrator **MUST halt execution and request explicit user permission before merging**.
+   - If Cancelled / Rejected: Workflow terminates immediately with **zero Git branches created**, leaving `dev` in pristine condition.
+3. **Just-In-Time (JIT) Branch Creation (The Pivot):** Upon establishing a clear green light (🟢 GREEN or explicit PO selection of an approved solution proposal), the **Orchestrator** creates the dedicated feature/fix branch from `dev` (`git checkout -b <branch_name>`) with the finalized, accurate ticket name, initializes `.agent_handoffs/<branch_name>/`, and summons the Architect.
+4. **Architecture:** The **Architect** (`pro`) consumes `1_intake_gate.md` and designs technical contracts in `2_architecture.md` (ceiling: 3,000 tokens).
+5. **Implementation:** The **Senior Dev** (`inherit`/`flash`) consumes `2_architecture.md`, delivers conforming code, runs verification, and logs changes in `3_implementation.md` (ceiling: 2,500 tokens).
+6. **Technical Review:** The **Code Reviewer** (`flash`) consumes `3_implementation.md`, conducts a diff-based audit (`git diff`), and outputs `4_review.md` (ceiling: 1,500 tokens). If fixes are requested, control returns to Senior Dev.
+7. **Business Acceptance & UAT:** The **Acceptance Gatekeeper** (`flash`) consumes `1_intake_gate.md` and `4_review.md`, verifies implementation against initial PO acceptance criteria, audits Bulgarian UI localization, and outputs `5_acceptance_gate.md` (ceiling: 2,000 tokens). If business defects are found, control returns to Senior Dev autonomously.
+8. **Documentation & PR:** Upon acceptance, the **Document Writer** (`flash_lite`) consumes `5_acceptance_gate.md`, drafts docs/ADRs (`docs/adr/`), creates `6_documentation.md` (ceiling: 2,000 tokens), and opens a PR targeting `dev`.
+9. **Hard Stop for Consent:** The Orchestrator presents the verified PR, UAT audit summary, and execution metrics to the user. The Orchestrator **MUST halt execution and request explicit user permission before merging**.
 
 ### On-Demand Code Health Audit Workflow
 - **Manual Trigger Only:** The `code-health-auditor` operates independently outside the standard linear feature lifecycle. It must never be triggered automatically during feature runs.

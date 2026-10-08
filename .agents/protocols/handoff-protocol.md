@@ -6,6 +6,7 @@ This protocol governs the communication and artifact generation lifecycle betwee
 ## 2. Storage Location & Directory Structure
 * All handoff artifacts for a given branch must reside in `.agent_handoffs/<branch_name>/`.
 * The folder naming must match the active working branch name (e.g., `.agent_handoffs/feature/token-optimization/`).
+* **JIT Initialization:** During initial read-only triage on `dev`, initial context and intake artifacts reside in `.agent_handoffs/draft/` or staging. Upon Just-In-Time (JIT) branch creation following a green light, `.agent_handoffs/<branch_name>/` is initialized with `0_context.md` and `1_intake_gate.md`.
 * Retention policy: Handoff folders are permanently retained for historical auditability unless explicitly commanded for deletion by the user after a successful merge.
 
 ## 3. Single-Hop Delta Handoff Contract

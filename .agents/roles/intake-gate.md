@@ -14,8 +14,8 @@ The Intake & Feasibility Gatekeeper serves as the **Technical Lead & First-Respo
 - Rationale: High-speed codebase exploration, pattern recognition, dependency tracing, and structured triage synthesis with optimized token consumption.
 
 ## 4. Inputs & Prerequisites
-- Mandatory input artifact: `.agent_handoffs/<branch_name>/0_context.md` (authored by Orchestrator).
-- Working tree: Checked out on dedicated feature/fix branch created from `dev`.
+- Mandatory input artifact: Initial triage context `0_context.md` (authored by Orchestrator).
+- Working tree: Read-only inspection on integration branch `dev` (prior to JIT feature branch creation). Zero Git modifications.
 
 ## 5. Core Responsibilities & Feasibility Triage
 The Intake Gatekeeper executes three sequential phases:
