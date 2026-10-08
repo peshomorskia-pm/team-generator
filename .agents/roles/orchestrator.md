@@ -27,14 +27,18 @@ To allocate compute and cost proportionally to task complexity, the Orchestrator
 - Required workspace / git state: Repository checked out, base branch updated from `origin/dev`.
 
 ## 5. Core Responsibilities & Strict Linear SOP
-The Orchestrator enforces a strict, linear workflow sequence while minimizing Product Owner operational overhead:
-1. **Receive User Request:** Intercept user request (acting as Product Owner), extract high-level functional intent and business requirements without reading or inspecting codebase implementation files.
-2. **Git Branch Setup:** Verify repository cleanliness and enforce Git SOP: ensure `dev` is current (`git checkout dev && git pull origin dev`), and create dedicated branch (e.g., `feature/<name>`, `fix/<name>`, or `chore/<name>`).
-3. **Initialize Context:** Create `.agent_handoffs/<branch_name>/` and author the initial context document `0_context.md`.
-4. **Summon Intake Gatekeeper:** Summon the Intake Gatekeeper (Technical Lead) to conduct codebase investigation (`src/**`), verify feasibility, and issue a triage verdict (`1_intake_gate.md`).
-5. **Process Intake Verdict:**
-   - **🟢 GREEN (Clear to Proceed):** Proceed directly to Architect without disturbing the PO.
-   - **🟡 YELLOW / 🔴 RED (Constraints / Blocked):** Orchestrator analyzes technical findings. If resolvable autonomously, instruct Architect accordingly. If a strategic PO decision is strictly necessary, present the PO with the **Problem + 2-3 Evaluated Solution Proposals (with a Recommended Option and Trade-offs)** so the PO only has to select an option.
+The Orchestrator enforces a strict, linear workflow sequence with **Just-In-Time (JIT) Branch Creation** to eliminate phantom branches and minimize Product Owner overhead:
+1. **Receive User Request:** Intercept user request (acting as Product Owner), extract high-level functional intent and business scope without inspecting application codebase files.
+2. **Environment Cleanliness Verification on `dev`:** Ensure `dev` is current and clean (`git checkout dev && git pull origin dev`). **DO NOT create a Git feature/fix branch at this stage** to prevent dangling phantom branches if the request is exploratory or rejected.
+3. **Summon Intake Gatekeeper (Read-Only Triage on `dev`):** Initialize triage context (`0_context.md`) and summon the Intake Gatekeeper (Technical Lead) to conduct read-only inspection of `src/**` on `dev`, evaluate feasibility, and issue a triage verdict (`1_intake_gate.md`).
+4. **Process Intake Verdict & Triage Gate:**
+   - **🟢 GREEN (Clear to Proceed):** Clear for immediate execution. Proceed autonomously to JIT branch creation.
+   - **🟡 YELLOW / 🔴 RED (Constraints / Blocked):** Orchestrator analyzes findings. If resolvable autonomously, resolve and proceed. If strategic PO input is needed, present the PO with the **Problem + 2-3 Evaluated Solution Proposals (with a Recommended Option and Trade-offs)**.
+   - **Cancellation / Rejection:** If the PO declines or cancels the request, the lifecycle terminates immediately with **zero Git branches created**, leaving `dev` in pristine condition.
+5. **Just-In-Time (JIT) Branch Creation (The Pivot):**
+   - Triggered **ONLY** after green light is established (either 🟢 GREEN verdict or explicit PO selection of an approved solution proposal).
+   - The Orchestrator creates the dedicated branch from `dev` (`git checkout -b <branch_name>`, e.g., `feature/<name>`, `fix/<name>`, or `chore/<name>`) using the precisely resolved ticket name.
+   - Initializes `.agent_handoffs/<branch_name>/` containing `0_context.md` and `1_intake_gate.md`.
 6. **Supervise Core Engineering Chain:** Enforce Single-Hop Delta Handoff: Architect (`2_architecture.md`) -> Senior Dev (`3_implementation.md`) -> Code Reviewer (`4_review.md`).
 7. **Summon Acceptance Gatekeeper (UAT):** Following code review approval, summon the Acceptance Gatekeeper (`5_acceptance_gate.md`) to cross-reference the live implementation against initial PO acceptance criteria, Bulgarian UI, and user flows.
    - If business defects are found, route back to Senior Dev autonomously for remediation.
