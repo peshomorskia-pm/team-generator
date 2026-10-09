@@ -4,6 +4,7 @@ import { GeneratorPlayer, DatabasePlayer } from '../types/generator';
 import { fisherYatesShuffle } from '../utils/shuffle';
 import { balanceTeams } from '../utils/balance';
 import { saveMatchup, generateTeamsFingerprint, areTeamConfigsEqual } from '../utils/history';
+import { copyTextToClipboard, formatTeamsForClipboard } from '../utils/clipboard';
 
 export function generateGuestId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -419,36 +420,21 @@ export function useTeamGenerator() {
   const copyResults = useCallback(async (): Promise<boolean> => {
     if (teams.length === 0) return false;
 
-    let textToCopy = 'Списък с отбори:\n\n';
-    teams.forEach((team) => {
-      textToCopy += `${team.name}:\n`;
-      team.players.forEach((p) => {
-        textToCopy += `- ${p.name}\n`;
-      });
-      textToCopy += '\n';
-    });
+    const textToCopy = formatTeamsForClipboard(teams, mode, format);
+    const successful = await copyTextToClipboard(textToCopy);
 
-    try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(textToCopy);
-      } else {
-        const textArea = document.createElement('textarea');
-        textArea.value = textToCopy;
-        textArea.style.position = 'absolute';
-        textArea.style.left = '-999999px';
-        document.body.prepend(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        textArea.remove();
-      }
+    if (successful) {
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
       return true;
-    } catch {
-      showAlert('Неуспешно копиране. Моля, копирайте ръчно.', 'error');
-      return false;
     }
-  }, [teams, showAlert]);
+
+    showAlert('Неуспешно копиране. Моля, копирайте ръчно.', 'error');
+    if (typeof window !== 'undefined' && typeof window.prompt === 'function') {
+      window.prompt('Копирайте съставите ръчно (Ctrl+C):', textToCopy);
+    }
+    return false;
+  }, [teams, mode, format, showAlert]);
 
   return {
     mode,

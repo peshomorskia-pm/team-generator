@@ -394,7 +394,7 @@ describe('useTeamGenerator', () => {
       expect(result.current.teams[0].players).toHaveLength(initialTeam1Players.length);
     });
 
-    it('copies generated team results to clipboard', async () => {
+    it('copies generated team results to clipboard with formatted text', async () => {
       const { result } = renderHook(() => useTeamGenerator());
 
       const writeTextMock = vi.fn().mockResolvedValue(undefined);
@@ -419,8 +419,70 @@ describe('useTeamGenerator', () => {
       });
 
       expect(success).toBe(true);
-      expect(writeTextMock).toHaveBeenCalled();
+      expect(writeTextMock).toHaveBeenCalledTimes(1);
+      const copiedText = writeTextMock.mock.calls[0][0] as string;
+      expect(copiedText).toContain('🎾 Тенис - По двойки');
+      expect(copiedText).toContain('Отбор 1:');
+      expect(copiedText).toContain('Отбор 2:');
+      expect(copiedText).toContain('Среща: Отбор 1 vs Отбор 2');
       expect(result.current.isCopied).toBe(true);
+    });
+
+    it('returns false when copying with no generated teams', async () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      let success: boolean | undefined;
+      await act(async () => {
+        success = await result.current.copyResults();
+      });
+
+      expect(success).toBe(false);
+      expect(result.current.isCopied).toBe(false);
+    });
+
+    it('handles clipboard failure gracefully by invoking window.prompt and showing alert', async () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      // Simulate clipboard writeText failing
+      const writeTextMock = vi.fn().mockRejectedValue(new Error('Permission denied'));
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: writeTextMock },
+        writable: true,
+        configurable: true,
+      });
+
+      // Simulate execCommand failing
+      document.execCommand = vi.fn().mockReturnValue(false);
+      const promptMock = vi.fn();
+      window.prompt = promptMock;
+
+      act(() => {
+        result.current.addGuest('Иван, Петър, Георги, Стоян');
+        result.current.setNumberOfTeams(2);
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      let success: boolean | undefined;
+      await act(async () => {
+        success = await result.current.copyResults();
+      });
+
+      expect(success).toBe(false);
+      expect(result.current.isCopied).toBe(false);
+      expect(promptMock).toHaveBeenCalledTimes(1);
+      expect(promptMock).toHaveBeenCalledWith(
+        'Копирайте съставите ръчно (Ctrl+C):',
+        expect.stringContaining('🎾 Тенис - По двойки')
+      );
+      expect(result.current.alert).toEqual({
+        message: 'Неуспешно копиране. Моля, копирайте ръчно.',
+        type: 'error',
+      });
+
+      delete (window as unknown as { prompt?: typeof window.prompt }).prompt;
     });
 
     it('guarantees consecutive different configurations when multiple balanced pairings exist', () => {

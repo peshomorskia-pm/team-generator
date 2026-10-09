@@ -39,6 +39,8 @@ export const TeamList = memo(function TeamList({
               type="button"
               id="copyBtn"
               onClick={onCopy}
+              title="Копирай съставите на отборите в клипборда"
+              aria-label="Копирай отборите"
               className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium flex items-center bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 transition-colors cursor-pointer"
             >
               {isCopied ? (

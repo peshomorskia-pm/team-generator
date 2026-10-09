@@ -91,6 +91,8 @@ describe('TeamList Component', () => {
 
     const copyBtn = screen.getByRole('button', { name: /копирай/i });
     expect(copyBtn).toBeInTheDocument();
+    expect(copyBtn).toHaveAttribute('title', 'Копирай съставите на отборите в клипборда');
+    expect(copyBtn).toHaveAttribute('aria-label', 'Копирай отборите');
 
     await user.click(copyBtn);
     expect(handleCopy).toHaveBeenCalledTimes(1);
