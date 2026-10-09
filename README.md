@@ -4,7 +4,7 @@
 [![Vercel Status](https://img.shields.io/badge/Hosted%20On-Vercel-black?logo=vercel)](https://team-generator-psi.vercel.app)
 [![Database](https://img.shields.io/badge/Database-Supabase%20Cloud-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
 
-A scalable Multi-Page Application (SPA) with a responsive App Shell, client-side routing, and light/dark theme support for randomly assigning and balancing players into competitive teams. Built with **React 19**, **TypeScript**, **Vite**, **Tailwind CSS**, **React Router v7**, **Vitest** (455 tests across 42 test files, 100% pass rate), **happy-dom**, and **React Testing Library**, alongside **Supabase** backend integration.
+A scalable Multi-Page Application (SPA) with a responsive App Shell, client-side routing, and light/dark theme support for randomly assigning and balancing players into competitive teams. Built with **React 19**, **TypeScript**, **Vite**, **Tailwind CSS**, **React Router v7**, **Vitest** (461 tests across 42 test files, 100% pass rate), **happy-dom**, and **React Testing Library**, alongside **Supabase** backend integration.
 
 * **Live Production Application:** [https://team-generator-psi.vercel.app](https://team-generator-psi.vercel.app)
 

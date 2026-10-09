@@ -2,7 +2,7 @@ import { LucideIcon } from 'lucide-react';
 import React from 'react';
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: 'indigo' | 'emerald' | 'amber' | 'slate' | 'purple';
+  variant?: 'indigo' | 'emerald' | 'amber' | 'slate' | 'purple' | 'outline';
   size?: 'sm' | 'md';
   icon?: LucideIcon;
   className?: string;
@@ -23,6 +23,7 @@ export const Badge: React.FC<BadgeProps> = ({
     amber: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
     slate: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-400',
     purple: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+    outline: 'border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300',
   }[variant];
 
   const sizeClasses = {

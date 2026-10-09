@@ -39,6 +39,14 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, onEdit, onDelete })
           <Badge variant="indigo" size="sm" className="ml-2 font-semibold">
             {formatLabel}
           </Badge>
+          {match.group_name && (
+            <Badge
+              variant="outline"
+              className="text-xs font-semibold bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800"
+            >
+              {match.group_name}
+            </Badge>
+          )}
           {isUpcoming && (
             <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
               Предстоящ
@@ -83,7 +91,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, onEdit, onDelete })
                   : 'text-gray-900 dark:text-white'
               }`}
             >
-              Отбор 1
+              {match.team_1_name || 'Отбор 1'}
             </h4>
             {team1Won && <Trophy className="w-4 h-4 text-amber-500 fill-amber-500" />}
           </div>
@@ -174,7 +182,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, onEdit, onDelete })
                   : 'text-gray-900 dark:text-white'
               }`}
             >
-              Отбор 2
+              {match.team_2_name || 'Отбор 2'}
             </h4>
           </div>
           <div className="flex flex-wrap gap-1.5 md:justify-end">

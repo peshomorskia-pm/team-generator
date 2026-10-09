@@ -53,6 +53,9 @@ export interface Database {
         Row: {
           id: string; // uuid
           match_format?: 'singles' | 'doubles'; // text
+          team_1_name?: string | null; // text
+          team_2_name?: string | null; // text
+          group_name?: string | null; // text
           team_1_score: number | null; // integer
           team_2_score: number | null; // integer
           played_at: string; // timestamptz
@@ -62,6 +65,9 @@ export interface Database {
         Insert: {
           id?: string;
           match_format?: 'singles' | 'doubles';
+          team_1_name?: string | null;
+          team_2_name?: string | null;
+          group_name?: string | null;
           team_1_score?: number | null;
           team_2_score?: number | null;
           played_at?: string;
@@ -71,6 +77,9 @@ export interface Database {
         Update: {
           id?: string;
           match_format?: 'singles' | 'doubles';
+          team_1_name?: string | null;
+          team_2_name?: string | null;
+          group_name?: string | null;
           team_1_score?: number | null;
           team_2_score?: number | null;
           played_at?: string;
