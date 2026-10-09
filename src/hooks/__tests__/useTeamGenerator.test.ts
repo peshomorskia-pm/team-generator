@@ -13,6 +13,7 @@ describe('useTeamGenerator', () => {
   it('initializes with default state', () => {
     const { result } = renderHook(() => useTeamGenerator());
 
+    expect(result.current.mode).toBe('tennis');
     expect(result.current.activePool).toEqual([]);
     expect(result.current.players).toEqual([]);
     expect(result.current.numberOfTeams).toBeNull();
@@ -21,7 +22,9 @@ describe('useTeamGenerator', () => {
     expect(result.current.history).toEqual([]);
     expect(result.current.alert).toBeNull();
     expect(result.current.balanceByRating).toBe(false);
-    expect(result.current.format).toBe('singles');
+    expect(result.current.format).toBe('doubles');
+    expect(result.current.canGenerate).toBe(false);
+    expect(result.current.validationError).toBeNull();
   });
 
   describe('guest player management', () => {
@@ -140,12 +143,12 @@ describe('useTeamGenerator', () => {
       const { result } = renderHook(() => useTeamGenerator());
 
       act(() => {
-        result.current.addGuest('Гост 1, Гост 2');
+        result.current.addGuest('Гост 1, Гост 2, Гост 3');
         result.current.toggleRegisteredPlayer({ id: 'db-1', name: 'Играч 1', rating: 1200 });
         result.current.setNumberOfTeams(2);
       });
 
-      expect(result.current.activePool).toHaveLength(3);
+      expect(result.current.activePool).toHaveLength(4);
 
       act(() => {
         result.current.generateTeams();
@@ -175,10 +178,11 @@ describe('useTeamGenerator', () => {
       });
     });
 
-    it('shows error if generating teams with fewer than 2 players', () => {
+    it('shows error if generating teams with fewer than 2 players in generic mode', () => {
       const { result } = renderHook(() => useTeamGenerator());
 
       act(() => {
+        result.current.setMode('generic');
         result.current.addGuest('Иван');
       });
 
@@ -192,10 +196,11 @@ describe('useTeamGenerator', () => {
       });
     });
 
-    it('shows error if neither numberOfTeams nor playersPerTeam is specified', () => {
+    it('shows error in generic mode if neither numberOfTeams nor playersPerTeam is specified', () => {
       const { result } = renderHook(() => useTeamGenerator());
 
       act(() => {
+        result.current.setMode('generic');
         result.current.addGuest('Иван, Петър');
       });
 
@@ -209,10 +214,11 @@ describe('useTeamGenerator', () => {
       });
     });
 
-    it('shows error if numberOfTeams is greater than pool size', () => {
+    it('shows error in generic mode if numberOfTeams is greater than pool size', () => {
       const { result } = renderHook(() => useTeamGenerator());
 
       act(() => {
+        result.current.setMode('generic');
         result.current.addGuest('Иван, Петър');
         result.current.setNumberOfTeams(3);
       });
@@ -223,7 +229,7 @@ describe('useTeamGenerator', () => {
 
       expect(result.current.alert).toEqual({
         type: 'error',
-        message: 'Броят на отборите не може да е по-голям от броя на играчите.',
+        message: 'Броят отбори (3) не може да надвишава наличните играчи (2).',
       });
     });
   });
@@ -284,6 +290,64 @@ describe('useTeamGenerator', () => {
       expect(result.current.teams[1].players).toHaveLength(2);
     });
 
+    it('partitions team sizes evenly with max size difference of 1 when playersPerTeam is specified (e.g. 13 players / 3 per team => [3, 3, 3, 2, 2])', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.setMode('generic');
+        result.current.addGuest('P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13');
+        result.current.setPlayersPerTeam(3);
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(5);
+      const sizes = result.current.teams.map((t) => t.players.length);
+      expect(sizes).toEqual([3, 3, 3, 2, 2]);
+      const totalPlayers = sizes.reduce((a, b) => a + b, 0);
+      expect(totalPlayers).toBe(13);
+    });
+
+    it('partitions team sizes evenly with max size difference of 1 when numberOfTeams is specified (e.g. 13 players / 5 teams => [3, 3, 3, 2, 2])', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.setMode('generic');
+        result.current.addGuest('P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13');
+        result.current.setNumberOfTeams(5);
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(5);
+      const sizes = result.current.teams.map((t) => t.players.length);
+      expect(sizes).toEqual([3, 3, 3, 2, 2]);
+      const totalPlayers = sizes.reduce((a, b) => a + b, 0);
+      expect(totalPlayers).toBe(13);
+    });
+
+    it('partitions team sizes evenly for other non-divisible counts (10 players / 4 per team => [4, 3, 3])', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.setMode('generic');
+        result.current.addGuest('P1, P2, P3, P4, P5, P6, P7, P8, P9, P10');
+        result.current.setPlayersPerTeam(4);
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(3);
+      const sizes = result.current.teams.map((t) => t.players.length);
+      expect(sizes).toEqual([4, 3, 3]);
+    });
+
     it('balances teams evenly by rating defaulting unrated guests to neutral rating', () => {
       const { result } = renderHook(() => useTeamGenerator());
 
@@ -330,7 +394,7 @@ describe('useTeamGenerator', () => {
       expect(result.current.teams[0].players).toHaveLength(initialTeam1Players.length);
     });
 
-    it('copies generated team results to clipboard', async () => {
+    it('copies generated team results to clipboard with formatted text', async () => {
       const { result } = renderHook(() => useTeamGenerator());
 
       const writeTextMock = vi.fn().mockResolvedValue(undefined);
@@ -341,7 +405,7 @@ describe('useTeamGenerator', () => {
       });
 
       act(() => {
-        result.current.addGuest('Иван, Петър');
+        result.current.addGuest('Иван, Петър, Георги, Стоян');
         result.current.setNumberOfTeams(2);
       });
 
@@ -355,8 +419,70 @@ describe('useTeamGenerator', () => {
       });
 
       expect(success).toBe(true);
-      expect(writeTextMock).toHaveBeenCalled();
+      expect(writeTextMock).toHaveBeenCalledTimes(1);
+      const copiedText = writeTextMock.mock.calls[0][0] as string;
+      expect(copiedText).toContain('🎾 Тенис - По двойки');
+      expect(copiedText).toContain('Отбор 1:');
+      expect(copiedText).toContain('Отбор 2:');
+      expect(copiedText).toContain('Среща: Отбор 1 vs Отбор 2');
       expect(result.current.isCopied).toBe(true);
+    });
+
+    it('returns false when copying with no generated teams', async () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      let success: boolean | undefined;
+      await act(async () => {
+        success = await result.current.copyResults();
+      });
+
+      expect(success).toBe(false);
+      expect(result.current.isCopied).toBe(false);
+    });
+
+    it('handles clipboard failure gracefully by invoking window.prompt and showing alert', async () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      // Simulate clipboard writeText failing
+      const writeTextMock = vi.fn().mockRejectedValue(new Error('Permission denied'));
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText: writeTextMock },
+        writable: true,
+        configurable: true,
+      });
+
+      // Simulate execCommand failing
+      document.execCommand = vi.fn().mockReturnValue(false);
+      const promptMock = vi.fn();
+      window.prompt = promptMock;
+
+      act(() => {
+        result.current.addGuest('Иван, Петър, Георги, Стоян');
+        result.current.setNumberOfTeams(2);
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      let success: boolean | undefined;
+      await act(async () => {
+        success = await result.current.copyResults();
+      });
+
+      expect(success).toBe(false);
+      expect(result.current.isCopied).toBe(false);
+      expect(promptMock).toHaveBeenCalledTimes(1);
+      expect(promptMock).toHaveBeenCalledWith(
+        'Копирайте съставите ръчно (Ctrl+C):',
+        expect.stringContaining('🎾 Тенис - По двойки')
+      );
+      expect(result.current.alert).toEqual({
+        message: 'Неуспешно копиране. Моля, копирайте ръчно.',
+        type: 'error',
+      });
+
+      delete (window as unknown as { prompt?: typeof window.prompt }).prompt;
     });
 
     it('guarantees consecutive different configurations when multiple balanced pairings exist', () => {
@@ -388,17 +514,17 @@ describe('useTeamGenerator', () => {
   describe('format state and dual ratings', () => {
     it('manages format state transitions', () => {
       const { result } = renderHook(() => useTeamGenerator());
-      expect(result.current.format).toBe('singles');
-
-      act(() => {
-        result.current.setFormat('doubles');
-      });
       expect(result.current.format).toBe('doubles');
 
       act(() => {
         result.current.setFormat('singles');
       });
       expect(result.current.format).toBe('singles');
+
+      act(() => {
+        result.current.setFormat('doubles');
+      });
+      expect(result.current.format).toBe('doubles');
     });
 
     it('preserves singles_rating and doubles_rating when toggling registered player', () => {
@@ -426,7 +552,7 @@ describe('useTeamGenerator', () => {
       });
     });
 
-    it('computes team totalRating based on active format when generating teams', () => {
+    it('computes team totalRating based on active format when generating teams in tennis mode', () => {
       const { result } = renderHook(() => useTeamGenerator());
 
       act(() => {
@@ -444,7 +570,6 @@ describe('useTeamGenerator', () => {
           singles_rating: 1400,
           doubles_rating: 1700,
         });
-        result.current.setNumberOfTeams(2);
         result.current.setFormat('singles');
       });
 
@@ -455,8 +580,22 @@ describe('useTeamGenerator', () => {
       const singlesRatings = result.current.teams.map((t) => t.totalRating);
       expect(singlesRatings.sort()).toEqual([1400, 1800]);
 
-      // Switch to doubles format and regenerate
+      // Add 2 more players for tennis doubles format (requires >= 4 players)
       act(() => {
+        result.current.toggleRegisteredPlayer({
+          id: 'p3',
+          name: 'P3',
+          rating: 1200,
+          singles_rating: 1500,
+          doubles_rating: 1100,
+        });
+        result.current.toggleRegisteredPlayer({
+          id: 'p4',
+          name: 'P4',
+          rating: 1200,
+          singles_rating: 1600,
+          doubles_rating: 1500,
+        });
         result.current.setFormat('doubles');
       });
 
@@ -464,19 +603,22 @@ describe('useTeamGenerator', () => {
         result.current.generateTeams();
       });
 
+      expect(result.current.teams).toHaveLength(2);
       const doublesRatings = result.current.teams.map((t) => t.totalRating);
-      expect(doublesRatings.sort()).toEqual([1300, 1700]);
+      const totalDoubles = 1300 + 1700 + 1100 + 1500;
+      expect((doublesRatings[0] ?? 0) + (doublesRatings[1] ?? 0)).toBe(totalDoubles);
     });
 
-    it('balances teams evenly by rating when playersPerTeam is specified', () => {
+    it('balances teams evenly by rating in tennis mode', () => {
       const { result } = renderHook(() => useTeamGenerator());
 
       act(() => {
+        result.current.setMode('tennis');
+        result.current.setFormat('doubles');
         result.current.toggleRegisteredPlayer({ id: 'p1', name: 'P1', rating: 1800 });
         result.current.toggleRegisteredPlayer({ id: 'p2', name: 'P2', rating: 1600 });
         result.current.toggleRegisteredPlayer({ id: 'p3', name: 'P3', rating: 1400 });
         result.current.toggleRegisteredPlayer({ id: 'p4', name: 'P4', rating: 1200 });
-        result.current.setPlayersPerTeam(2);
         result.current.setBalanceByRating(true);
       });
 
@@ -492,10 +634,37 @@ describe('useTeamGenerator', () => {
       expect(result.current.teams[1].totalRating).toBe(3000);
     });
 
-    it('balances teams by format-specific rating when playersPerTeam is set and format is doubles', () => {
+    it('partitions 10 players with playersPerTeam = 3 into sizes [3, 3, 2, 2] in generic mode even if balanceByRating is true', () => {
       const { result } = renderHook(() => useTeamGenerator());
 
       act(() => {
+        result.current.setMode('tennis');
+        result.current.setBalanceByRating(true);
+        result.current.setMode('generic');
+        for (let i = 1; i <= 10; i++) {
+          result.current.toggleRegisteredPlayer({
+            id: `p-${i}`,
+            name: `Player ${i}`,
+            rating: i === 1 ? 5000 : 1000,
+          });
+        }
+        result.current.setPlayersPerTeam(3);
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(4);
+      const sizes = result.current.teams.map((t) => t.players.length).sort((a, b) => b - a);
+      expect(sizes).toEqual([3, 3, 2, 2]);
+    });
+
+    it('isolates ratings in generic mode ignoring format state even if playersPerTeam is set', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.setMode('generic');
         result.current.setFormat('doubles');
         result.current.toggleRegisteredPlayer({
           id: 'p1',
@@ -532,9 +701,271 @@ describe('useTeamGenerator', () => {
       expect(result.current.teams).toHaveLength(2);
       expect(result.current.teams[0].players).toHaveLength(2);
       expect(result.current.teams[1].players).toHaveLength(2);
-      // Balanced by doubles rating: 1800+1200=3000, 1600+1400=3000
-      expect(result.current.teams[0].totalRating).toBe(3000);
-      expect(result.current.teams[1].totalRating).toBe(3000);
+      // In generic mode, balanced by general rating (1000+1000=2000), ignoring leaked doubles_rating
+      expect(result.current.teams[0].totalRating).toBe(2000);
+      expect(result.current.teams[1].totalRating).toBe(2000);
+    });
+  });
+
+  describe('Generator mode & Tennis validation', () => {
+    it('manages mode state transitions', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+      expect(result.current.mode).toBe('tennis');
+
+      act(() => {
+        result.current.setMode('generic');
+      });
+      expect(result.current.mode).toBe('generic');
+
+      act(() => {
+        result.current.setMode('tennis');
+      });
+      expect(result.current.mode).toBe('tennis');
+    });
+
+    it('enforces tennis doubles validations: blocks < 4 players or odd count', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+      expect(result.current.mode).toBe('tennis');
+      expect(result.current.format).toBe('doubles');
+
+      // Empty pool
+      expect(result.current.canGenerate).toBe(false);
+      expect(result.current.validationError).toBeNull();
+
+      // 3 players (< 4 and odd)
+      act(() => {
+        result.current.addGuest('A, B, C');
+      });
+      expect(result.current.canGenerate).toBe(false);
+      expect(result.current.validationError).toBe('Нужни са поне 4 играчи за игра по двойки.');
+
+      // Try generate: shows alert
+      act(() => {
+        result.current.generateTeams();
+      });
+      expect(result.current.alert?.message).toBe('Нужни са поне 4 играчи за игра по двойки.');
+
+      // 5 players (>= 4 but odd)
+      act(() => {
+        result.current.addGuest('D, E');
+      });
+      expect(result.current.canGenerate).toBe(false);
+      expect(result.current.validationError).toBe('Добавете още 1 играч за пълни двойки');
+
+      act(() => {
+        result.current.generateTeams();
+      });
+      expect(result.current.alert?.message).toBe('Добавете още 1 играч за пълни двойки');
+
+      // 6 players (>= 4 and even) -> valid!
+      act(() => {
+        result.current.addGuest('F');
+      });
+      expect(result.current.canGenerate).toBe(true);
+      expect(result.current.validationError).toBeNull();
+
+      act(() => {
+        result.current.generateTeams();
+      });
+      expect(result.current.teams).toHaveLength(3); // 6 / 2 = 3 teams
+    });
+
+    it('toggles to generic mode with 3 players and allows generation', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.addGuest('A, B, C');
+      });
+
+      // Invalid in tennis doubles
+      expect(result.current.canGenerate).toBe(false);
+      expect(result.current.validationError).not.toBeNull();
+
+      // Switch to generic
+      act(() => {
+        result.current.setMode('generic');
+      });
+
+      expect(result.current.canGenerate).toBe(true);
+      expect(result.current.validationError).toBeNull();
+    });
+
+    it('validates singles format in tennis mode requiring >= 2 players', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.setFormat('singles');
+        result.current.addGuest('A');
+      });
+
+      expect(result.current.canGenerate).toBe(false);
+      expect(result.current.validationError).toBe('Нужни са поне 2-ма играчи за сформиране на сингъл срещи');
+
+      act(() => {
+        result.current.generateTeams();
+      });
+      expect(result.current.alert?.message).toBe('Нужни са поне 2-ма играчи за сформиране на сингъл срещи');
+
+      act(() => {
+        result.current.addGuest('B');
+      });
+
+      expect(result.current.canGenerate).toBe(true);
+      expect(result.current.validationError).toBeNull();
+
+      act(() => {
+        result.current.generateTeams();
+      });
+      expect(result.current.teams).toHaveLength(2);
+    });
+
+    it('balances by general rating in generic mode without leaking tennis ratings', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.setMode('generic');
+        result.current.setNumberOfTeams(2);
+        result.current.setBalanceByRating(true);
+        // Player 1: general rating 1000, doubles_rating 3000
+        result.current.toggleRegisteredPlayer({
+          id: 'p-1',
+          name: 'Player 1',
+          rating: 1000,
+          doubles_rating: 3000,
+        });
+        // Player 2: general rating 1000, doubles_rating 1000
+        result.current.toggleRegisteredPlayer({
+          id: 'p-2',
+          name: 'Player 2',
+          rating: 1000,
+          doubles_rating: 1000,
+        });
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(2);
+      expect(result.current.teams[0].totalRating).toBe(1000);
+      expect(result.current.teams[1].totalRating).toBe(1000);
+    });
+  });
+
+  describe('generic mode validation rules', () => {
+    const add10Players = (result: { current: ReturnType<typeof useTeamGenerator> }) => {
+      act(() => {
+        result.current.setMode('generic');
+        result.current.addGuest('P1, P2, P3, P4, P5, P6, P7, P8, P9, P10');
+      });
+    };
+
+    it('validates playersPerTeam = 12 with 10 players (canGenerate = false and Bulgarian error string)', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+      add10Players(result);
+
+      act(() => {
+        result.current.setPlayersPerTeam(12);
+      });
+
+      expect(result.current.canGenerate).toBe(false);
+      expect(result.current.validationError).toBe(
+        'Броят играчи в отбор (12) не може да бъде по-голям или равен на общия брой играчи (10). Нужни са играчи за поне 2 отбора.'
+      );
+
+      // Guard clause prevents generateTeams from executing
+      act(() => {
+        result.current.generateTeams();
+      });
+      expect(result.current.teams).toHaveLength(0);
+      expect(result.current.alert?.message).toBe(
+        'Броят играчи в отбор (12) не може да бъде по-голям или равен на общия брой играчи (10). Нужни са играчи за поне 2 отбора.'
+      );
+    });
+
+    it('validates playersPerTeam = 10 with 10 players (canGenerate = false)', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+      add10Players(result);
+
+      act(() => {
+        result.current.setPlayersPerTeam(10);
+      });
+
+      expect(result.current.canGenerate).toBe(false);
+      expect(result.current.validationError).toBe(
+        'Броят играчи в отбор (10) не може да бъде по-голям или равен на общия брой играчи (10). Нужни са играчи за поне 2 отбора.'
+      );
+    });
+
+    it('validates numberOfTeams = 12 with 10 players (canGenerate = false)', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+      add10Players(result);
+
+      act(() => {
+        result.current.setNumberOfTeams(12);
+      });
+
+      expect(result.current.canGenerate).toBe(false);
+      expect(result.current.validationError).toBe(
+        'Броят отбори (12) не може да надвишава наличните играчи (10).'
+      );
+
+      // Guard clause prevents generateTeams from executing
+      act(() => {
+        result.current.generateTeams();
+      });
+      expect(result.current.teams).toHaveLength(0);
+      expect(result.current.alert?.message).toBe(
+        'Броят отбори (12) не може да надвишава наличните играчи (10).'
+      );
+    });
+
+    it('validates numberOfTeams = 1 with 10 players (canGenerate = false)', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+      add10Players(result);
+
+      act(() => {
+        result.current.setNumberOfTeams(1);
+      });
+
+      expect(result.current.canGenerate).toBe(false);
+      expect(result.current.validationError).toBe('Нужни са поне 2 отбора за разпределение.');
+
+      // Guard clause prevents generateTeams from executing
+      act(() => {
+        result.current.generateTeams();
+      });
+      expect(result.current.teams).toHaveLength(0);
+      expect(result.current.alert?.message).toBe('Нужни са поне 2 отбора за разпределение.');
+    });
+
+    it('validates playersPerTeam = 3 with 10 players (canGenerate = true and validationError = null)', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+      add10Players(result);
+
+      act(() => {
+        result.current.setPlayersPerTeam(3);
+      });
+
+      expect(result.current.canGenerate).toBe(true);
+      expect(result.current.validationError).toBeNull();
+
+      act(() => {
+        result.current.generateTeams();
+      });
+      expect(result.current.teams.length).toBeGreaterThan(0);
+    });
+
+    it('validates playersPerTeam < 1 with 10 players (canGenerate = false)', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+      add10Players(result);
+
+      act(() => {
+        result.current.setPlayersPerTeam(0);
+      });
+
+      expect(result.current.canGenerate).toBe(false);
+      expect(result.current.validationError).toBe('Броят играчи в отбор трябва да бъде поне 1.');
     });
   });
 });

@@ -10,17 +10,20 @@ export const TeamList = memo(function TeamList({
   isCopied = false,
   onSaveAsMatch,
   format,
+  mode = 'tennis',
 }: TeamListProps) {
   if (teams.length === 0) {
     return null;
   }
+
+  const isTennisMode = mode === 'tennis';
 
   return (
     <div id="resultsContainer" className="w-full max-w-5xl mt-10 transition-all duration-300">
       <div className="flex items-center justify-between mb-6 px-2">
         <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Резултати</h2>
         <div className="flex items-center gap-2">
-          {teams.length === 2 && onSaveAsMatch && (
+          {isTennisMode && teams.length === 2 && onSaveAsMatch && (
             <button
               type="button"
               id="saveAsMatchBtn"
@@ -36,6 +39,8 @@ export const TeamList = memo(function TeamList({
               type="button"
               id="copyBtn"
               onClick={onCopy}
+              title="Копирай съставите на отборите в клипборда"
+              aria-label="Копирай отборите"
               className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium flex items-center bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 transition-colors cursor-pointer"
             >
               {isCopied ? (
@@ -62,6 +67,7 @@ export const TeamList = memo(function TeamList({
             index={index}
             onShuffleTeam={onShuffleTeam}
             format={format}
+            mode={mode}
           />
         ))}
       </div>

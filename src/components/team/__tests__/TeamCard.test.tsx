@@ -63,4 +63,26 @@ describe('TeamCard', () => {
     await user.click(shuffleBtn);
     expect(handleShuffle).toHaveBeenCalledWith('team-1');
   });
+
+  it('completely hides total rating badge and player rating stars when mode is generic', () => {
+    render(<TeamCard team={mockTeam} index={0} mode="generic" />);
+
+    // Header info
+    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getByText('Отбор 1')).toBeInTheDocument();
+    expect(screen.getByText('3 играчи')).toBeInTheDocument();
+
+    // Total rating badge hidden
+    expect(screen.queryByText('24')).not.toBeInTheDocument();
+
+    // Player names visible
+    expect(screen.getByText('Иван')).toBeInTheDocument();
+    expect(screen.getByText('Петър')).toBeInTheDocument();
+    expect(screen.getByText('Георги')).toBeInTheDocument();
+
+    // Player ratings/stars hidden
+    expect(screen.queryByText('★ 8')).not.toBeInTheDocument();
+    expect(screen.queryByText('★ 9')).not.toBeInTheDocument();
+    expect(screen.queryByText('★ 7')).not.toBeInTheDocument();
+  });
 });

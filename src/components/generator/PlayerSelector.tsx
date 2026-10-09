@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Search, Star, Users, CheckSquare, Square, X } from 'lucide-react';
 import { PlayerRow } from '../../types/database.types';
+import { GeneratorMode } from '../../types';
 import { Badge, Input, Button } from '../ui';
 
 export interface PlayerSelectorProps {
@@ -14,6 +15,7 @@ export interface PlayerSelectorProps {
   searchTerm?: string;
   onSearchChange?: (term: string) => void;
   format?: 'singles' | 'doubles';
+  mode?: GeneratorMode;
 }
 
 export const PlayerSelector: React.FC<PlayerSelectorProps> = ({
@@ -26,7 +28,8 @@ export const PlayerSelector: React.FC<PlayerSelectorProps> = ({
   error = null,
   searchTerm,
   onSearchChange,
-  format = 'singles',
+  format,
+  mode = 'tennis',
 }) => {
   const [internalSearch, setInternalSearch] = useState('');
   const search = searchTerm !== undefined ? searchTerm : internalSearch;
@@ -202,10 +205,22 @@ export const PlayerSelector: React.FC<PlayerSelectorProps> = ({
                     {player.name}
                   </span>
                 </div>
-                <Badge variant="amber" size="sm" icon={Star} className="ml-2 shrink-0">
-                  {(format === 'doubles' ? player.doubles_rating : player.singles_rating) ??
-                    player.rating}
-                </Badge>
+                {(() => {
+                  if (mode === 'generic') return null;
+
+                  const playerRating =
+                    format === 'doubles'
+                      ? (player.doubles_rating ?? player.rating)
+                      : format === 'singles'
+                        ? (player.singles_rating ?? player.rating)
+                        : player.rating;
+
+                  return playerRating !== undefined ? (
+                    <Badge variant="amber" size="sm" icon={Star} className="ml-2 shrink-0">
+                      {playerRating}
+                    </Badge>
+                  ) : null;
+                })()}
               </label>
             );
           })}

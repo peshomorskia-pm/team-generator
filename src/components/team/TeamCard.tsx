@@ -8,6 +8,7 @@ export const TeamCard: React.FC<TeamCardProps> = ({
   index = 0,
   onShuffleTeam,
   format,
+  mode = 'tennis',
 }) => {
   const displayTotalRating = React.useMemo(() => {
     if (team.totalRating !== undefined && team.totalRating > 0 && !format) {
@@ -36,7 +37,7 @@ export const TeamCard: React.FC<TeamCardProps> = ({
           {team.name}
         </h3>
         <div className="flex items-center space-x-2">
-          {displayTotalRating !== undefined && displayTotalRating > 0 && (
+          {mode !== 'generic' && displayTotalRating !== undefined && displayTotalRating > 0 && (
             <Badge variant="amber" size="sm" icon={Star}>
               {displayTotalRating}
             </Badge>
@@ -78,7 +79,7 @@ export const TeamCard: React.FC<TeamCardProps> = ({
                   <User className="w-4 h-4 mr-2 text-indigo-400 shrink-0" />
                   <span className="truncate">{player.name}</span>
                 </div>
-                {playerRating !== undefined && (
+                {mode !== 'generic' && playerRating !== undefined && (
                   <span className="text-xs text-amber-500 font-medium ml-2 shrink-0">
                     ★ {playerRating}
                   </span>
