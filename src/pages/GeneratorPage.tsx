@@ -160,6 +160,7 @@ export const GeneratorPage: React.FC = () => {
                     searchTerm={searchQuery}
                     onSearchChange={setSearchQuery}
                     format={effectiveFormat}
+                    mode={mode}
                   />
 
                   <div className="border-t border-gray-200 dark:border-slate-700 pt-5">
@@ -176,6 +177,7 @@ export const GeneratorPage: React.FC = () => {
                     onRemovePlayer={removePlayer}
                     onClearPool={handleClearPool}
                     format={effectiveFormat}
+                    mode={mode}
                   />
 
                   <div className="border-t border-gray-200 dark:border-slate-700 pt-5">

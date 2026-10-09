@@ -286,20 +286,25 @@ export function useTeamGenerator() {
               }
             });
           } else if (hasPpt) {
-            let teamIndex = 1;
-            for (let i = 0; i < shuffled.length; i += pptInt) {
-              const chunk = shuffled.slice(i, i + pptInt);
+            const numTeams = Math.ceil(shuffled.length / pptInt);
+            const baseSize = Math.floor(shuffled.length / numTeams);
+            const remainder = shuffled.length % numTeams;
+
+            let cursor = 0;
+            for (let i = 0; i < numTeams; i++) {
+              const targetSize = i < remainder ? baseSize + 1 : baseSize;
+              const chunk = shuffled.slice(cursor, cursor + targetSize);
+              cursor += targetSize;
               const total = chunk.reduce(
                 (sum, p) => sum + (resolvePlayerRating(p, effectiveFormat) ?? 0),
                 0
               );
               generatedTeams.push({
-                id: `team-${teamIndex}`,
-                name: `Отбор ${teamIndex}`,
+                id: `team-${i + 1}`,
+                name: `Отбор ${i + 1}`,
                 players: chunk,
                 totalRating: total,
               });
-              teamIndex++;
             }
           }
         }

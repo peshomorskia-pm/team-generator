@@ -150,21 +150,24 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
     await user.type(guestInput, 'Гост 1, Гост 2');
     await user.click(screen.getByRole('button', { name: /добави/i }));
 
-    // Switch to Generic mode
-    await user.click(screen.getByRole('button', { name: '🎲 Универсален' }));
-
-    // Set number of teams = 2
-    const numTeamsInput = screen.getByLabelText(/брой отбори/i);
-    await user.clear(numTeamsInput);
-    await user.type(numTeamsInput, '2');
-
-    // Balance by rating checkbox appears because ratings exist in pool
+    // Balance by rating checkbox appears in tennis mode because ratings exist in pool
     const balanceCheckbox = screen.getByRole('checkbox', {
       name: /балансирай отборите по рейтинг на играчите/i,
     });
     expect(balanceCheckbox).toBeInTheDocument();
     await user.click(balanceCheckbox);
     expect(balanceCheckbox).toBeChecked();
+
+    // Verify it disappears when switching to generic mode
+    await user.click(screen.getByRole('button', { name: '🎲 Универсален' }));
+    expect(
+      screen.queryByRole('checkbox', {
+        name: /балансирай отборите по рейтинг на играчите/i,
+      })
+    ).not.toBeInTheDocument();
+
+    // Switch back to tennis mode to generate balanced tennis teams
+    await user.click(screen.getByRole('button', { name: '🎾 Тенис' }));
 
     // Click generate button
     const generateBtn = screen.getByRole('button', { name: /разпредели в отбори/i });
@@ -453,11 +456,11 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
     expect(screen.getByText('1750')).toBeInTheDocument();
     expect(screen.queryByText('1450')).not.toBeInTheDocument();
 
-    // Toggle mode to generic: displays general rating 1200 without format ratings
+    // Toggle mode to generic: player ratings are stripped/hidden
     const genericModeBtn = screen.getByRole('button', { name: '🎲 Универсален' });
     fireEvent.click(genericModeBtn);
 
-    expect(screen.getByText('1200')).toBeInTheDocument();
+    expect(screen.queryByText('1200')).not.toBeInTheDocument();
     expect(screen.queryByText('1750')).not.toBeInTheDocument();
     expect(screen.queryByText('1450')).not.toBeInTheDocument();
   });

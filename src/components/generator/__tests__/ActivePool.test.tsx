@@ -115,4 +115,27 @@ describe('ActivePool Component', () => {
     expect(badge).toHaveTextContent('1350');
     expect(badge).not.toHaveTextContent('1750');
   });
+
+  it('hides player ratings/stars when mode is generic', () => {
+    const poolWithRatings: GeneratorPlayer[] = [
+      {
+        id: 'reg-1',
+        name: 'Христо',
+        source: 'registered',
+        rating: 1520,
+      },
+    ];
+
+    render(
+      <ActivePool
+        activePool={poolWithRatings}
+        onRemovePlayer={vi.fn()}
+        mode="generic"
+      />
+    );
+
+    const badge = screen.getByTestId('player-badge-reg-1');
+    expect(badge).toHaveTextContent('Христо');
+    expect(badge).not.toHaveTextContent('1520');
+  });
 });

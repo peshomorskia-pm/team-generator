@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Search, Star, Users, CheckSquare, Square, X } from 'lucide-react';
 import { PlayerRow } from '../../types/database.types';
+import { GeneratorMode } from '../../types';
 import { Badge, Input, Button } from '../ui';
 
 export interface PlayerSelectorProps {
@@ -14,6 +15,7 @@ export interface PlayerSelectorProps {
   searchTerm?: string;
   onSearchChange?: (term: string) => void;
   format?: 'singles' | 'doubles';
+  mode?: GeneratorMode;
 }
 
 export const PlayerSelector: React.FC<PlayerSelectorProps> = ({
@@ -27,6 +29,7 @@ export const PlayerSelector: React.FC<PlayerSelectorProps> = ({
   searchTerm,
   onSearchChange,
   format,
+  mode = 'tennis',
 }) => {
   const [internalSearch, setInternalSearch] = useState('');
   const search = searchTerm !== undefined ? searchTerm : internalSearch;
@@ -203,6 +206,8 @@ export const PlayerSelector: React.FC<PlayerSelectorProps> = ({
                   </span>
                 </div>
                 {(() => {
+                  if (mode === 'generic') return null;
+
                   const playerRating =
                     format === 'doubles'
                       ? (player.doubles_rating ?? player.rating)

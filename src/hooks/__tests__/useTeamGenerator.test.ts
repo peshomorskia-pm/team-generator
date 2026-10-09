@@ -290,6 +290,64 @@ describe('useTeamGenerator', () => {
       expect(result.current.teams[1].players).toHaveLength(2);
     });
 
+    it('partitions team sizes evenly with max size difference of 1 when playersPerTeam is specified (e.g. 13 players / 3 per team => [3, 3, 3, 2, 2])', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.setMode('generic');
+        result.current.addGuest('P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13');
+        result.current.setPlayersPerTeam(3);
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(5);
+      const sizes = result.current.teams.map((t) => t.players.length);
+      expect(sizes).toEqual([3, 3, 3, 2, 2]);
+      const totalPlayers = sizes.reduce((a, b) => a + b, 0);
+      expect(totalPlayers).toBe(13);
+    });
+
+    it('partitions team sizes evenly with max size difference of 1 when numberOfTeams is specified (e.g. 13 players / 5 teams => [3, 3, 3, 2, 2])', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.setMode('generic');
+        result.current.addGuest('P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13');
+        result.current.setNumberOfTeams(5);
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(5);
+      const sizes = result.current.teams.map((t) => t.players.length);
+      expect(sizes).toEqual([3, 3, 3, 2, 2]);
+      const totalPlayers = sizes.reduce((a, b) => a + b, 0);
+      expect(totalPlayers).toBe(13);
+    });
+
+    it('partitions team sizes evenly for other non-divisible counts (10 players / 4 per team => [4, 3, 3])', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.setMode('generic');
+        result.current.addGuest('P1, P2, P3, P4, P5, P6, P7, P8, P9, P10');
+        result.current.setPlayersPerTeam(4);
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(3);
+      const sizes = result.current.teams.map((t) => t.players.length);
+      expect(sizes).toEqual([4, 3, 3]);
+    });
+
     it('balances teams evenly by rating defaulting unrated guests to neutral rating', () => {
       const { result } = renderHook(() => useTeamGenerator());
 

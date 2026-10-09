@@ -57,6 +57,7 @@ export interface TeamCardProps {
   index?: number;
   onShuffleTeam?: (teamId: string) => void;
   format?: 'singles' | 'doubles';
+  mode?: GeneratorMode;
 }
 
 export interface AlertNotification {

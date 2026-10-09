@@ -203,6 +203,21 @@ describe('TeamSettings', () => {
       expect(handleBalanceToggle).toHaveBeenCalledWith(true);
     });
 
+    it('hides balance checkbox in generic mode even when hasRatings is true', () => {
+      render(
+        <TeamSettings
+          mode="generic"
+          hasRatings={true}
+          onBalanceToggle={vi.fn()}
+          onGenerate={vi.fn()}
+        />
+      );
+
+      expect(
+        screen.queryByLabelText(/балансирай отборите по рейтинг/i)
+      ).not.toBeInTheDocument();
+    });
+
     it('triggers onGenerate when generate button is clicked', async () => {
       const user = userEvent.setup();
       const handleGenerate = vi.fn();

@@ -134,7 +134,7 @@ export const TeamSettings = memo(function TeamSettings({
         </div>
       )}
 
-      {hasRatings && onBalanceToggle && (
+      {mode !== 'generic' && hasRatings && onBalanceToggle && (
         <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800">
           <div className="flex items-center space-x-2">
             <Sliders className="w-4 h-4 text-amber-600 dark:text-amber-400" />

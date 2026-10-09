@@ -65,6 +65,7 @@ export const TeamList = memo(function TeamList({
             index={index}
             onShuffleTeam={onShuffleTeam}
             format={format}
+            mode={mode}
           />
         ))}
       </div>
