@@ -215,5 +215,24 @@ describe('PlayerSelector Component', () => {
     expect(screen.getByText('1400')).toBeInTheDocument();
     expect(screen.getByText('1350')).toBeInTheDocument();
   });
+
+  it('hides player ratings and stars when mode is generic', () => {
+    render(
+      <PlayerSelector
+        players={samplePlayers}
+        selectedIds={new Set()}
+        onTogglePlayer={vi.fn()}
+        mode="generic"
+      />
+    );
+
+    // Player names are rendered
+    expect(screen.getByText('Александър')).toBeInTheDocument();
+    expect(screen.getByText('Борис')).toBeInTheDocument();
+
+    // Ratings are stripped/hidden
+    expect(screen.queryByText('1550')).not.toBeInTheDocument();
+    expect(screen.queryByText('1400')).not.toBeInTheDocument();
+  });
 });
 

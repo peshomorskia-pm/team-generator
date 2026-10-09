@@ -23,9 +23,13 @@ export interface PlayerInputProps {
   playerCount?: number;
 }
 
+export type GeneratorMode = 'tennis' | 'generic';
+
 export interface TeamSettingsProps {
-  numberOfTeams: number;
-  onSettingsChange: (teams: number) => void;
+  mode?: GeneratorMode;
+  onModeChange?: (mode: GeneratorMode) => void;
+  numberOfTeams?: number | null;
+  onSettingsChange?: (teams: number | null) => void;
   onGenerate: () => void;
   playersPerTeam?: number | null;
   onPlayersPerTeamChange?: (count: number | null) => void;
@@ -34,6 +38,8 @@ export interface TeamSettingsProps {
   hasRatings?: boolean;
   format?: 'singles' | 'doubles';
   onFormatChange?: (format: 'singles' | 'doubles') => void;
+  canGenerate?: boolean;
+  validationError?: string | null;
 }
 
 export interface TeamListProps {
@@ -43,6 +49,7 @@ export interface TeamListProps {
   isCopied?: boolean;
   onSaveAsMatch?: () => void;
   format?: 'singles' | 'doubles';
+  mode?: GeneratorMode;
 }
 
 export interface TeamCardProps {
@@ -50,6 +57,7 @@ export interface TeamCardProps {
   index?: number;
   onShuffleTeam?: (teamId: string) => void;
   format?: 'singles' | 'doubles';
+  mode?: GeneratorMode;
 }
 
 export interface AlertNotification {

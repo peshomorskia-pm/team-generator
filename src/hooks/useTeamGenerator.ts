@@ -1,9 +1,10 @@
-import { useState, useCallback, useRef } from 'react';
-import { Team, AlertNotification } from '../types';
+import { useState, useCallback, useRef, useMemo } from 'react';
+import { Team, AlertNotification, GeneratorMode } from '../types';
 import { GeneratorPlayer, DatabasePlayer } from '../types/generator';
 import { fisherYatesShuffle } from '../utils/shuffle';
 import { balanceTeams } from '../utils/balance';
 import { saveMatchup, generateTeamsFingerprint, areTeamConfigsEqual } from '../utils/history';
+import { copyTextToClipboard, formatTeamsForClipboard } from '../utils/clipboard';
 
 export function generateGuestId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -18,16 +19,20 @@ export function generateGuestId(): string {
 
 const resolvePlayerRating = (
   player: GeneratorPlayer,
-  fmt: 'singles' | 'doubles'
+  fmt?: 'singles' | 'doubles'
 ): number | undefined => {
   if (player.source === 'guest') return undefined;
   if (fmt === 'singles') {
     return player.singles_rating ?? player.rating;
   }
-  return player.doubles_rating ?? player.rating;
+  if (fmt === 'doubles') {
+    return player.doubles_rating ?? player.rating;
+  }
+  return player.rating;
 };
 
 export function useTeamGenerator() {
+  const [mode, setMode] = useState<GeneratorMode>('tennis');
   const [activePool, setActivePool] = useState<GeneratorPlayer[]>([]);
   const [numberOfTeams, setNumberOfTeams] = useState<number | null>(null);
   const [playersPerTeam, setPlayersPerTeam] = useState<number | null>(null);
@@ -36,7 +41,7 @@ export function useTeamGenerator() {
   const [alert, setAlert] = useState<AlertNotification | null>(null);
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [balanceByRating, setBalanceByRating] = useState<boolean>(false);
-  const [format, setFormat] = useState<'singles' | 'doubles'>('singles');
+  const [format, setFormat] = useState<'singles' | 'doubles'>('doubles');
   const lastTeamsRef = useRef<Team[] | null>(null);
   const lastFingerprintRef = useRef<string>('');
 
@@ -119,43 +124,195 @@ export function useTeamGenerator() {
     }
   }, []);
 
+  const { validationError, canGenerate } = useMemo(() => {
+    if (activePool.length === 0) {
+      return {
+        canGenerate: false,
+        validationError: null,
+      };
+    }
+
+    if (mode === 'tennis') {
+      if (format === 'doubles') {
+        if (activePool.length < 4) {
+          return {
+            canGenerate: false,
+            validationError: 'Нужни са поне 4 играчи за игра по двойки.',
+          };
+        }
+        if (activePool.length % 2 !== 0) {
+          return {
+            canGenerate: false,
+            validationError: 'Добавете още 1 играч за пълни двойки',
+          };
+        }
+        return {
+          canGenerate: true,
+          validationError: null,
+        };
+      }
+
+      // singles
+      if (activePool.length < 2) {
+        return {
+          canGenerate: false,
+          validationError: 'Нужни са поне 2-ма играчи за сформиране на сингъл срещи',
+        };
+      }
+      return {
+        canGenerate: true,
+        validationError: null,
+      };
+    }
+
+    // Generic mode
+    if (activePool.length < 2) {
+      return {
+        canGenerate: false,
+        validationError: 'Нужни са поне 2-ма играчи за да се сформират отбори.',
+      };
+    }
+
+    if (playersPerTeam !== null && !Number.isNaN(playersPerTeam)) {
+      if (playersPerTeam < 1) {
+        return {
+          canGenerate: false,
+          validationError: 'Броят играчи в отбор трябва да бъде поне 1.',
+        };
+      }
+      if (playersPerTeam >= activePool.length) {
+        return {
+          canGenerate: false,
+          validationError: `Броят играчи в отбор (${playersPerTeam}) не може да бъде по-голям или равен на общия брой играчи (${activePool.length}). Нужни са играчи за поне 2 отбора.`,
+        };
+      }
+      return {
+        canGenerate: true,
+        validationError: null,
+      };
+    }
+
+    if (numberOfTeams !== null && !Number.isNaN(numberOfTeams)) {
+      if (numberOfTeams < 2) {
+        return {
+          canGenerate: false,
+          validationError: 'Нужни са поне 2 отбора за разпределение.',
+        };
+      }
+      if (numberOfTeams > activePool.length) {
+        return {
+          canGenerate: false,
+          validationError: `Броят отбори (${numberOfTeams}) не може да надвишава наличните играчи (${activePool.length}).`,
+        };
+      }
+      return {
+        canGenerate: true,
+        validationError: null,
+      };
+    }
+
+    return {
+      canGenerate: true,
+      validationError: null,
+    };
+  }, [activePool.length, mode, format, playersPerTeam, numberOfTeams]);
+
   const generateTeams = useCallback(
     (teamCount?: number, balanceByRatingParam?: boolean) => {
       if (activePool.length === 0) {
         showAlert('Списъкът с играчи е празен. Моля, въведете поне няколко имена.', 'error');
         return;
       }
-      if (activePool.length < 2) {
-        showAlert('Нужни са поне 2-ма играчи за да се сформират отбори.', 'error');
+
+      if (!canGenerate && typeof teamCount !== 'number') {
+        if (validationError) {
+          showAlert(validationError, 'error');
+        }
         return;
       }
 
+      if (mode === 'tennis') {
+        if (format === 'doubles') {
+          if (activePool.length < 4) {
+            showAlert('Нужни са поне 4 играчи за игра по двойки.', 'error');
+            return;
+          }
+          if (activePool.length % 2 !== 0) {
+            showAlert('Добавете още 1 играч за пълни двойки', 'error');
+            return;
+          }
+        }
+        if (format === 'singles') {
+          if (activePool.length < 2) {
+            showAlert('Нужни са поне 2-ма играчи за сформиране на сингъл срещи', 'error');
+            return;
+          }
+        }
+      } else {
+        if (activePool.length < 2) {
+          showAlert('Нужни са поне 2-ма играчи за да се сформират отбори.', 'error');
+          return;
+        }
+      }
+
+      const effectiveFormat = mode === 'tennis' ? format : undefined;
+
+      const tennisTargetTeams =
+        format === 'doubles'
+          ? Math.floor(activePool.length / 2)
+          : activePool.length;
+
       const effectiveNumTeams =
-        typeof teamCount === 'number' && teamCount > 0
-          ? teamCount
-          : numberOfTeams !== null && !Number.isNaN(numberOfTeams) && numberOfTeams > 0
-            ? numberOfTeams
-            : null;
+        mode === 'tennis'
+          ? typeof teamCount === 'number' && teamCount > 0
+            ? teamCount
+            : tennisTargetTeams
+          : typeof teamCount === 'number' && teamCount > 0
+            ? teamCount
+            : numberOfTeams !== null && !Number.isNaN(numberOfTeams) && numberOfTeams > 0
+              ? numberOfTeams
+              : null;
 
       const pptInt =
-        playersPerTeam !== null && !Number.isNaN(playersPerTeam) && playersPerTeam > 0
+        mode === 'generic' && playersPerTeam !== null && !Number.isNaN(playersPerTeam) && playersPerTeam > 0
           ? playersPerTeam
           : null;
 
       const effectiveBalance =
-        typeof balanceByRatingParam === 'boolean' ? balanceByRatingParam : balanceByRating;
+        mode === 'generic'
+          ? false
+          : typeof balanceByRatingParam === 'boolean'
+            ? balanceByRatingParam
+            : balanceByRating;
 
       const hasNumTeams = effectiveNumTeams !== null && effectiveNumTeams > 0;
       const hasPpt = pptInt !== null && pptInt > 0;
 
-      if (!hasNumTeams && !hasPpt) {
-        showAlert("Моля, въведете 'Брой отбори' или 'Брой играчи в отбор'.", 'error');
-        return;
-      }
+      if (mode === 'generic') {
+        if (!hasNumTeams && !hasPpt) {
+          showAlert("Моля, въведете 'Брой отбори' или 'Брой играчи в отбор'.", 'error');
+          return;
+        }
 
-      if (hasNumTeams && effectiveNumTeams > activePool.length) {
-        showAlert('Броят на отборите не може да е по-голям от броя на играчите.', 'error');
-        return;
+        if (hasNumTeams && effectiveNumTeams > activePool.length) {
+          showAlert(`Броят отбори (${effectiveNumTeams}) не може да надвишава наличните играчи (${activePool.length}).`, 'error');
+          return;
+        }
+
+        if (hasNumTeams && effectiveNumTeams < 2) {
+          showAlert('Нужни са поне 2 отбора за разпределение.', 'error');
+          return;
+        }
+
+        if (hasPpt && pptInt < 1) {
+          showAlert('Броят играчи в отбор трябва да бъде поне 1.', 'error');
+          return;
+        }
+
+        if (hasPpt && pptInt >= activePool.length) {
+          showAlert(`Броят играчи в отбор (${pptInt}) не може да бъде по-голям или равен на общия брой играчи (${activePool.length}). Нужни са играчи за поне 2 отбора.`, 'error');
+          return;
+        }
       }
 
       const targetNumTeams = hasNumTeams
@@ -170,7 +327,7 @@ export function useTeamGenerator() {
       const maxAttempts = 15;
 
       const hasRatings = activePool.some(
-        (p) => resolvePlayerRating(p, format) !== undefined || p.rating !== undefined
+        (p) => resolvePlayerRating(p, effectiveFormat) !== undefined
       );
 
       do {
@@ -178,7 +335,7 @@ export function useTeamGenerator() {
 
         if (effectiveBalance && hasRatings && targetNumTeams) {
           const shuffled = fisherYatesShuffle(activePool);
-          generatedTeams = balanceTeams(shuffled, targetNumTeams, format);
+          generatedTeams = balanceTeams(shuffled, targetNumTeams, effectiveFormat);
         } else {
           const shuffled = fisherYatesShuffle(activePool);
 
@@ -194,27 +351,32 @@ export function useTeamGenerator() {
             shuffled.forEach((player, index) => {
               const teamIdx = index % effectiveNumTeams;
               generatedTeams[teamIdx].players.push(player);
-              const pRating = resolvePlayerRating(player, format);
+              const pRating = resolvePlayerRating(player, effectiveFormat);
               if (pRating !== undefined) {
                 generatedTeams[teamIdx].totalRating =
                   (generatedTeams[teamIdx].totalRating ?? 0) + pRating;
               }
             });
           } else if (hasPpt) {
-            let teamIndex = 1;
-            for (let i = 0; i < shuffled.length; i += pptInt) {
-              const chunk = shuffled.slice(i, i + pptInt);
+            const numTeams = Math.ceil(shuffled.length / pptInt);
+            const baseSize = Math.floor(shuffled.length / numTeams);
+            const remainder = shuffled.length % numTeams;
+
+            let cursor = 0;
+            for (let i = 0; i < numTeams; i++) {
+              const targetSize = i < remainder ? baseSize + 1 : baseSize;
+              const chunk = shuffled.slice(cursor, cursor + targetSize);
+              cursor += targetSize;
               const total = chunk.reduce(
-                (sum, p) => sum + (resolvePlayerRating(p, format) ?? 0),
+                (sum, p) => sum + (resolvePlayerRating(p, effectiveFormat) ?? 0),
                 0
               );
               generatedTeams.push({
-                id: `team-${teamIndex}`,
-                name: `Отбор ${teamIndex}`,
+                id: `team-${i + 1}`,
+                name: `Отбор ${i + 1}`,
                 players: chunk,
                 totalRating: total,
               });
-              teamIndex++;
             }
           }
         }
@@ -233,7 +395,7 @@ export function useTeamGenerator() {
       setHistory((prev) => [fingerprint, ...prev]);
       setTeams(generatedTeams);
     },
-    [activePool, numberOfTeams, playersPerTeam, balanceByRating, showAlert, format]
+    [activePool, mode, numberOfTeams, playersPerTeam, balanceByRating, showAlert, format, canGenerate, validationError]
   );
 
   const shuffleSingleTeam = useCallback((teamId: string) => {
@@ -258,38 +420,28 @@ export function useTeamGenerator() {
   const copyResults = useCallback(async (): Promise<boolean> => {
     if (teams.length === 0) return false;
 
-    let textToCopy = 'Списък с отбори:\n\n';
-    teams.forEach((team) => {
-      textToCopy += `${team.name}:\n`;
-      team.players.forEach((p) => {
-        textToCopy += `- ${p.name}\n`;
-      });
-      textToCopy += '\n';
-    });
+    const textToCopy = formatTeamsForClipboard(teams, mode, format);
+    const successful = await copyTextToClipboard(textToCopy);
 
-    try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(textToCopy);
-      } else {
-        const textArea = document.createElement('textarea');
-        textArea.value = textToCopy;
-        textArea.style.position = 'absolute';
-        textArea.style.left = '-999999px';
-        document.body.prepend(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        textArea.remove();
-      }
+    if (successful) {
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
       return true;
-    } catch {
-      showAlert('Неуспешно копиране. Моля, копирайте ръчно.', 'error');
-      return false;
     }
-  }, [teams, showAlert]);
+
+    showAlert('Неуспешно копиране. Моля, копирайте ръчно.', 'error');
+    if (typeof window !== 'undefined' && typeof window.prompt === 'function') {
+      window.prompt('Копирайте съставите ръчно (Ctrl+C):', textToCopy);
+    }
+    return false;
+  }, [teams, mode, format, showAlert]);
 
   return {
+    mode,
+    setMode,
+    canGenerate,
+    validationError,
+    validationMessage: validationError,
     activePool,
     players: activePool,
     numberOfTeams,

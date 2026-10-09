@@ -4,7 +4,9 @@ import { TeamSettingsProps } from '../../types';
 import { Button, Input } from '../ui';
 
 export const TeamSettings = memo(function TeamSettings({
-  numberOfTeams,
+  mode = 'tennis',
+  onModeChange,
+  numberOfTeams = null,
   onSettingsChange,
   onGenerate,
   playersPerTeam = null,
@@ -12,78 +14,140 @@ export const TeamSettings = memo(function TeamSettings({
   balanceByRating = false,
   onBalanceToggle,
   hasRatings = false,
-  format = 'singles',
+  format = 'doubles',
   onFormatChange,
+  canGenerate: _canGenerate = true,
+  validationError = null,
 }: TeamSettingsProps) {
   return (
     <div className="space-y-6">
-      {/* Format Selector Pills */}
+      {/* Mode Selector */}
       <div className="flex flex-col space-y-1.5">
         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Формат на мача
+          Режим
         </span>
         <div className="flex items-center rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700 self-start">
           <button
             type="button"
-            onClick={() => onFormatChange?.('singles')}
+            onClick={() => onModeChange?.('tennis')}
             className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
-              format === 'singles'
+              mode === 'tennis'
                 ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
-            aria-pressed={format === 'singles'}
+            aria-pressed={mode === 'tennis'}
           >
-            Поединично
+            🎾 Тенис
           </button>
           <button
             type="button"
-            onClick={() => onFormatChange?.('doubles')}
+            onClick={() => onModeChange?.('generic')}
             className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
-              format === 'doubles'
+              mode === 'generic'
                 ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
-            aria-pressed={format === 'doubles'}
+            aria-pressed={mode === 'generic'}
           >
-            По двойки
+            🎲 Универсален
           </button>
         </div>
       </div>
 
-      {/* Settings Inputs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Input
-          type="number"
-          id="numTeams"
-          label="Брой отбори"
-          min="1"
-          value={numberOfTeams || ''}
-          onChange={(e) => {
-            const val = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
-            onSettingsChange(Number.isNaN(val) ? 0 : val);
-          }}
-          placeholder="Напр. 2"
-        />
+      {/* Mode-specific Controls */}
+      {mode === 'tennis' ? (
+        <div className="space-y-4">
+          {/* Format Selector Pills */}
+          <div className="flex flex-col space-y-1.5">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Формат на мача
+            </span>
+            <div className="flex items-center rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700 self-start">
+              <button
+                type="button"
+                onClick={() => onFormatChange?.('doubles')}
+                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  format === 'doubles'
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+                aria-pressed={format === 'doubles'}
+              >
+                По двойки
+              </button>
+              <button
+                type="button"
+                onClick={() => onFormatChange?.('singles')}
+                className={`px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  format === 'singles'
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+                aria-pressed={format === 'singles'}
+              >
+                Поединично
+              </button>
+            </div>
+          </div>
 
-        <Input
-          type="number"
-          id="playersPerTeam"
-          label={
-            <>
-              <span className="opacity-80 font-normal mr-1">(или)</span> Брой играчи в отбор
-            </>
-          }
-          min="1"
-          value={playersPerTeam ?? ''}
-          onChange={(e) => {
-            const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-            onPlayersPerTeamChange?.(val !== null && Number.isNaN(val) ? null : val);
-          }}
-          placeholder="Напр. 5"
-        />
-      </div>
+          {/* Validation Warning */}
+          {validationError && (
+            <div
+              data-testid="tennis-validation-warning"
+              className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-200"
+            >
+              {validationError}
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Generic Settings Inputs */
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              type="number"
+              id="numTeams"
+              label="Брой отбори"
+              min="1"
+              value={numberOfTeams ?? ''}
+              onChange={(e) => {
+                const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                onSettingsChange?.(val !== null && Number.isNaN(val) ? null : val);
+              }}
+              placeholder="Напр. 2"
+            />
 
-      {hasRatings && onBalanceToggle && (
+            <Input
+              type="number"
+              id="playersPerTeam"
+              label={
+                <>
+                  <span className="opacity-80 font-normal mr-1">(или)</span> Брой играчи в отбор
+                </>
+              }
+              min="1"
+              value={playersPerTeam ?? ''}
+              onChange={(e) => {
+                const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                onPlayersPerTeamChange?.(val !== null && Number.isNaN(val) ? null : val);
+              }}
+              placeholder="Напр. 5"
+            />
+          </div>
+
+          {/* Validation Warning */}
+          {validationError && (
+            <div
+              data-testid="generic-validation-warning"
+              className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-200"
+            >
+              {validationError}
+            </div>
+          )}
+        </div>
+      )}
+
+      {mode !== 'generic' && hasRatings && onBalanceToggle && (
         <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800">
           <div className="flex items-center space-x-2">
             <Sliders className="w-4 h-4 text-amber-600 dark:text-amber-400" />
@@ -107,6 +171,7 @@ export const TeamSettings = memo(function TeamSettings({
         id="generateBtn"
         size="lg"
         onClick={onGenerate}
+        disabled={Boolean(validationError)}
         className="w-full flex items-center justify-center space-x-2 cursor-pointer py-4"
       >
         <Shuffle className="w-5 h-5" />

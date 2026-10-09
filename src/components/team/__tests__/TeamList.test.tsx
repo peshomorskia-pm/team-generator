@@ -91,6 +91,8 @@ describe('TeamList Component', () => {
 
     const copyBtn = screen.getByRole('button', { name: /копирай/i });
     expect(copyBtn).toBeInTheDocument();
+    expect(copyBtn).toHaveAttribute('title', 'Копирай съставите на отборите в клипборда');
+    expect(copyBtn).toHaveAttribute('aria-label', 'Копирай отборите');
 
     await user.click(copyBtn);
     expect(handleCopy).toHaveBeenCalledTimes(1);
@@ -98,5 +100,29 @@ describe('TeamList Component', () => {
     // When copied
     rerender(<TeamList teams={mockTeams2} onCopy={handleCopy} isCopied={true} />);
     expect(screen.getByText('Копирано!')).toBeInTheDocument();
+  });
+
+  describe('Generator mode integration', () => {
+    it('shows "Запиши като мач" when mode is "tennis" and 2 teams exist', () => {
+      render(
+        <TeamList
+          teams={mockTeams2}
+          mode="tennis"
+          onSaveAsMatch={vi.fn()}
+        />
+      );
+      expect(screen.getByRole('button', { name: /запиши като мач/i })).toBeInTheDocument();
+    });
+
+    it('strictly hides "Запиши като мач" when mode is "generic", even with exactly 2 teams and onSaveAsMatch provided', () => {
+      render(
+        <TeamList
+          teams={mockTeams2}
+          mode="generic"
+          onSaveAsMatch={vi.fn()}
+        />
+      );
+      expect(screen.queryByRole('button', { name: /запиши като мач/i })).not.toBeInTheDocument();
+    });
   });
 });
