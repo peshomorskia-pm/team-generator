@@ -43,6 +43,8 @@ export const GeneratorPage: React.FC = () => {
   const {
     activePool,
     teams,
+    targetTeamSize,
+    hasIncompleteTeams,
     groups,
     drawGroups,
     resetGroups,
@@ -228,6 +230,8 @@ export const GeneratorPage: React.FC = () => {
           onSaveAsMatch={() => setIsMatchModalOpen(true)}
           format={effectiveFormat}
           onDrawGroups={drawGroups}
+          hasIncompleteTeams={hasIncompleteTeams}
+          targetTeamSize={targetTeamSize}
         />
       )}
 

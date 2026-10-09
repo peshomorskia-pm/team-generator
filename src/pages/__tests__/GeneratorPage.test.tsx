@@ -613,5 +613,51 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
       expect(screen.queryByRole('button', { name: /тегли жребий за групи/i })).not.toBeInTheDocument();
     });
   });
+
+  describe('In-place team slot substitution & gating integration', () => {
+    it('handles in-place player removal and substitution in tennis doubles', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      // Add 4 guests in tennis doubles
+      const guestInput = screen.getByPlaceholderText('напр. Иван, Петър, Георги');
+      await user.type(guestInput, 'Иван, Петър, Георги, Стоян');
+      await user.click(screen.getByRole('button', { name: /добави/i }));
+
+      // Generate teams
+      const generateBtn = screen.getByRole('button', { name: /разпредели в отбори/i });
+      await user.click(generateBtn);
+
+      expect(screen.getByRole('heading', { level: 2, name: 'Резултати' })).toBeInTheDocument();
+      const saveMatchBtn = screen.getByRole('button', { name: /запиши като мач/i });
+      expect(saveMatchBtn).toBeEnabled();
+      expect(screen.queryByText('Свободно място')).not.toBeInTheDocument();
+
+      // Remove "Стоян" from the active pool
+      const removeStoyanBtn = screen.getByRole('button', { name: 'Премахни Стоян' });
+      await user.click(removeStoyanBtn);
+
+      // Now 1 team is incomplete: placeholder is displayed
+      expect(screen.getByText('Свободно място')).toBeInTheDocument();
+      // "Запиши като мач" is disabled
+      expect(screen.getByRole('button', { name: /запиши като мач/i })).toBeDisabled();
+      // Validation warning is shown
+      expect(screen.getByTestId('tennis-validation-warning')).toHaveTextContent(
+        'Добавете още 1 играч за пълни двойки'
+      );
+
+      // Substitute with new guest "Васил"
+      await user.type(guestInput, 'Васил');
+      await user.click(screen.getByRole('button', { name: /добави/i }));
+
+      // Slot is filled with "Васил" (appears in both ActivePool and TeamCard)
+      expect(screen.getAllByText('Васил')).toHaveLength(2);
+      expect(screen.queryByText('Свободно място')).not.toBeInTheDocument();
+      // Save as match is enabled again
+      expect(screen.getByRole('button', { name: /запиши като мач/i })).toBeEnabled();
+      // Validation warning is cleared
+      expect(screen.queryByTestId('tennis-validation-warning')).not.toBeInTheDocument();
+    });
+  });
 });
 

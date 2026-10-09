@@ -51,6 +51,8 @@ export interface TeamListProps {
   format?: 'singles' | 'doubles';
   mode?: GeneratorMode;
   onDrawGroups?: () => void;
+  hasIncompleteTeams?: boolean;
+  targetTeamSize?: number;
 }
 
 export interface TeamCardProps {
@@ -59,6 +61,7 @@ export interface TeamCardProps {
   onShuffleTeam?: (teamId: string) => void;
   format?: 'singles' | 'doubles';
   mode?: GeneratorMode;
+  targetSize?: number;
 }
 
 export interface AlertNotification {

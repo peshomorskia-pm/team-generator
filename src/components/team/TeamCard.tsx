@@ -9,7 +9,12 @@ export const TeamCard: React.FC<TeamCardProps> = ({
   onShuffleTeam,
   format,
   mode = 'tennis',
+  targetSize,
 }) => {
+  const emptySlotsCount =
+    targetSize !== undefined && targetSize > team.players.length
+      ? targetSize - team.players.length
+      : 0;
   const displayTotalRating = React.useMemo(() => {
     if (team.totalRating !== undefined && team.totalRating > 0 && !format) {
       return team.totalRating;
@@ -87,7 +92,18 @@ export const TeamCard: React.FC<TeamCardProps> = ({
               </li>
             );
           })}
-          {team.players.length === 0 && (
+          {emptySlotsCount > 0 &&
+            Array.from({ length: emptySlotsCount }).map((_, slotIdx) => (
+              <li
+                key={`empty-slot-${slotIdx}`}
+                data-testid="empty-slot"
+                className="flex items-center text-gray-400 dark:text-slate-500 text-sm border border-dashed border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-gray-50/50 dark:bg-slate-800/40"
+              >
+                <User className="w-4 h-4 mr-2 text-gray-400 dark:text-slate-500 shrink-0" />
+                <span className="italic">Свободно място</span>
+              </li>
+            ))}
+          {team.players.length === 0 && emptySlotsCount === 0 && (
             <li className="text-xs text-gray-400 italic text-center py-2">
               Няма разпределени играчи
             </li>
