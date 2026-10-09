@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useTeamGenerator } from '../useTeamGenerator';
+import { useTeamGenerator, getTargetTeamSize, calculateTeamRating } from '../useTeamGenerator';
 import { areTeamConfigsEqual } from '../../utils/history';
 import { DatabasePlayer } from '../../types/generator';
 
@@ -1113,6 +1113,316 @@ describe('useTeamGenerator', () => {
       expect(result.current.groups).toEqual([]);
     });
   });
+
+  describe('in-place team slot substitution, pruning, and gating', () => {
+    describe('getTargetTeamSize helper', () => {
+      it('returns 2 in tennis doubles and 1 in tennis singles', () => {
+        expect(getTargetTeamSize('tennis', 'doubles')).toBe(2);
+        expect(getTargetTeamSize('tennis', 'singles')).toBe(1);
+      });
+
+      it('returns playersPerTeam in generic mode when ppt is defined', () => {
+        expect(getTargetTeamSize('generic', undefined, 3, null, 10)).toBe(3);
+        expect(getTargetTeamSize('generic', undefined, 4, 2, 8)).toBe(4);
+      });
+
+      it('returns Math.ceil(poolSize / numberOfTeams) in generic mode with numberOfTeams', () => {
+        expect(getTargetTeamSize('generic', undefined, null, 2, 5)).toBe(3);
+        expect(getTargetTeamSize('generic', undefined, null, 3, 9)).toBe(3);
+        expect(getTargetTeamSize('generic', undefined, null, 2, 0)).toBe(1);
+      });
+    });
+
+    describe('calculateTeamRating helper', () => {
+      it('calculates team rating taking format into account and ignoring guest ratings', () => {
+        const players = [
+          { id: '1', name: 'P1', rating: 1200, doubles_rating: 1300, singles_rating: 1100, source: 'registered' as const },
+          { id: '2', name: 'G1', rating: 999, source: 'guest' as const },
+        ];
+        expect(calculateTeamRating(players, 'doubles')).toBe(1300);
+        expect(calculateTeamRating(players, 'singles')).toBe(1100);
+        expect(calculateTeamRating(players, undefined)).toBe(1200);
+      });
+    });
+
+    it('in-place player removal in doubles: removes 1 player, leaves 1 player, keeps other teams intact, resets groups', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.addGuest('P1, P2, P3, P4, P5, P6');
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(3);
+      expect(result.current.teams[0].players).toHaveLength(2);
+      expect(result.current.teams[1].players).toHaveLength(2);
+      expect(result.current.teams[2].players).toHaveLength(2);
+
+      // Draw groups first
+      act(() => {
+        result.current.drawGroups();
+      });
+      expect(result.current.groups.length).toBeGreaterThan(0);
+
+      const playerToRemoveId = result.current.teams[0].players[0].id;
+      const preservedPlayer = result.current.teams[0].players[1];
+      const preservedTeam1 = { ...result.current.teams[1] };
+      const preservedTeam2 = { ...result.current.teams[2] };
+
+      // Remove player
+      act(() => {
+        result.current.removePlayer(playerToRemoveId);
+      });
+
+      // Teams remain 3, team[0] has 1 player remaining
+      expect(result.current.teams).toHaveLength(3);
+      expect(result.current.teams[0].players).toHaveLength(1);
+      expect(result.current.teams[0].players[0].id).toBe(preservedPlayer.id);
+
+      // Other teams intact
+      expect(result.current.teams[1].players).toEqual(preservedTeam1.players);
+      expect(result.current.teams[2].players).toEqual(preservedTeam2.players);
+
+      // Groups cleared
+      expect(result.current.groups).toEqual([]);
+      expect(result.current.hasIncompleteTeams).toBe(true);
+    });
+
+    it('team pruning: removing the last player of a team prunes that team entirely', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.addGuest('P1, P2, P3, P4');
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(2);
+      const team0 = result.current.teams[0];
+      const team1 = result.current.teams[1];
+      const [t0p0, t0p1] = team0.players;
+
+      // Remove first player of team 0
+      act(() => {
+        result.current.removePlayer(t0p0.id);
+      });
+      expect(result.current.teams).toHaveLength(2);
+      expect(result.current.teams[0].players).toHaveLength(1);
+
+      // Remove remaining player of team 0 -> team 0 is pruned!
+      act(() => {
+        result.current.removePlayer(t0p1.id);
+      });
+      expect(result.current.teams).toHaveLength(1);
+      expect(result.current.teams[0].id).toBe(team1.id);
+      expect(result.current.teams[0].players).toEqual(team1.players);
+    });
+
+    it('in-place player substitution: adding a player fills the incomplete team empty slot without reshuffling other teams', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.addGuest('P1, P2, P3, P4');
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      const team0 = result.current.teams[0];
+      const team1 = result.current.teams[1];
+      const playerToRemove = team0.players[0];
+      const remainingPlayer = team0.players[1];
+
+      // Remove player -> team0 now has 1 player (slot open)
+      act(() => {
+        result.current.removePlayer(playerToRemove.id);
+      });
+      expect(result.current.teams[0].players).toHaveLength(1);
+
+      // Substitute with new guest
+      act(() => {
+        result.current.addGuest('NewGuest');
+      });
+
+      // Team 0 now has 2 players, filled with NewGuest
+      expect(result.current.teams).toHaveLength(2);
+      expect(result.current.teams[0].players).toHaveLength(2);
+      expect(result.current.teams[0].players[0].id).toBe(remainingPlayer.id);
+      expect(result.current.teams[0].players[1].name).toBe('NewGuest');
+
+      // Team 1 was completely preserved
+      expect(result.current.teams[1].players).toEqual(team1.players);
+      expect(result.current.hasIncompleteTeams).toBe(false);
+    });
+
+    it('in-place player substitution: adding a registered player fills empty slot', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.addGuest('P1, P2, P3, P4');
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      const playerToRemove = result.current.teams[0].players[0];
+      act(() => {
+        result.current.removePlayer(playerToRemove.id);
+      });
+
+      const newDbPlayer: DatabasePlayer = {
+        id: 'new-db-sub',
+        name: 'Нов Състезател',
+        rating: 1600,
+        doubles_rating: 1650,
+      };
+
+      act(() => {
+        result.current.toggleRegisteredPlayer(newDbPlayer);
+      });
+
+      expect(result.current.teams[0].players).toHaveLength(2);
+      expect(result.current.teams[0].players[1].name).toBe('Нов Състезател');
+      expect(result.current.teams[0].players[1].id).toBe('new-db-sub');
+    });
+
+    it('adding a player when all teams are full only adds them to activePool without mutating teams', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.addGuest('P1, P2, P3, P4');
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      const snapshot = JSON.parse(JSON.stringify(result.current.teams));
+
+      act(() => {
+        result.current.addGuest('FifthPlayer');
+      });
+
+      expect(result.current.activePool).toHaveLength(5);
+      expect(result.current.teams).toEqual(snapshot);
+    });
+
+    it('recalculates team totalRating upon removal and substitution', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      const p1: DatabasePlayer = { id: 'p-1', name: 'P1', rating: 1200, doubles_rating: 1250 };
+      const p2: DatabasePlayer = { id: 'p-2', name: 'P2', rating: 1100, doubles_rating: 1150 };
+      const p3: DatabasePlayer = { id: 'p-3', name: 'P3', rating: 1000, doubles_rating: 1050 };
+      const p4: DatabasePlayer = { id: 'p-4', name: 'P4', rating: 900, doubles_rating: 950 };
+
+      act(() => {
+        result.current.toggleRegisteredPlayer(p1);
+        result.current.toggleRegisteredPlayer(p2);
+        result.current.toggleRegisteredPlayer(p3);
+        result.current.toggleRegisteredPlayer(p4);
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      const targetTeam = result.current.teams.find((t) =>
+        t.players.some((p) => p.id === 'p-1')
+      )!;
+      const initialRating = targetTeam.totalRating;
+      const isP1TogetherWith = targetTeam.players.find((p) => p.id !== 'p-1')!;
+
+      // Remove p1
+      act(() => {
+        result.current.removePlayer('p-1');
+      });
+
+      const updatedTeam = result.current.teams.find((t) => t.id === targetTeam.id)!;
+      const partnerDoublesRating =
+        isP1TogetherWith.doubles_rating ?? isP1TogetherWith.rating!;
+      expect(updatedTeam.totalRating).toBe(partnerDoublesRating);
+      expect(updatedTeam.totalRating).toBeLessThan(initialRating!);
+
+      // Substitute with p5
+      const p5: DatabasePlayer = { id: 'p-5', name: 'P5', rating: 1500, doubles_rating: 1550 };
+      act(() => {
+        result.current.toggleRegisteredPlayer(p5);
+      });
+
+      const subbedTeam = result.current.teams.find((t) => t.id === targetTeam.id)!;
+      expect(subbedTeam.totalRating).toBe(partnerDoublesRating + 1550);
+    });
+
+    it('reports missing player validation error when incomplete teams exist in tennis doubles', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.addGuest('P1, P2, P3, P4');
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.canGenerate).toBe(true);
+      expect(result.current.validationError).toBeNull();
+
+      // Remove 1 player -> odd active pool (3) and incomplete team
+      act(() => {
+        result.current.removePlayer(result.current.teams[0].players[0].id);
+      });
+
+      expect(result.current.hasIncompleteTeams).toBe(true);
+      expect(result.current.validationError).toBe('Добавете още 1 играч за пълни двойки');
+      expect(result.current.canGenerate).toBe(false);
+
+      // Substitute 1 guest back -> pool is 4 again
+      act(() => {
+        result.current.addGuest('Sub');
+      });
+
+      expect(result.current.hasIncompleteTeams).toBe(false);
+      expect(result.current.validationError).toBeNull();
+      expect(result.current.canGenerate).toBe(true);
+    });
+
+    it('draw gating: prevents drawing groups while teams are incomplete', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.addGuest('P1, P2, P3, P4, P5, P6');
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(3);
+
+      // Remove a player -> team 0 has 1 player (incomplete)
+      act(() => {
+        result.current.removePlayer(result.current.teams[0].players[0].id);
+      });
+
+      expect(result.current.hasIncompleteTeams).toBe(true);
+
+      // Attempt draw groups
+      act(() => {
+        result.current.drawGroups();
+      });
+
+      // Gating must prevent drawing
+      expect(result.current.groups).toEqual([]);
+    });
+  });
 });
+
 
 

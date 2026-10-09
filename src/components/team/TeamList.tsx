@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { Copy, Check, Swords } from 'lucide-react';
 import { TeamListProps } from '../../types';
 import { TeamCard } from './TeamCard';
+import { getTargetTeamSize } from '../../hooks/useTeamGenerator';
 
 export const TeamList = memo(function TeamList({
   teams,
@@ -12,12 +13,29 @@ export const TeamList = memo(function TeamList({
   format,
   mode = 'tennis',
   onDrawGroups,
+  hasIncompleteTeams: propHasIncompleteTeams,
+  targetTeamSize: propTargetTeamSize,
 }: TeamListProps) {
   if (teams.length === 0) {
     return null;
   }
 
   const isTennisMode = mode === 'tennis';
+
+  const computedTargetSize =
+    propTargetTeamSize ??
+    getTargetTeamSize(
+      mode,
+      format,
+      null,
+      null,
+      teams.reduce((acc, t) => acc + t.players.length, 0)
+    );
+
+  const hasIncomplete =
+    propHasIncompleteTeams !== undefined
+      ? propHasIncompleteTeams
+      : teams.some((t) => t.players.length < computedTargetSize);
 
   return (
     <div id="resultsContainer" className="w-full max-w-5xl mt-10 transition-all duration-300">
@@ -29,7 +47,12 @@ export const TeamList = memo(function TeamList({
               type="button"
               id="drawGroupsBtn"
               onClick={onDrawGroups}
-              className="text-sm text-indigo-700 dark:text-indigo-300 hover:text-indigo-900 dark:hover:text-indigo-100 font-semibold flex items-center bg-indigo-50 dark:bg-indigo-950/60 px-3 py-1.5 rounded-lg shadow-sm border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer"
+              disabled={hasIncomplete}
+              className={`text-sm font-semibold flex items-center px-3 py-1.5 rounded-lg shadow-sm border transition-colors ${
+                hasIncomplete
+                  ? 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500 border-gray-200 dark:border-slate-700 cursor-not-allowed opacity-60'
+                  : 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 hover:text-indigo-900 dark:hover:text-indigo-100 border-indigo-200 dark:border-indigo-800 cursor-pointer'
+              }`}
             >
               <span>🎲 Тегли жребий за групи</span>
             </button>
@@ -39,9 +62,20 @@ export const TeamList = memo(function TeamList({
               type="button"
               id="saveAsMatchBtn"
               onClick={onSaveAsMatch}
-              className="text-sm text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 font-medium flex items-center bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 transition-colors cursor-pointer"
+              disabled={hasIncomplete}
+              className={`text-sm font-medium flex items-center px-3 py-1.5 rounded-lg shadow-sm border transition-colors ${
+                hasIncomplete
+                  ? 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500 border-gray-200 dark:border-slate-700 cursor-not-allowed opacity-60'
+                  : 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 border-gray-200 dark:border-slate-700 cursor-pointer'
+              }`}
             >
-              <Swords className="w-4 h-4 mr-1 text-emerald-600 dark:text-emerald-400" />
+              <Swords
+                className={`w-4 h-4 mr-1 ${
+                  hasIncomplete
+                    ? 'text-gray-400 dark:text-slate-500'
+                    : 'text-emerald-600 dark:text-emerald-400'
+                }`}
+              />
               <span>Запиши като мач</span>
             </button>
           )}
@@ -79,6 +113,7 @@ export const TeamList = memo(function TeamList({
             onShuffleTeam={onShuffleTeam}
             format={format}
             mode={mode}
+            targetSize={computedTargetSize}
           />
         ))}
       </div>

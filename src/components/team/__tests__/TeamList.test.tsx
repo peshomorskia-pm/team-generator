@@ -170,4 +170,51 @@ describe('TeamList Component', () => {
       expect(screen.queryByRole('button', { name: /тегли жребий за групи/i })).not.toBeInTheDocument();
     });
   });
+
+  describe('Incomplete teams gating and placeholders', () => {
+    it('disables "Запиши като мач" when hasIncompleteTeams is true', () => {
+      render(
+        <TeamList
+          teams={mockTeams2}
+          mode="tennis"
+          onSaveAsMatch={vi.fn()}
+          hasIncompleteTeams={true}
+        />
+      );
+
+      const saveMatchBtn = screen.getByRole('button', { name: /запиши като мач/i });
+      expect(saveMatchBtn).toBeDisabled();
+    });
+
+    it('disables "🎲 Тегли жребий за групи" when hasIncompleteTeams is true', () => {
+      render(
+        <TeamList
+          teams={mockTeams3}
+          mode="tennis"
+          onDrawGroups={vi.fn()}
+          hasIncompleteTeams={true}
+        />
+      );
+
+      const drawBtn = screen.getByRole('button', { name: /тегли жребий за групи/i });
+      expect(drawBtn).toBeDisabled();
+    });
+
+    it('passes targetTeamSize to TeamCard to render placeholders when incomplete', () => {
+      // In doubles, targetSize is 2. mockTeams2 have 1 player each.
+      render(
+        <TeamList
+          teams={mockTeams2}
+          mode="tennis"
+          format="doubles"
+          targetTeamSize={2}
+          hasIncompleteTeams={true}
+        />
+      );
+
+      const emptySlots = screen.getAllByTestId('empty-slot');
+      expect(emptySlots).toHaveLength(2); // 1 empty slot for each of the 2 teams
+      expect(screen.getAllByText('Свободно място')).toHaveLength(2);
+    });
+  });
 });

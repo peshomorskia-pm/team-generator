@@ -20,6 +20,8 @@ export interface UseTeamGeneratorReturn {
   playersPerTeam: number | null;
   setPlayersPerTeam: (val: number | null) => void;
   teams: Team[];
+  targetTeamSize: number;
+  hasIncompleteTeams: boolean;
   groups: TournamentGroup[];
   drawGroups: () => void;
   resetGroups: () => void;
@@ -34,6 +36,17 @@ export interface UseTeamGeneratorReturn {
   setFormat: (format: 'singles' | 'doubles') => void;
   addGuest: (name: string) => void;
   toggleRegisteredPlayer: (
+    player:
+      | DatabasePlayer
+      | {
+          id: string;
+          name: string;
+          rating?: number;
+          singles_rating?: number;
+          doubles_rating?: number;
+        }
+  ) => void;
+  addRegisteredPlayer?: (
     player:
       | DatabasePlayer
       | {

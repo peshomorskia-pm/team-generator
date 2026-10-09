@@ -85,4 +85,41 @@ describe('TeamCard', () => {
     expect(screen.queryByText('★ 9')).not.toBeInTheDocument();
     expect(screen.queryByText('★ 7')).not.toBeInTheDocument();
   });
+
+  it('renders "Свободно място" dashed placeholder when team.players.length < targetSize', () => {
+    const singlePlayerTeam: Team = {
+      id: 'team-incomplete',
+      name: 'Отбор 1',
+      players: [{ id: 'p-1', name: 'Иван', rating: 1200 }],
+    };
+
+    render(<TeamCard team={singlePlayerTeam} index={0} targetSize={2} />);
+
+    expect(screen.getByText('Иван')).toBeInTheDocument();
+    expect(screen.getByText('Свободно място')).toBeInTheDocument();
+    const emptySlots = screen.getAllByTestId('empty-slot');
+    expect(emptySlots).toHaveLength(1);
+    expect(emptySlots[0].className).toContain('border-dashed');
+  });
+
+  it('renders multiple placeholders when multiple slots are missing', () => {
+    const singlePlayerTeam: Team = {
+      id: 'team-incomplete',
+      name: 'Отбор 1',
+      players: [{ id: 'p-1', name: 'Иван' }],
+    };
+
+    render(<TeamCard team={singlePlayerTeam} index={0} targetSize={4} />);
+
+    const emptySlots = screen.getAllByTestId('empty-slot');
+    expect(emptySlots).toHaveLength(3);
+    expect(screen.getAllByText('Свободно място')).toHaveLength(3);
+  });
+
+  it('does not render placeholder when team is complete (team.players.length >= targetSize)', () => {
+    render(<TeamCard team={mockTeam} index={0} targetSize={3} />);
+
+    expect(screen.queryByText('Свободно място')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('empty-slot')).not.toBeInTheDocument();
+  });
 });
