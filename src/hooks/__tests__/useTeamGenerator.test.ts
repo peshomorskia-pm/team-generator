@@ -1422,7 +1422,162 @@ describe('useTeamGenerator', () => {
       expect(result.current.groups).toEqual([]);
     });
   });
+
+  describe('single-group auto-assignment and tournament schedule lifecycle', () => {
+    it('automatically assigns single group (Група А) when tennis mode has N in {3, 4, 5} teams', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      // 3 teams in tennis singles (3 guests)
+      act(() => {
+        result.current.setMode('tennis');
+        result.current.setFormat('singles');
+        result.current.addGuest('T1, T2, T3');
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(3);
+      expect(result.current.groups).toHaveLength(1);
+      expect(result.current.groups[0].id).toBe('group-0');
+      expect(result.current.groups[0].name).toBe('Група А');
+      expect(result.current.groups[0].teams).toHaveLength(3);
+
+      // 4 teams in tennis doubles (8 guests)
+      act(() => {
+        result.current.clearPool();
+        result.current.setFormat('doubles');
+        result.current.addGuest('A1, A2, B1, B2, C1, C2, D1, D2');
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(4);
+      expect(result.current.groups).toHaveLength(1);
+      expect(result.current.groups[0].name).toBe('Група А');
+      expect(result.current.groups[0].teams).toHaveLength(4);
+
+      // 5 teams in tennis singles (5 guests)
+      act(() => {
+        result.current.clearPool();
+        result.current.setFormat('singles');
+        result.current.addGuest('P1, P2, P3, P4, P5');
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(5);
+      expect(result.current.groups).toHaveLength(1);
+      expect(result.current.groups[0].name).toBe('Група А');
+      expect(result.current.groups[0].teams).toHaveLength(5);
+    });
+
+    it('requires manual draw for N >= 6 teams and does not auto-assign', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.setMode('tennis');
+        result.current.setFormat('singles');
+        result.current.addGuest('P1, P2, P3, P4, P5, P6');
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(6);
+      expect(result.current.groups).toEqual([]);
+
+      act(() => {
+        result.current.drawGroups();
+      });
+
+      expect(result.current.groups).toHaveLength(2);
+      expect(result.current.groups[0].name).toBe('Група А');
+      expect(result.current.groups[1].name).toBe('Група Б');
+    });
+
+    it('generates schedule and handles reset lifecycle', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.setMode('tennis');
+        result.current.setFormat('singles');
+        result.current.addGuest('T1, T2, T3');
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.schedule).toEqual([]);
+
+      // Generate schedule
+      act(() => {
+        result.current.generateSchedule();
+      });
+
+      expect(result.current.schedule).toHaveLength(3); // 3 matches for N=3
+      expect(result.current.schedule[0].groupId).toBe('group-0');
+      expect(result.current.schedule[0].round).toBe(1);
+
+      // Reset schedule
+      act(() => {
+        result.current.resetSchedule();
+      });
+
+      expect(result.current.schedule).toEqual([]);
+    });
+
+    it('resets schedule when teams change, pool changes, or mode changes', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.setMode('tennis');
+        result.current.setFormat('singles');
+        result.current.addGuest('T1, T2, T3');
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      act(() => {
+        result.current.generateSchedule();
+      });
+
+      expect(result.current.schedule).toHaveLength(3);
+
+      // Adding guest resets schedule
+      act(() => {
+        result.current.addGuest('T4');
+      });
+      expect(result.current.schedule).toEqual([]);
+
+      // Re-generate teams and schedule
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      act(() => {
+        result.current.generateSchedule();
+      });
+      expect(result.current.schedule).toHaveLength(6); // N=4 -> 6 matches
+
+      // Changing mode resets schedule
+      act(() => {
+        result.current.setMode('generic');
+      });
+      expect(result.current.schedule).toEqual([]);
+    });
+  });
 });
+
 
 
 

@@ -1,11 +1,12 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
-import { Team, AlertNotification, GeneratorMode, TournamentGroup, UseTeamGeneratorReturn } from '../types';
+import { Team, AlertNotification, GeneratorMode, TournamentGroup, TournamentMatch, UseTeamGeneratorReturn } from '../types';
 import { GeneratorPlayer, DatabasePlayer } from '../types/generator';
 import { fisherYatesShuffle } from '../utils/shuffle';
 import { balanceTeams } from '../utils/balance';
 import { saveMatchup, generateTeamsFingerprint, areTeamConfigsEqual } from '../utils/history';
 import { copyTextToClipboard, formatTeamsForClipboard } from '../utils/clipboard';
 import { drawTournamentGroups } from '../utils/groupPartition';
+import { generateTournamentSchedule } from '../utils/roundRobin';
 
 export function generateGuestId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -68,7 +69,8 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
   const [numberOfTeams, setNumberOfTeams] = useState<number | null>(null);
   const [playersPerTeam, setPlayersPerTeam] = useState<number | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
-  const [groups, setGroups] = useState<TournamentGroup[]>([]);
+  const [drawnGroups, setDrawnGroups] = useState<TournamentGroup[]>([]);
+  const [schedule, setSchedule] = useState<TournamentMatch[]>([]);
   const [history, setHistory] = useState<string[]>([]);
   const [alert, setAlert] = useState<AlertNotification | null>(null);
   const [isCopied, setIsCopied] = useState<boolean>(false);
@@ -88,13 +90,32 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
     return teams.some((t) => t.players.length < targetTeamSize);
   }, [teams, targetTeamSize]);
 
+  // Completely reactive tournament groups computation:
+  // - Tennis mode with 3, 4, or 5 complete teams: auto-assigned to single group ("Група А")
+  // - Tennis mode with >= 6 teams: formed via drawTournamentGroups()
+  // - Incomplete teams or generic mode: empty array
+  const groups = useMemo<TournamentGroup[]>(() => {
+    if (mode !== 'tennis' || hasIncompleteTeams) {
+      return [];
+    }
+    if (teams.length >= 3 && teams.length <= 5) {
+      return [{ id: 'group-0', name: 'Група А', teams }];
+    }
+    if (teams.length >= 6) {
+      return drawnGroups;
+    }
+    return [];
+  }, [mode, hasIncompleteTeams, teams, drawnGroups]);
+
   const resetGroups = useCallback(() => {
-    setGroups([]);
+    setDrawnGroups([]);
+    setSchedule([]);
   }, []);
 
   const handleSetMode = useCallback((newMode: GeneratorMode) => {
     setMode(newMode);
-    setGroups([]);
+    setDrawnGroups([]);
+    setSchedule([]);
   }, []);
 
   const showAlert = useCallback((message: string, type: 'error' | 'success' = 'error') => {
@@ -154,7 +175,8 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
         return currentTeams;
       });
 
-      setGroups([]);
+      setDrawnGroups([]);
+      setSchedule([]);
     },
     [mode, effectiveFormat, playersPerTeam, numberOfTeams, activePool.length]
   );
@@ -226,7 +248,8 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
           ];
         });
       }
-      setGroups([]);
+      setDrawnGroups([]);
+      setSchedule([]);
     },
     [activePool, mode, effectiveFormat, playersPerTeam, numberOfTeams]
   );
@@ -279,7 +302,8 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
           ...prevTeams.slice(incompleteIdx + 1),
         ];
       });
-      setGroups([]);
+      setDrawnGroups([]);
+      setSchedule([]);
     },
     [activePool, mode, effectiveFormat, playersPerTeam, numberOfTeams]
   );
@@ -304,7 +328,8 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
           })
           .filter((t) => t.players.length > 0);
       });
-      setGroups([]);
+      setDrawnGroups([]);
+      setSchedule([]);
     },
     [effectiveFormat]
   );
@@ -312,7 +337,8 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
   const clearPool = useCallback(() => {
     setActivePool([]);
     setTeams([]);
-    setGroups([]);
+    setDrawnGroups([]);
+    setSchedule([]);
   }, []);
 
   const handleNumTeamsChange = useCallback((val: number | null) => {
@@ -605,17 +631,30 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
       saveMatchup(generatedTeams);
       setHistory((prev) => [fingerprint, ...prev]);
       setTeams(generatedTeams);
-      setGroups([]);
+      setDrawnGroups([]);
+      setSchedule([]);
     },
     [activePool, mode, numberOfTeams, playersPerTeam, balanceByRating, showAlert, format, canGenerate, validationError]
   );
 
   const drawGroups = useCallback(() => {
-    if (teams.length >= 3 && mode === 'tennis' && !hasIncompleteTeams) {
+    if (teams.length >= 6 && mode === 'tennis' && !hasIncompleteTeams) {
       const drawn = drawTournamentGroups(teams);
-      setGroups(drawn);
+      setDrawnGroups(drawn);
+      setSchedule([]);
     }
   }, [teams, mode, hasIncompleteTeams]);
+
+  const generateSchedule = useCallback(() => {
+    if (groups.length > 0) {
+      const drawnSchedule = generateTournamentSchedule(groups);
+      setSchedule(drawnSchedule);
+    }
+  }, [groups]);
+
+  const resetSchedule = useCallback(() => {
+    setSchedule([]);
+  }, []);
 
   const shuffleSingleTeam = useCallback((teamId: string) => {
     setTeams((prevTeams) => {
@@ -634,12 +673,13 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
       setHistory((prev) => [fingerprint, ...prev]);
       return updated;
     });
+    setSchedule([]);
   }, []);
 
   const copyResults = useCallback(async (): Promise<boolean> => {
     if (teams.length === 0) return false;
 
-    const textToCopy = formatTeamsForClipboard(teams, mode, format);
+    const textToCopy = formatTeamsForClipboard(teams, mode, format, schedule);
     const successful = await copyTextToClipboard(textToCopy);
 
     if (successful) {
@@ -653,7 +693,7 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
       window.prompt('Копирайте съставите ръчно (Ctrl+C):', textToCopy);
     }
     return false;
-  }, [teams, mode, format, showAlert]);
+  }, [teams, mode, format, schedule, showAlert]);
 
   return {
     mode,
@@ -674,6 +714,9 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
     drawGroups,
     resetGroups,
     clearGroups: resetGroups,
+    schedule,
+    generateSchedule,
+    resetSchedule,
     history,
     alert,
     showAlert,

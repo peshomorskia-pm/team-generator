@@ -27,6 +27,13 @@ describe('TeamList Component', () => {
     },
   ];
 
+  const mockTeams6: Team[] = [
+    ...mockTeams3,
+    { id: 'team-4', name: 'Отбор 4', players: [{ id: 'p-4', name: 'Димитър' }] },
+    { id: 'team-5', name: 'Отбор 5', players: [{ id: 'p-5', name: 'Александър' }] },
+    { id: 'team-6', name: 'Отбор 6', players: [{ id: 'p-6', name: 'Никола' }] },
+  ];
+
   const mockTeam1: Team[] = [
     {
       id: 'team-1',
@@ -127,13 +134,13 @@ describe('TeamList Component', () => {
   });
 
   describe('Tournament groups draw button', () => {
-    it('renders "🎲 Тегли жребий за групи" when tennis mode, >= 3 teams, and onDrawGroups provided', async () => {
+    it('renders "🎲 Тегли жребий за групи" when tennis mode, >= 6 teams, and onDrawGroups provided', async () => {
       const user = userEvent.setup();
       const onDrawGroupsMock = vi.fn();
 
       render(
         <TeamList
-          teams={mockTeams3}
+          teams={mockTeams6}
           mode="tennis"
           onDrawGroups={onDrawGroupsMock}
         />
@@ -146,10 +153,10 @@ describe('TeamList Component', () => {
       expect(onDrawGroupsMock).toHaveBeenCalledTimes(1);
     });
 
-    it('does not render draw button when teams count is less than 3', () => {
+    it('does not render draw button when teams count is less than 6 (e.g. 3 teams)', () => {
       render(
         <TeamList
-          teams={mockTeams2}
+          teams={mockTeams3}
           mode="tennis"
           onDrawGroups={vi.fn()}
         />
@@ -189,7 +196,7 @@ describe('TeamList Component', () => {
     it('disables "🎲 Тегли жребий за групи" when hasIncompleteTeams is true', () => {
       render(
         <TeamList
-          teams={mockTeams3}
+          teams={mockTeams6}
           mode="tennis"
           onDrawGroups={vi.fn()}
           hasIncompleteTeams={true}

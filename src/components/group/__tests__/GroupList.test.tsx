@@ -98,4 +98,35 @@ describe('GroupList component', () => {
     expect(writeTextMock).toHaveBeenCalled();
     expect(screen.getByText('Копирано!')).toBeInTheDocument();
   });
+
+  describe('tournament match schedule integration', () => {
+    it('renders "📅 Генерирай програма с мачове" button when onGenerateSchedule is provided and hasSchedule is false', () => {
+      const onGenerateScheduleMock = vi.fn();
+      render(
+        <GroupList
+          groups={dummyGroups}
+          onGenerateSchedule={onGenerateScheduleMock}
+          hasSchedule={false}
+        />
+      );
+
+      const genBtn = screen.getByRole('button', { name: /генерирай програма с мачове/i });
+      expect(genBtn).toBeInTheDocument();
+
+      fireEvent.click(genBtn);
+      expect(onGenerateScheduleMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('hides "📅 Генерирай програма с мачове" button when hasSchedule is true', () => {
+      render(
+        <GroupList
+          groups={dummyGroups}
+          onGenerateSchedule={vi.fn()}
+          hasSchedule={true}
+        />
+      );
+
+      expect(screen.queryByRole('button', { name: /генерирай програма с мачове/i })).not.toBeInTheDocument();
+    });
+  });
 });

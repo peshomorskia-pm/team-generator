@@ -546,7 +546,7 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
   });
 
   describe('Tournament groups draw integration', () => {
-    it('shows "🎲 Тегли жребий за групи" button in tennis mode with >= 3 teams and allows drawing and resetting groups', async () => {
+    it('auto-assigns single group and shows generate schedule for N in {3, 4, 5} in tennis mode', async () => {
       const user = userEvent.setup();
       renderComponent();
 
@@ -556,6 +556,48 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
       // Add 4 guests -> 4 teams
       const guestInput = screen.getByPlaceholderText('напр. Иван, Петър, Георги');
       await user.type(guestInput, 'А1, А2, А3, А4');
+      await user.click(screen.getByRole('button', { name: /добави/i }));
+
+      // Generate teams
+      await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+
+      // "🎲 Тегли жребий за групи" button is NOT visible for N in {3, 4, 5}
+      expect(screen.queryByRole('button', { name: /тегли жребий за групи/i })).not.toBeInTheDocument();
+
+      // GroupList is mounted directly, showing "Турнирни групи" and "Група А"
+      expect(screen.getByRole('heading', { level: 2, name: 'Турнирни групи' })).toBeInTheDocument();
+      expect(screen.getByText('Група А')).toBeInTheDocument();
+
+      // Primary action button "📅 Генерирай програма с мачове" is visible
+      const genScheduleBtn = screen.getByRole('button', { name: /генерирай програма с мачове/i });
+      expect(genScheduleBtn).toBeInTheDocument();
+
+      // Click to generate tournament schedule
+      await user.click(genScheduleBtn);
+
+      // MatchScheduleList is rendered with "Програма на срещите"
+      expect(screen.getByRole('heading', { level: 2, name: 'Програма на срещите' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /генерирай програма с мачове/i })).not.toBeInTheDocument();
+
+      // Clear schedule
+      const clearScheduleBtn = screen.getByRole('button', { name: /изчисти програмата/i });
+      await user.click(clearScheduleBtn);
+
+      // Schedule is cleared and generate button reappears
+      expect(screen.queryByRole('heading', { level: 2, name: 'Програма на срещите' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /генерирай програма с мачове/i })).toBeInTheDocument();
+    });
+
+    it('shows "🎲 Тегли жребий за групи" button for N >= 6 teams and allows drawing groups and generating schedule', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      // Switch to singles
+      await user.click(screen.getByRole('button', { name: 'Поединично' }));
+
+      // Add 6 guests -> 6 teams
+      const guestInput = screen.getByPlaceholderText('напр. Иван, Петър, Георги');
+      await user.type(guestInput, 'А1, А2, А3, А4, А5, А6');
       await user.click(screen.getByRole('button', { name: /добави/i }));
 
       // Generate teams
@@ -571,11 +613,16 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
       // Click to draw groups
       await user.click(drawBtn);
 
-      // GroupList is mounted, showing "Турнирни групи"
+      // GroupList is mounted, showing "Турнирни групи", "Група А", "Група Б"
       expect(screen.getByRole('heading', { level: 2, name: 'Турнирни групи' })).toBeInTheDocument();
       expect(screen.getByText('Група А')).toBeInTheDocument();
+      expect(screen.getByText('Група Б')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /нов жребий/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /изчисти жребия/i })).toBeInTheDocument();
+
+      // Generate schedule button is visible
+      const genScheduleBtn = screen.getByRole('button', { name: /генерирай програма с мачове/i });
+      expect(genScheduleBtn).toBeInTheDocument();
 
       // Click "Изчисти жребия" to clear groups
       await user.click(screen.getByRole('button', { name: /изчисти жребия/i }));

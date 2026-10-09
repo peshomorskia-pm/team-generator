@@ -7,6 +7,22 @@ export interface TournamentGroup {
   teams: Team[];
 }
 
+export interface TournamentMatch {
+  id: string; // Format: 'match-group-0-r1-m1'
+  groupId: string;
+  groupName: string;
+  round: number; // 1-indexed (1, 2, 3...)
+  team1: Team;
+  team2: Team;
+  byeTeam?: Team; // Resting team in this round, if applicable
+}
+
+export interface TournamentRound {
+  roundNumber: number;
+  matches: TournamentMatch[];
+  byeTeam?: Team;
+}
+
 export interface UseTeamGeneratorReturn {
   mode: GeneratorMode;
   setMode: (mode: GeneratorMode) => void;
@@ -26,6 +42,9 @@ export interface UseTeamGeneratorReturn {
   drawGroups: () => void;
   resetGroups: () => void;
   clearGroups: () => void;
+  schedule: TournamentMatch[];
+  generateSchedule: () => void;
+  resetSchedule: () => void;
   history: string[];
   alert: AlertNotification | null;
   showAlert: (message: string, type?: 'error' | 'success') => void;
