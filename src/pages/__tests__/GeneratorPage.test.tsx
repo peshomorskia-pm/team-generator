@@ -15,6 +15,7 @@ vi.mock('react-router-dom', async () => {
 });
 
 const mockCreateMatch = vi.fn();
+const mockBulkCreateMatches = vi.fn();
 vi.mock('../../hooks/useMatches', () => ({
   useMatches: () => ({
     matches: [],
@@ -22,6 +23,7 @@ vi.mock('../../hooks/useMatches', () => ({
     error: null,
     alert: null,
     createMatch: mockCreateMatch,
+    bulkCreateMatches: mockBulkCreateMatches,
     updateMatch: vi.fn(),
     deleteMatch: vi.fn(),
     clearAlert: vi.fn(),
@@ -57,6 +59,8 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
     vi.restoreAllMocks();
     mockNavigate.mockReset();
     mockCreateMatch.mockReset();
+    mockBulkCreateMatches.mockReset();
+    mockBulkCreateMatches.mockResolvedValue({ count: 6, error: null });
 
     vi.spyOn(usePlayersModule, 'usePlayers').mockReturnValue({
       players: dummyDbPlayers,
@@ -658,6 +662,78 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
 
       // Group draw button must NOT exist
       expect(screen.queryByRole('button', { name: /тегли жребий за групи/i })).not.toBeInTheDocument();
+    });
+
+    it('generates schedule and saves all tournament matches navigating to /matches with location state', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      // Switch to singles
+      await user.click(screen.getByRole('button', { name: 'Поединично' }));
+
+      // Add 4 guests -> 4 teams
+      const guestInput = screen.getByPlaceholderText('напр. Иван, Петър, Георги');
+      await user.type(guestInput, 'А1, А2, А3, А4');
+      await user.click(screen.getByRole('button', { name: /добави/i }));
+
+      // Generate teams
+      await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+
+      // Generate schedule
+      await user.click(screen.getByRole('button', { name: /генерирай програма с мачове/i }));
+
+      // Verify "⚡ Запиши всички мачове" button is rendered
+      const saveAllBtn = screen.getByRole('button', { name: /запиши всички мачове/i });
+      expect(saveAllBtn).toBeInTheDocument();
+
+      // Click "⚡ Запиши всички мачове"
+      await user.click(saveAllBtn);
+
+      // Verify bulkCreateMatches was called with schedule and format
+      expect(mockBulkCreateMatches).toHaveBeenCalledTimes(1);
+      expect(mockBulkCreateMatches).toHaveBeenCalledWith(expect.any(Array), 'singles');
+
+      // Verify navigation to /matches with state payload
+      expect(mockNavigate).toHaveBeenCalledWith('/matches', {
+        state: {
+          fromBulkCreate: true,
+          matchCount: 6,
+          statusFilter: 'upcoming',
+        },
+      });
+    });
+
+    it('shows Bulgarian error alert notification without resetting schedule when bulk save fails', async () => {
+      mockBulkCreateMatches.mockResolvedValueOnce({
+        count: 0,
+        error: new Error('Network failure'),
+      });
+
+      const user = userEvent.setup();
+      renderComponent();
+
+      await user.click(screen.getByRole('button', { name: 'Поединично' }));
+
+      const guestInput = screen.getByPlaceholderText('напр. Иван, Петър, Георги');
+      await user.type(guestInput, 'А1, А2, А3, А4');
+      await user.click(screen.getByRole('button', { name: /добави/i }));
+
+      await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+      await user.click(screen.getByRole('button', { name: /генерирай програма с мачове/i }));
+
+      const saveAllBtn = screen.getByRole('button', { name: /запиши всички мачове/i });
+      await user.click(saveAllBtn);
+
+      // Check alert
+      expect(
+        screen.getByText('Възникна грешка при записване на турнирните мачове.')
+      ).toBeInTheDocument();
+
+      // Verify navigate was NOT called
+      expect(mockNavigate).not.toHaveBeenCalled();
+
+      // Schedule is still present
+      expect(screen.getByRole('heading', { level: 2, name: 'Програма на срещите' })).toBeInTheDocument();
     });
   });
 

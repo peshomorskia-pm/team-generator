@@ -39,7 +39,12 @@ export const GeneratorPage: React.FC = () => {
     error: dbError,
   } = usePlayers();
 
-  const { createMatch, alert: matchAlert, clearAlert: clearMatchAlert } = useMatches();
+  const {
+    createMatch,
+    bulkCreateMatches,
+    alert: matchAlert,
+    clearAlert: clearMatchAlert,
+  } = useMatches();
 
   const {
     activePool,
@@ -53,6 +58,7 @@ export const GeneratorPage: React.FC = () => {
     generateSchedule,
     resetSchedule,
     alert,
+    showAlert,
     isCopied,
     balanceByRating,
     numberOfTeams,
@@ -76,6 +82,7 @@ export const GeneratorPage: React.FC = () => {
   } = useTeamGenerator();
 
   const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
+  const [isSavingMatches, setIsSavingMatches] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const selectedIds = useMemo(() => new Set(activePool.map((p) => p.id)), [activePool]);
@@ -136,6 +143,29 @@ export const GeneratorPage: React.FC = () => {
     },
     [createMatch, navigate]
   );
+
+  const handleSaveAllMatches = useCallback(async () => {
+    if (schedule.length === 0) return;
+    setIsSavingMatches(true);
+    try {
+      const { count, error } = await bulkCreateMatches(schedule, format);
+      if (error) {
+        showAlert('Възникна грешка при записване на турнирните мачове.', 'error');
+      } else {
+        navigate('/matches', {
+          state: {
+            fromBulkCreate: true,
+            matchCount: count,
+            statusFilter: 'upcoming',
+          },
+        });
+      }
+    } catch {
+      showAlert('Възникна грешка при записване на турнирните мачове.', 'error');
+    } finally {
+      setIsSavingMatches(false);
+    }
+  }, [schedule, format, bulkCreateMatches, showAlert, navigate]);
 
   const activeAlert = alert || matchAlert;
 
@@ -232,6 +262,8 @@ export const GeneratorPage: React.FC = () => {
             <MatchScheduleList
               schedule={schedule}
               onReset={resetSchedule}
+              onSaveAllMatches={handleSaveAllMatches}
+              isSavingMatches={isSavingMatches}
             />
           )}
         </>

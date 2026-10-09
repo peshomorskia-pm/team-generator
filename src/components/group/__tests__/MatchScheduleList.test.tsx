@@ -185,4 +185,77 @@ describe('MatchScheduleList Component', () => {
 
     vi.useRealTimers();
   });
+
+  it('renders "⚡ Запиши всички мачове" button and calls onSaveAllMatches on click', async () => {
+    const onSaveAllMatches = vi.fn();
+    const team1 = createMockTeam('t1', 'Отбор 1');
+    const team2 = createMockTeam('t2', 'Отбор 2');
+
+    const schedule: TournamentMatch[] = [
+      {
+        id: 'match-group-0-r1-m1',
+        groupId: 'group-0',
+        groupName: 'Група А',
+        round: 1,
+        team1,
+        team2,
+      },
+    ];
+
+    render(
+      <MatchScheduleList
+        schedule={schedule}
+        onSaveAllMatches={onSaveAllMatches}
+        isSavingMatches={false}
+      />
+    );
+
+    const saveBtn = screen.getByRole('button', { name: /запиши всички мачове/i });
+    expect(saveBtn).toBeInTheDocument();
+    expect(saveBtn).toHaveAttribute('id', 'saveAllMatchesBtn');
+    expect(saveBtn).not.toBeDisabled();
+    expect(screen.getByText(/⚡ Запиши всички мачове/i)).toBeInTheDocument();
+
+    fireEvent.click(saveBtn);
+    expect(onSaveAllMatches).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables save button and displays "Записване..." with spinner during isSavingMatches', () => {
+    const onSaveAllMatches = vi.fn();
+    const onReset = vi.fn();
+    const team1 = createMockTeam('t1', 'Отбор 1');
+    const team2 = createMockTeam('t2', 'Отбор 2');
+
+    const schedule: TournamentMatch[] = [
+      {
+        id: 'match-group-0-r1-m1',
+        groupId: 'group-0',
+        groupName: 'Група А',
+        round: 1,
+        team1,
+        team2,
+      },
+    ];
+
+    render(
+      <MatchScheduleList
+        schedule={schedule}
+        onSaveAllMatches={onSaveAllMatches}
+        onReset={onReset}
+        isSavingMatches={true}
+      />
+    );
+
+    const saveBtn = screen.getByRole('button', { name: /записване.../i });
+    expect(saveBtn).toBeInTheDocument();
+    expect(saveBtn).toBeDisabled();
+    expect(screen.getByText('Записване...')).toBeInTheDocument();
+
+    // Reset button should also be disabled during save
+    const resetBtn = screen.getByRole('button', { name: /изчисти програмата/i });
+    expect(resetBtn).toBeDisabled();
+
+    fireEvent.click(saveBtn);
+    expect(onSaveAllMatches).not.toHaveBeenCalled();
+  });
 });

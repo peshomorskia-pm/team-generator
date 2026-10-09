@@ -1,9 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { MatchesPage } from '../MatchesPage';
 import type { MatchDetail } from '../../types/matches';
 import type { PlayerRow } from '../../types/database.types';
+
+const renderPage = (
+  initialEntries: Array<string | { pathname: string; state?: unknown }> = ['/']
+) => render(<MemoryRouter initialEntries={initialEntries as unknown as string[]}>{<MatchesPage />}</MemoryRouter>);
 
 const mockCreateMatch = vi.fn();
 const mockUpdateMatch = vi.fn();
@@ -161,7 +166,7 @@ describe('MatchesPage Integration Tests', () => {
   });
 
   it('renders stats, search input, status tabs, and match cards', () => {
-    render(<MatchesPage />);
+    renderPage();
 
     expect(screen.getByRole('heading', { name: 'Мачове', level: 1 })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /нов мач/i })).toBeInTheDocument();
@@ -179,14 +184,14 @@ describe('MatchesPage Integration Tests', () => {
 
   it('shows loading spinner when loading is true', () => {
     mockLoading = true;
-    render(<MatchesPage />);
+    renderPage();
 
     expect(screen.getByText('Зареждане на мачовете...')).toBeInTheDocument();
   });
 
   it('renders empty state "Няма записани мачове" when matches list is empty', () => {
     mockMatchesData = [];
-    render(<MatchesPage />);
+    renderPage();
 
     expect(screen.getByText('Няма записани мачове')).toBeInTheDocument();
     expect(
@@ -196,7 +201,7 @@ describe('MatchesPage Integration Tests', () => {
 
   it('filters matches by status tabs (Всички, Изиграни, Предстоящи)', async () => {
     const user = userEvent.setup();
-    render(<MatchesPage />);
+    renderPage();
 
     // Click "Изиграни" tab
     const completedTab = screen.getByRole('button', { name: 'Изиграни' });
@@ -229,7 +234,7 @@ describe('MatchesPage Integration Tests', () => {
 
   it('filters matches by period dropdown (Тази седмица, Този месец)', async () => {
     const user = userEvent.setup();
-    render(<MatchesPage />);
+    renderPage();
 
     const periodSelect = screen.getByLabelText('Филтър по период');
 
@@ -254,7 +259,7 @@ describe('MatchesPage Integration Tests', () => {
 
   it('filters matches by custom date range period from calendar', async () => {
     const user = userEvent.setup();
-    render(<MatchesPage />);
+    renderPage();
 
     const periodSelect = screen.getByLabelText('Филтър по период');
     await user.selectOptions(periodSelect, 'custom');
@@ -275,7 +280,7 @@ describe('MatchesPage Integration Tests', () => {
 
   it('applies combined AND filtering logic (Status AND Period AND Search)', async () => {
     const user = userEvent.setup();
-    render(<MatchesPage />);
+    renderPage();
 
     // 1. Switch to "Предстоящи"
     await user.click(screen.getByRole('button', { name: 'Предстоящи' }));
@@ -300,7 +305,7 @@ describe('MatchesPage Integration Tests', () => {
 
   it('filters match cards by player or guest name through search bar', async () => {
     const user = userEvent.setup();
-    render(<MatchesPage />);
+    renderPage();
 
     const searchInput = screen.getByPlaceholderText('Търсене по име на играч или гост...');
     await user.type(searchInput, 'Георги');
@@ -320,7 +325,7 @@ describe('MatchesPage Integration Tests', () => {
 
   it('opens MatchModal on "Нов мач" button click', async () => {
     const user = userEvent.setup();
-    render(<MatchesPage />);
+    renderPage();
 
     await user.click(screen.getByRole('button', { name: /нов мач/i }));
 
@@ -330,7 +335,7 @@ describe('MatchesPage Integration Tests', () => {
 
   it('opens edit MatchModal when clicking edit on a match card', async () => {
     const user = userEvent.setup();
-    render(<MatchesPage />);
+    renderPage();
 
     const editButtons = screen.getAllByRole('button', { name: 'Редактирай' });
     await user.click(editButtons[0]);
@@ -344,7 +349,7 @@ describe('MatchesPage Integration Tests', () => {
     const user = userEvent.setup();
     mockDeleteMatch.mockResolvedValue(undefined);
 
-    render(<MatchesPage />);
+    renderPage();
 
     const deleteButtons = screen.getAllByRole('button', { name: 'Изтрий' });
     await user.click(deleteButtons[0]);
@@ -361,12 +366,45 @@ describe('MatchesPage Integration Tests', () => {
     const user = userEvent.setup();
     mockAlert = { type: 'success', message: 'Мачът е записан успешно.' };
 
-    render(<MatchesPage />);
+    renderPage();
 
     expect(screen.getByText('Мачът е записан успешно.')).toBeInTheDocument();
     const closeBtn = screen.getByLabelText('Close');
     await user.click(closeBtn);
 
     expect(mockClearAlert).toHaveBeenCalledTimes(1);
+  });
+
+  it('navigates with fromBulkCreate state -> renders "Предстоящи" tab active with success alert and allows dismissal', async () => {
+    const user = userEvent.setup();
+    renderPage([
+      {
+        pathname: '/matches',
+        state: {
+          fromBulkCreate: true,
+          matchCount: 4,
+          statusFilter: 'upcoming',
+        },
+      },
+    ]);
+
+    expect(
+      screen.getByText('Успешно създадени 4 предстоящи мача от турнира!')
+    ).toBeInTheDocument();
+
+    const upcomingTab = screen.getByRole('button', { name: 'Предстоящи' });
+    expect(upcomingTab).toHaveClass('bg-white');
+
+    // Shows upcoming fixture
+    expect(screen.getByText('Димитър Бербатов')).toBeInTheDocument();
+    // Excludes completed matches
+    expect(screen.queryByText('Красимир Балъков')).not.toBeInTheDocument();
+
+    // Dismiss alert banner
+    const closeBtn = screen.getByLabelText('Close');
+    await user.click(closeBtn);
+    expect(
+      screen.queryByText('Успешно създадени 4 предстоящи мача от турнира!')
+    ).not.toBeInTheDocument();
   });
 });

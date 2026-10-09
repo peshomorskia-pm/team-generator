@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Calendar, RotateCcw, Copy, Check } from 'lucide-react';
+import { Calendar, RotateCcw, Copy, Check, Zap, Loader2 } from 'lucide-react';
 import type { TournamentMatch } from '../../types';
 import { copyTextToClipboard, formatScheduleForClipboard } from '../../utils/clipboard';
 
@@ -7,12 +7,16 @@ export interface MatchScheduleListProps {
   schedule: TournamentMatch[];
   onReset?: () => void;
   onClear?: () => void;
+  onSaveAllMatches?: () => Promise<void> | void;
+  isSavingMatches?: boolean;
 }
 
 export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
   schedule,
   onReset,
   onClear,
+  onSaveAllMatches,
+  isSavingMatches = false,
 }) => {
   const [isCopied, setIsCopied] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -58,6 +62,34 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
         </h2>
 
         <div className="flex flex-wrap items-center gap-2">
+          {onSaveAllMatches && (
+            <button
+              type="button"
+              id="saveAllMatchesBtn"
+              onClick={onSaveAllMatches}
+              disabled={isSavingMatches}
+              title={isSavingMatches ? 'Записване...' : 'Запиши всички мачове'}
+              aria-label={isSavingMatches ? 'Записване...' : 'Запиши всички мачове'}
+              className={`text-sm font-semibold flex items-center px-4 py-1.5 rounded-lg shadow-sm border transition-colors ${
+                isSavingMatches
+                  ? 'bg-indigo-400 dark:bg-indigo-600/70 border-indigo-400 text-white cursor-not-allowed opacity-80'
+                  : 'bg-indigo-600 hover:bg-indigo-700 text-white border-transparent shadow hover:shadow-md cursor-pointer'
+              }`}
+            >
+              {isSavingMatches ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                  <span>Записване...</span>
+                </>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4 mr-1.5 fill-current" />
+                  <span>⚡ Запиши всички мачове</span>
+                </>
+              )}
+            </button>
+          )}
+
           <button
             type="button"
             id="copyScheduleBtn"
@@ -88,9 +120,12 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
               type="button"
               id="resetScheduleBtn"
               onClick={handleReset}
+              disabled={isSavingMatches}
               title="Изчисти програмата"
               aria-label="Изчисти програмата"
-              className="text-sm text-rose-600 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-300 font-medium flex items-center bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 transition-colors cursor-pointer"
+              className={`text-sm text-rose-600 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-300 font-medium flex items-center bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 transition-colors ${
+                isSavingMatches ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+              }`}
             >
               <RotateCcw className="w-4 h-4 mr-1 text-rose-500" />
               <span>Изчисти програмата</span>
