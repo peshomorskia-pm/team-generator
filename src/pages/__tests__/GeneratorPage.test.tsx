@@ -15,6 +15,7 @@ vi.mock('react-router-dom', async () => {
 });
 
 const mockCreateMatch = vi.fn();
+const mockBulkCreateMatches = vi.fn();
 vi.mock('../../hooks/useMatches', () => ({
   useMatches: () => ({
     matches: [],
@@ -22,6 +23,7 @@ vi.mock('../../hooks/useMatches', () => ({
     error: null,
     alert: null,
     createMatch: mockCreateMatch,
+    bulkCreateMatches: mockBulkCreateMatches,
     updateMatch: vi.fn(),
     deleteMatch: vi.fn(),
     clearAlert: vi.fn(),
@@ -57,6 +59,8 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
     vi.restoreAllMocks();
     mockNavigate.mockReset();
     mockCreateMatch.mockReset();
+    mockBulkCreateMatches.mockReset();
+    mockBulkCreateMatches.mockResolvedValue({ count: 6, error: null });
 
     vi.spyOn(usePlayersModule, 'usePlayers').mockReturnValue({
       players: dummyDbPlayers,
@@ -543,6 +547,240 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
     const expectedTeamError = 'Броят отбори (3) не може да надвишава наличните играчи (2).';
     expect(screen.getByText(expectedTeamError)).toBeInTheDocument();
     expect(generateBtn).toBeDisabled();
+  });
+
+  describe('Tournament groups draw integration', () => {
+    it('auto-assigns single group and shows generate schedule for N in {3, 4, 5} in tennis mode', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      // Switch to singles
+      await user.click(screen.getByRole('button', { name: 'Поединично' }));
+
+      // Add 4 guests -> 4 teams
+      const guestInput = screen.getByPlaceholderText('напр. Иван, Петър, Георги');
+      await user.type(guestInput, 'А1, А2, А3, А4');
+      await user.click(screen.getByRole('button', { name: /добави/i }));
+
+      // Generate teams
+      await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+
+      // "🎲 Тегли жребий за групи" button is NOT visible for N in {3, 4, 5}
+      expect(screen.queryByRole('button', { name: /тегли жребий за групи/i })).not.toBeInTheDocument();
+
+      // GroupList is mounted directly, showing "Турнирни групи" and "Група А"
+      expect(screen.getByRole('heading', { level: 2, name: 'Турнирни групи' })).toBeInTheDocument();
+      expect(screen.getByText('Група А')).toBeInTheDocument();
+
+      // Primary action button "📅 Генерирай програма с мачове" is visible
+      const genScheduleBtn = screen.getByRole('button', { name: /генерирай програма с мачове/i });
+      expect(genScheduleBtn).toBeInTheDocument();
+
+      // Click to generate tournament schedule
+      await user.click(genScheduleBtn);
+
+      // MatchScheduleList is rendered with "Програма на срещите"
+      expect(screen.getByRole('heading', { level: 2, name: 'Програма на срещите' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /генерирай програма с мачове/i })).not.toBeInTheDocument();
+
+      // Clear schedule
+      const clearScheduleBtn = screen.getByRole('button', { name: /изчисти програмата/i });
+      await user.click(clearScheduleBtn);
+
+      // Schedule is cleared and generate button reappears
+      expect(screen.queryByRole('heading', { level: 2, name: 'Програма на срещите' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /генерирай програма с мачове/i })).toBeInTheDocument();
+    });
+
+    it('shows "🎲 Тегли жребий за групи" button for N >= 6 teams and allows drawing groups and generating schedule', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      // Switch to singles
+      await user.click(screen.getByRole('button', { name: 'Поединично' }));
+
+      // Add 6 guests -> 6 teams
+      const guestInput = screen.getByPlaceholderText('напр. Иван, Петър, Георги');
+      await user.type(guestInput, 'А1, А2, А3, А4, А5, А6');
+      await user.click(screen.getByRole('button', { name: /добави/i }));
+
+      // Generate teams
+      await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+
+      // "Резултати" heading is visible
+      expect(screen.getByRole('heading', { level: 2, name: 'Резултати' })).toBeInTheDocument();
+
+      // "🎲 Тегли жребий за групи" button is visible
+      const drawBtn = screen.getByRole('button', { name: /тегли жребий за групи/i });
+      expect(drawBtn).toBeInTheDocument();
+
+      // Click to draw groups
+      await user.click(drawBtn);
+
+      // GroupList is mounted, showing "Турнирни групи", "Група А", "Група Б"
+      expect(screen.getByRole('heading', { level: 2, name: 'Турнирни групи' })).toBeInTheDocument();
+      expect(screen.getByText('Група А')).toBeInTheDocument();
+      expect(screen.getByText('Група Б')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /нов жребий/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /изчисти жребия/i })).toBeInTheDocument();
+
+      // Generate schedule button is visible
+      const genScheduleBtn = screen.getByRole('button', { name: /генерирай програма с мачове/i });
+      expect(genScheduleBtn).toBeInTheDocument();
+
+      // Click "Изчисти жребия" to clear groups
+      await user.click(screen.getByRole('button', { name: /изчисти жребия/i }));
+
+      // Groups cleared, TeamList returned
+      expect(screen.queryByRole('heading', { level: 2, name: 'Турнирни групи' })).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 2, name: 'Резултати' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /тегли жребий за групи/i })).toBeInTheDocument();
+    });
+
+    it('does not display "🎲 Тегли жребий за групи" button when mode is generic even with >= 3 teams', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      // Switch to generic
+      await user.click(screen.getByRole('button', { name: '🎲 Универсален' }));
+
+      // Add 4 guests
+      const guestInput = screen.getByPlaceholderText('напр. Иван, Петър, Георги');
+      await user.type(guestInput, 'Г1, Г2, Г3, Г4');
+      await user.click(screen.getByRole('button', { name: /добави/i }));
+
+      // Number of teams = 3
+      const numTeamsInput = screen.getByLabelText(/брой отбори/i);
+      await user.clear(numTeamsInput);
+      await user.type(numTeamsInput, '3');
+
+      // Generate teams
+      await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+
+      // Results rendered
+      expect(screen.getByRole('heading', { level: 2, name: 'Резултати' })).toBeInTheDocument();
+
+      // Group draw button must NOT exist
+      expect(screen.queryByRole('button', { name: /тегли жребий за групи/i })).not.toBeInTheDocument();
+    });
+
+    it('generates schedule and saves all tournament matches navigating to /matches with location state', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      // Switch to singles
+      await user.click(screen.getByRole('button', { name: 'Поединично' }));
+
+      // Add 4 guests -> 4 teams
+      const guestInput = screen.getByPlaceholderText('напр. Иван, Петър, Георги');
+      await user.type(guestInput, 'А1, А2, А3, А4');
+      await user.click(screen.getByRole('button', { name: /добави/i }));
+
+      // Generate teams
+      await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+
+      // Generate schedule
+      await user.click(screen.getByRole('button', { name: /генерирай програма с мачове/i }));
+
+      // Verify "⚡ Запиши всички мачове" button is rendered
+      const saveAllBtn = screen.getByRole('button', { name: /запиши всички мачове/i });
+      expect(saveAllBtn).toBeInTheDocument();
+
+      // Click "⚡ Запиши всички мачове"
+      await user.click(saveAllBtn);
+
+      // Verify bulkCreateMatches was called with schedule and format
+      expect(mockBulkCreateMatches).toHaveBeenCalledTimes(1);
+      expect(mockBulkCreateMatches).toHaveBeenCalledWith(expect.any(Array), 'singles');
+
+      // Verify navigation to /matches with state payload
+      expect(mockNavigate).toHaveBeenCalledWith('/matches', {
+        state: {
+          fromBulkCreate: true,
+          matchCount: 6,
+          statusFilter: 'upcoming',
+        },
+      });
+    });
+
+    it('shows Bulgarian error alert notification without resetting schedule when bulk save fails', async () => {
+      mockBulkCreateMatches.mockResolvedValueOnce({
+        count: 0,
+        error: new Error('Network failure'),
+      });
+
+      const user = userEvent.setup();
+      renderComponent();
+
+      await user.click(screen.getByRole('button', { name: 'Поединично' }));
+
+      const guestInput = screen.getByPlaceholderText('напр. Иван, Петър, Георги');
+      await user.type(guestInput, 'А1, А2, А3, А4');
+      await user.click(screen.getByRole('button', { name: /добави/i }));
+
+      await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+      await user.click(screen.getByRole('button', { name: /генерирай програма с мачове/i }));
+
+      const saveAllBtn = screen.getByRole('button', { name: /запиши всички мачове/i });
+      await user.click(saveAllBtn);
+
+      // Check alert
+      expect(
+        screen.getByText('Възникна грешка при записване на турнирните мачове.')
+      ).toBeInTheDocument();
+
+      // Verify navigate was NOT called
+      expect(mockNavigate).not.toHaveBeenCalled();
+
+      // Schedule is still present
+      expect(screen.getByRole('heading', { level: 2, name: 'Програма на срещите' })).toBeInTheDocument();
+    });
+  });
+
+  describe('In-place team slot substitution & gating integration', () => {
+    it('handles in-place player removal and substitution in tennis doubles', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      // Add 4 guests in tennis doubles
+      const guestInput = screen.getByPlaceholderText('напр. Иван, Петър, Георги');
+      await user.type(guestInput, 'Иван, Петър, Георги, Стоян');
+      await user.click(screen.getByRole('button', { name: /добави/i }));
+
+      // Generate teams
+      const generateBtn = screen.getByRole('button', { name: /разпредели в отбори/i });
+      await user.click(generateBtn);
+
+      expect(screen.getByRole('heading', { level: 2, name: 'Резултати' })).toBeInTheDocument();
+      const saveMatchBtn = screen.getByRole('button', { name: /запиши като мач/i });
+      expect(saveMatchBtn).toBeEnabled();
+      expect(screen.queryByText('Свободно място')).not.toBeInTheDocument();
+
+      // Remove "Стоян" from the active pool
+      const removeStoyanBtn = screen.getByRole('button', { name: 'Премахни Стоян' });
+      await user.click(removeStoyanBtn);
+
+      // Now 1 team is incomplete: placeholder is displayed
+      expect(screen.getByText('Свободно място')).toBeInTheDocument();
+      // "Запиши като мач" is disabled
+      expect(screen.getByRole('button', { name: /запиши като мач/i })).toBeDisabled();
+      // Validation warning is shown
+      expect(screen.getByTestId('tennis-validation-warning')).toHaveTextContent(
+        'Добавете още 1 играч за пълни двойки'
+      );
+
+      // Substitute with new guest "Васил"
+      await user.type(guestInput, 'Васил');
+      await user.click(screen.getByRole('button', { name: /добави/i }));
+
+      // Slot is filled with "Васил" (appears in both ActivePool and TeamCard)
+      expect(screen.getAllByText('Васил')).toHaveLength(2);
+      expect(screen.queryByText('Свободно място')).not.toBeInTheDocument();
+      // Save as match is enabled again
+      expect(screen.getByRole('button', { name: /запиши като мач/i })).toBeEnabled();
+      // Validation warning is cleared
+      expect(screen.queryByTestId('tennis-validation-warning')).not.toBeInTheDocument();
+    });
   });
 });
 

@@ -27,6 +27,13 @@ describe('TeamList Component', () => {
     },
   ];
 
+  const mockTeams6: Team[] = [
+    ...mockTeams3,
+    { id: 'team-4', name: 'Отбор 4', players: [{ id: 'p-4', name: 'Димитър' }] },
+    { id: 'team-5', name: 'Отбор 5', players: [{ id: 'p-5', name: 'Александър' }] },
+    { id: 'team-6', name: 'Отбор 6', players: [{ id: 'p-6', name: 'Никола' }] },
+  ];
+
   const mockTeam1: Team[] = [
     {
       id: 'team-1',
@@ -123,6 +130,98 @@ describe('TeamList Component', () => {
         />
       );
       expect(screen.queryByRole('button', { name: /запиши като мач/i })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Tournament groups draw button', () => {
+    it('renders "🎲 Тегли жребий за групи" when tennis mode, >= 6 teams, and onDrawGroups provided', async () => {
+      const user = userEvent.setup();
+      const onDrawGroupsMock = vi.fn();
+
+      render(
+        <TeamList
+          teams={mockTeams6}
+          mode="tennis"
+          onDrawGroups={onDrawGroupsMock}
+        />
+      );
+
+      const drawBtn = screen.getByRole('button', { name: /тегли жребий за групи/i });
+      expect(drawBtn).toBeInTheDocument();
+
+      await user.click(drawBtn);
+      expect(onDrawGroupsMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not render draw button when teams count is less than 6 (e.g. 3 teams)', () => {
+      render(
+        <TeamList
+          teams={mockTeams3}
+          mode="tennis"
+          onDrawGroups={vi.fn()}
+        />
+      );
+
+      expect(screen.queryByRole('button', { name: /тегли жребий за групи/i })).not.toBeInTheDocument();
+    });
+
+    it('does not render draw button when mode is generic', () => {
+      render(
+        <TeamList
+          teams={mockTeams3}
+          mode="generic"
+          onDrawGroups={vi.fn()}
+        />
+      );
+
+      expect(screen.queryByRole('button', { name: /тегли жребий за групи/i })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Incomplete teams gating and placeholders', () => {
+    it('disables "Запиши като мач" when hasIncompleteTeams is true', () => {
+      render(
+        <TeamList
+          teams={mockTeams2}
+          mode="tennis"
+          onSaveAsMatch={vi.fn()}
+          hasIncompleteTeams={true}
+        />
+      );
+
+      const saveMatchBtn = screen.getByRole('button', { name: /запиши като мач/i });
+      expect(saveMatchBtn).toBeDisabled();
+    });
+
+    it('disables "🎲 Тегли жребий за групи" when hasIncompleteTeams is true', () => {
+      render(
+        <TeamList
+          teams={mockTeams6}
+          mode="tennis"
+          onDrawGroups={vi.fn()}
+          hasIncompleteTeams={true}
+        />
+      );
+
+      const drawBtn = screen.getByRole('button', { name: /тегли жребий за групи/i });
+      expect(drawBtn).toBeDisabled();
+    });
+
+    it('passes targetTeamSize to TeamCard to render placeholders when incomplete', () => {
+      // In doubles, targetSize is 2. mockTeams2 have 1 player each.
+      render(
+        <TeamList
+          teams={mockTeams2}
+          mode="tennis"
+          format="doubles"
+          targetTeamSize={2}
+          hasIncompleteTeams={true}
+        />
+      );
+
+      const emptySlots = screen.getAllByTestId('empty-slot');
+      expect(emptySlots).toHaveLength(2); // 1 empty slot for each of the 2 teams
+      expect(screen.getAllByText('Свободно място')).toHaveLength(2);
     });
   });
 });

@@ -1,4 +1,4 @@
-import { Team, GeneratorMode } from '../types';
+import { Team, GeneratorMode, TournamentGroup, TournamentMatch } from '../types';
 
 /**
  * Copies plain text to system clipboard using modern Clipboard API with
@@ -70,18 +70,108 @@ export async function copyTextToClipboard(text: string): Promise<boolean> {
 }
 
 /**
+ * Formats a team name with player names in parentheses if available.
+ * E.g., 'Отбор 2 (Данков, Йов)' or 'Отбор 1' if no players.
+ */
+function formatTeamWithPlayers(team: Team): string {
+  if (team.players && team.players.length > 0) {
+    const playerNames = team.players
+      .map((p) => p.name)
+      .filter(Boolean)
+      .join(', ');
+    if (playerNames) {
+      return `${team.name} (${playerNames})`;
+    }
+  }
+  return team.name;
+}
+
+/**
+ * Builds round-robin match schedule lines for plain text clipboard export.
+ */
+function buildScheduleLines(schedule: TournamentMatch[]): string[] {
+  if (!schedule || schedule.length === 0) {
+    return [];
+  }
+
+  const lines: string[] = ['📅 Програма на срещите:'];
+
+  const groupIds: string[] = [];
+  schedule.forEach((m) => {
+    if (!groupIds.includes(m.groupId)) {
+      groupIds.push(m.groupId);
+    }
+  });
+
+  groupIds.forEach((groupId) => {
+    const groupMatches = schedule.filter((m) => m.groupId === groupId);
+    const groupName = groupMatches[0]?.groupName;
+    if (groupIds.length > 1 || groupName) {
+      lines.push(`📌 ${groupName}:`);
+    }
+
+    const roundNumbers: number[] = [];
+    groupMatches.forEach((m) => {
+      if (!roundNumbers.includes(m.round)) {
+        roundNumbers.push(m.round);
+      }
+    });
+    roundNumbers.sort((a, b) => a - b);
+
+    roundNumbers.forEach((rNum) => {
+      const roundMatches = groupMatches.filter((m) => m.round === rNum);
+      lines.push(`  Кръг ${rNum}:`);
+      roundMatches.forEach((m) => {
+        lines.push(`    - ${formatTeamWithPlayers(m.team1)} vs ${formatTeamWithPlayers(m.team2)}`);
+      });
+      const bye = roundMatches.find((m) => m.byeTeam)?.byeTeam;
+      if (bye) {
+        lines.push(`    Почива: ${formatTeamWithPlayers(bye)}`);
+      }
+    });
+  });
+
+  return lines;
+}
+
+/**
+ * Formats tournament match schedule into clean, human-readable plain text
+ * suitable for chat apps (Viber, WhatsApp) and text editors.
+ *
+ * @param schedule - Array of tournament matches
+ * @returns Cleanly formatted string
+ */
+export function formatScheduleForClipboard(schedule: TournamentMatch[]): string {
+  const lines = buildScheduleLines(schedule);
+  return lines.length > 0 ? lines.join('\n') : '';
+}
+
+/**
+ * Helper to append round-robin match schedule lines to plain text.
+ */
+function appendScheduleLines(lines: string[], schedule: TournamentMatch[]): void {
+  const scheduleLines = buildScheduleLines(schedule);
+  if (scheduleLines.length > 0) {
+    lines.push('');
+    lines.push(...scheduleLines);
+  }
+}
+
+/**
  * Formats team generator results into a clean, human-readable plain text
  * suitable for chat apps (Viber, WhatsApp) and text editors.
  *
  * @param teams - Array of generated teams
  * @param mode - Generator mode ('tennis' | 'generic')
  * @param format - Tennis format ('singles' | 'doubles')
+ * @param schedule - Optional tournament match schedule
  * @returns Cleanly formatted string
  */
 export function formatTeamsForClipboard(
   teams: Team[],
   mode: GeneratorMode = 'tennis',
-  format?: 'singles' | 'doubles'
+  format?: 'singles' | 'doubles',
+  schedule?: TournamentMatch[]
 ): string {
   if (!teams || teams.length === 0) {
     return '';
@@ -132,5 +222,65 @@ export function formatTeamsForClipboard(
     lines.push(`Среща: ${teams[0].name} vs ${teams[1].name}`);
   }
 
+  if (schedule && schedule.length > 0) {
+    appendScheduleLines(lines, schedule);
+  }
+
   return lines.join('\n');
 }
+
+/**
+ * Formats tournament groups into clean, human-readable plain text
+ * suitable for chat apps (Viber, WhatsApp) and text editors.
+ *
+ * @param groups - Array of tournament groups
+ * @param mode - Generator mode ('tennis' | 'generic')
+ * @param format - Tennis format ('singles' | 'doubles')
+ * @param schedule - Optional tournament match schedule
+ * @returns Cleanly formatted string
+ */
+export function formatGroupsForClipboard(
+  groups: TournamentGroup[],
+  mode: GeneratorMode = 'tennis',
+  format?: 'singles' | 'doubles',
+  schedule?: TournamentMatch[]
+): string {
+  if (!groups || groups.length === 0) {
+    return '';
+  }
+
+  const isTennis = mode === 'tennis';
+  const lines: string[] = ['🏆 Турнирни групи', ''];
+
+  groups.forEach((group, gIndex) => {
+    lines.push(`📌 ${group.name}:`);
+
+    group.teams.forEach((team) => {
+      const playerDescriptions = team.players
+        .map((p) => {
+          const r = isTennis
+            ? (format === 'singles' ? p.singles_rating : p.doubles_rating) ?? p.rating
+            : p.rating;
+          return r !== undefined && r !== null ? `${p.name} (★ ${r})` : p.name;
+        })
+        .join(', ');
+
+      if (playerDescriptions) {
+        lines.push(`  - ${team.name}: ${playerDescriptions}`);
+      } else {
+        lines.push(`  - ${team.name}`);
+      }
+    });
+
+    if (gIndex < groups.length - 1) {
+      lines.push('');
+    }
+  });
+
+  if (schedule && schedule.length > 0) {
+    appendScheduleLines(lines, schedule);
+  }
+
+  return lines.join('\n');
+}
+

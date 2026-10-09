@@ -50,6 +50,9 @@ export interface TeamListProps {
   onSaveAsMatch?: () => void;
   format?: 'singles' | 'doubles';
   mode?: GeneratorMode;
+  onDrawGroups?: () => void;
+  hasIncompleteTeams?: boolean;
+  targetTeamSize?: number;
 }
 
 export interface TeamCardProps {
@@ -58,6 +61,7 @@ export interface TeamCardProps {
   onShuffleTeam?: (teamId: string) => void;
   format?: 'singles' | 'doubles';
   mode?: GeneratorMode;
+  targetSize?: number;
 }
 
 export interface AlertNotification {
@@ -74,3 +78,5 @@ export interface NavItem {
 
 export * from './generator';
 export * from './matches';
+export * from './tournament';
+

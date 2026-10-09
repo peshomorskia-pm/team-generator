@@ -9,6 +9,9 @@ export interface MatchPlayerDetail extends MatchPlayerRow {
 
 export interface MatchDetail extends MatchRow {
   match_players: MatchPlayerDetail[];
+  team_1_name?: string | null;
+  team_2_name?: string | null;
+  group_name?: string | null;
 }
 
 export type MatchFormat = 'singles' | 'doubles';
@@ -20,4 +23,7 @@ export interface MatchFormData {
   played_at: string; // ISO date string
   team_1_players: { player_id?: string; guest_name?: string }[];
   team_2_players: { player_id?: string; guest_name?: string }[];
+  team_1_name?: string | null;
+  team_2_name?: string | null;
+  group_name?: string | null;
 }

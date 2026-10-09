@@ -5,6 +5,8 @@ import { Card } from '../components/ui/Card';
 import { Alert } from '../components/ui/Alert';
 import { TeamSettings } from '../components/team/TeamSettings';
 import { TeamList } from '../components/team/TeamList';
+import { GroupList } from '../components/group/GroupList';
+import { MatchScheduleList } from '../components/group/MatchScheduleList';
 import { MatchModal, type MatchParticipant } from '../components/match/MatchModal';
 import { PlayerSelector } from '../components/generator/PlayerSelector';
 import { GuestInput } from '../components/generator/GuestInput';
@@ -37,12 +39,26 @@ export const GeneratorPage: React.FC = () => {
     error: dbError,
   } = usePlayers();
 
-  const { createMatch, alert: matchAlert, clearAlert: clearMatchAlert } = useMatches();
+  const {
+    createMatch,
+    bulkCreateMatches,
+    alert: matchAlert,
+    clearAlert: clearMatchAlert,
+  } = useMatches();
 
   const {
     activePool,
     teams,
+    targetTeamSize,
+    hasIncompleteTeams,
+    groups,
+    drawGroups,
+    resetGroups,
+    schedule,
+    generateSchedule,
+    resetSchedule,
     alert,
+    showAlert,
     isCopied,
     balanceByRating,
     numberOfTeams,
@@ -66,6 +82,7 @@ export const GeneratorPage: React.FC = () => {
   } = useTeamGenerator();
 
   const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
+  const [isSavingMatches, setIsSavingMatches] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const selectedIds = useMemo(() => new Set(activePool.map((p) => p.id)), [activePool]);
@@ -126,6 +143,29 @@ export const GeneratorPage: React.FC = () => {
     },
     [createMatch, navigate]
   );
+
+  const handleSaveAllMatches = useCallback(async () => {
+    if (schedule.length === 0) return;
+    setIsSavingMatches(true);
+    try {
+      const { count, error } = await bulkCreateMatches(schedule, format);
+      if (error) {
+        showAlert('Възникна грешка при записване на турнирните мачове.', 'error');
+      } else {
+        navigate('/matches', {
+          state: {
+            fromBulkCreate: true,
+            matchCount: count,
+            statusFilter: 'upcoming',
+          },
+        });
+      }
+    } catch {
+      showAlert('Възникна грешка при записване на турнирните мачове.', 'error');
+    } finally {
+      setIsSavingMatches(false);
+    }
+  }, [schedule, format, bulkCreateMatches, showAlert, navigate]);
 
   const activeAlert = alert || matchAlert;
 
@@ -206,15 +246,41 @@ export const GeneratorPage: React.FC = () => {
       </div>
 
       {/* Results Section */}
-      <TeamList
-        teams={teams}
-        mode={mode}
-        onShuffleTeam={shuffleSingleTeam}
-        onCopy={copyResults}
-        isCopied={isCopied}
-        onSaveAsMatch={() => setIsMatchModalOpen(true)}
-        format={effectiveFormat}
-      />
+      {groups.length > 0 ? (
+        <>
+          <GroupList
+            groups={groups}
+            onRedraw={teams.length >= 6 ? drawGroups : undefined}
+            onReset={teams.length >= 6 ? resetGroups : undefined}
+            onGenerateSchedule={generateSchedule}
+            hasSchedule={schedule.length > 0}
+            schedule={schedule}
+            mode={mode}
+            format={effectiveFormat}
+          />
+          {schedule.length > 0 && (
+            <MatchScheduleList
+              schedule={schedule}
+              onReset={resetSchedule}
+              onSaveAllMatches={handleSaveAllMatches}
+              isSavingMatches={isSavingMatches}
+            />
+          )}
+        </>
+      ) : (
+        <TeamList
+          teams={teams}
+          mode={mode}
+          onShuffleTeam={shuffleSingleTeam}
+          onCopy={copyResults}
+          isCopied={isCopied}
+          onSaveAsMatch={() => setIsMatchModalOpen(true)}
+          format={effectiveFormat}
+          onDrawGroups={drawGroups}
+          hasIncompleteTeams={hasIncompleteTeams}
+          targetTeamSize={targetTeamSize}
+        />
+      )}
 
       {/* Match Modal Integration */}
       <MatchModal

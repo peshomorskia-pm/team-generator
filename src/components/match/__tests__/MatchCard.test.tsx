@@ -169,4 +169,43 @@ describe('MatchCard Component', () => {
     render(<MatchCard match={legacy2v2Match} onEdit={vi.fn()} onDelete={vi.fn()} />);
     expect(screen.getByText('По двойки')).toBeInTheDocument();
   });
+
+  it('renders custom team names when provided', () => {
+    const customMatch: MatchDetail = {
+      ...sampleMatch,
+      team_1_name: 'Отбор 2',
+      team_2_name: 'Отбор 3',
+    };
+
+    render(<MatchCard match={customMatch} onEdit={vi.fn()} onDelete={vi.fn()} />);
+
+    expect(screen.getByText('Отбор 2')).toBeInTheDocument();
+    expect(screen.getByText('Отбор 3')).toBeInTheDocument();
+    expect(screen.queryByText('Отбор 1')).not.toBeInTheDocument();
+  });
+
+  it('renders group badge when group_name is provided', () => {
+    const groupedMatch: MatchDetail = {
+      ...sampleMatch,
+      group_name: 'Група А',
+    };
+
+    render(<MatchCard match={groupedMatch} onEdit={vi.fn()} onDelete={vi.fn()} />);
+
+    expect(screen.getByText('Група А')).toBeInTheDocument();
+  });
+
+  it('falls back to "Отбор 1" and "Отбор 2" when team names are null or undefined', () => {
+    const fallbackMatch: MatchDetail = {
+      ...sampleMatch,
+      team_1_name: null,
+      team_2_name: undefined,
+      group_name: null,
+    };
+
+    render(<MatchCard match={fallbackMatch} onEdit={vi.fn()} onDelete={vi.fn()} />);
+
+    expect(screen.getByText('Отбор 1')).toBeInTheDocument();
+    expect(screen.getByText('Отбор 2')).toBeInTheDocument();
+  });
 });
