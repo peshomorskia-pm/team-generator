@@ -52,7 +52,8 @@ We introduce a robust, decoupled mode architecture cleanly separating **Tennis M
 ### Positive
 - **Clean Separation of Concerns**: Tennis logic (ELO ratings, format constraints, match bridge) is completely decoupled from Generic team generation.
 - **PO Specification Alignment**: All Bulgarian coaching prompts, warning banners, toasts, and UI labels strictly adhere to requirements.
-- **Robust Test Coverage**: 36 test suites (327 tests passing at 100%) verify all edge cases, rating isolation, and multi-mode workflows.
+- **Robust Test Coverage**: 36 test suites (334 tests passing at 100%) verify all edge cases, rating isolation, and multi-mode workflows.
+- **Balanced Round-Robin Partition Algorithm**: Ensures even distribution of team sizes when `playersPerTeam` is specified ($\Delta \le 1$), eliminating solitary player isolation.
 - **Future Compatibility**: Lays a clean foundation for Stage 2 & 3 club workflows without architectural debt.
 
 ### Negative
