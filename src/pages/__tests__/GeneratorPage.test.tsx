@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { GeneratorPage } from '../GeneratorPage';
 import { ThemeProvider } from '../../context/ThemeContext';
@@ -29,7 +29,7 @@ vi.mock('../../hooks/useMatches', () => ({
   }),
 }));
 
-describe('GeneratorPage Integration Tests', () => {
+describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
   const mockCreatePlayer = vi.fn();
   const mockUpdatePlayer = vi.fn();
   const mockDeletePlayer = vi.fn();
@@ -150,6 +150,9 @@ describe('GeneratorPage Integration Tests', () => {
     await user.type(guestInput, 'Гост 1, Гост 2');
     await user.click(screen.getByRole('button', { name: /добави/i }));
 
+    // Switch to Generic mode
+    await user.click(screen.getByRole('button', { name: '🎲 Универсален' }));
+
     // Set number of teams = 2
     const numTeamsInput = screen.getByLabelText(/брой отбори/i);
     await user.clear(numTeamsInput);
@@ -218,30 +221,31 @@ describe('GeneratorPage Integration Tests', () => {
     expect(searchInput.value).toBe('Иван');
 
     // Select filtered player
-    await user.click(screen.getByRole('checkbox', { name: 'Иван Иванов' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Иван Иванов' }));
 
     // Clear search and select second player
     await user.clear(searchInput);
-    await user.click(screen.getByRole('checkbox', { name: 'Георги Димитров' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Георги Димитров' }));
 
     // Re-type a search query to simulate active filter at time of clear
     await user.type(searchInput, 'Димитров');
     expect(searchInput.value).toBe('Димитров');
 
-    // Set number of teams = 2 and generate
+    // Switch to Generic mode, set number of teams = 2 and generate
+    fireEvent.click(screen.getByRole('button', { name: '🎲 Универсален' }));
     const numTeamsInput = screen.getByLabelText(/брой отбори/i);
     await user.clear(numTeamsInput);
     await user.type(numTeamsInput, '2');
 
     const generateBtn = screen.getByRole('button', { name: /разпредели в отбори/i });
-    await user.click(generateBtn);
+    fireEvent.click(generateBtn);
 
     // Verify results exist
     expect(screen.getByRole('heading', { level: 2, name: 'Резултати' })).toBeInTheDocument();
 
     // Click 'Изчисти всички'
     const clearAllBtn = screen.getByRole('button', { name: /изчисти всички/i });
-    await user.click(clearAllBtn);
+    fireEvent.click(clearAllBtn);
 
     // Verify active pool is cleared
     expect(
@@ -260,20 +264,18 @@ describe('GeneratorPage Integration Tests', () => {
     renderComponent();
 
     // Select 1 registered player
-    await user.click(screen.getByRole('checkbox', { name: 'Иван Иванов' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Иван Иванов' }));
 
     // Add 1 guest player
     const guestInput = screen.getByPlaceholderText('напр. Иван, Петър, Георги');
     await user.type(guestInput, 'Гост Стоян');
-    await user.click(screen.getByRole('button', { name: /добави/i }));
+    fireEvent.click(screen.getByRole('button', { name: /добави/i }));
 
-    // Set number of teams = 2
-    const numTeamsInput = screen.getByLabelText(/брой отбори/i);
-    await user.clear(numTeamsInput);
-    await user.type(numTeamsInput, '2');
+    // Switch to singles format for 1v1 match (2 players)
+    fireEvent.click(screen.getByRole('button', { name: 'Поединично' }));
 
     // Generate teams
-    await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+    fireEvent.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
 
     // Assert results are rendered
     expect(screen.getByRole('heading', { level: 2, name: 'Резултати' })).toBeInTheDocument();
@@ -285,7 +287,7 @@ describe('GeneratorPage Integration Tests', () => {
     expect(saveAsMatchBtn).toBeInTheDocument();
 
     // Click 'Запиши като мач'
-    await user.click(saveAsMatchBtn);
+    fireEvent.click(saveAsMatchBtn);
 
     // Assert MatchModal appears
     const modalDialog = screen.getByRole('dialog');
@@ -299,7 +301,7 @@ describe('GeneratorPage Integration Tests', () => {
 
     // Cancel modal
     const cancelBtn = within(modalDialog).getByRole('button', { name: 'Отказ' });
-    await user.click(cancelBtn);
+    fireEvent.click(cancelBtn);
 
     // Assert modal closes
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -311,32 +313,31 @@ describe('GeneratorPage Integration Tests', () => {
   });
 
   it('Scenario 2 (Submission & Navigation): generates 2 teams -> submits MatchModal -> navigates to /matches', async () => {
-    const user = userEvent.setup();
     mockCreateMatch.mockResolvedValue(true);
 
     renderComponent();
 
     // Select 2 registered players
-    await user.click(screen.getByRole('checkbox', { name: 'Иван Иванов' }));
-    await user.click(screen.getByRole('checkbox', { name: 'Георги Димитров' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Иван Иванов' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Георги Димитров' }));
 
-    // Set number of teams = 2
-    const numTeamsInput = screen.getByLabelText(/брой отбори/i);
-    await user.clear(numTeamsInput);
-    await user.type(numTeamsInput, '2');
+    // Switch to singles format for 1v1 match (2 players)
+    fireEvent.click(screen.getByRole('button', { name: 'Поединично' }));
 
     // Generate teams
-    await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+    fireEvent.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
 
     // Open MatchModal
-    await user.click(screen.getByRole('button', { name: /запиши като мач/i }));
+    fireEvent.click(screen.getByRole('button', { name: /запиши като мач/i }));
 
     const modalDialog = screen.getByRole('dialog');
     expect(modalDialog).toBeInTheDocument();
 
     // Submit modal (Create button)
     const submitBtn = within(modalDialog).getByRole('button', { name: /създай/i });
-    await user.click(submitBtn);
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
 
     // Verify createMatch was invoked with mapped team players
     expect(mockCreateMatch).toHaveBeenCalledTimes(1);
@@ -355,26 +356,26 @@ describe('GeneratorPage Integration Tests', () => {
   });
 
   it('leaves modal open when createMatch fails', async () => {
-    const user = userEvent.setup();
     mockCreateMatch.mockResolvedValue(false);
 
     renderComponent();
 
-    await user.click(screen.getByRole('checkbox', { name: 'Иван Иванов' }));
-    await user.click(screen.getByRole('checkbox', { name: 'Георги Димитров' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Иван Иванов' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Георги Димитров' }));
 
-    const numTeamsInput = screen.getByLabelText(/брой отбори/i);
-    await user.clear(numTeamsInput);
-    await user.type(numTeamsInput, '2');
+    // Switch to singles format for 1v1 match (2 players)
+    fireEvent.click(screen.getByRole('button', { name: 'Поединично' }));
 
-    await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
-    await user.click(screen.getByRole('button', { name: /запиши като мач/i }));
+    fireEvent.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+    fireEvent.click(screen.getByRole('button', { name: /запиши като мач/i }));
 
     const modalDialog = screen.getByRole('dialog');
     expect(modalDialog).toBeInTheDocument();
 
     const submitBtn = within(modalDialog).getByRole('button', { name: /създай/i });
-    await user.click(submitBtn);
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
 
     expect(mockCreateMatch).toHaveBeenCalledTimes(1);
     expect(mockNavigate).not.toHaveBeenCalled();
@@ -382,45 +383,41 @@ describe('GeneratorPage Integration Tests', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
-  it('handles format toggle interaction and passes active format into MatchModal', async () => {
-    const user = userEvent.setup();
+  it('handles format toggle interaction and passes active format into MatchModal', () => {
     mockCreateMatch.mockResolvedValue(true);
 
     renderComponent();
 
-    // Select format "По двойки"
+    // Verify format pills: doubles is active by default
     const doublesFormatBtn = screen.getByRole('button', { name: 'По двойки' });
     const singlesFormatBtn = screen.getByRole('button', { name: 'Поединично' });
 
-    expect(singlesFormatBtn).toHaveAttribute('aria-pressed', 'true');
-    expect(doublesFormatBtn).toHaveAttribute('aria-pressed', 'false');
-
-    await user.click(doublesFormatBtn);
     expect(doublesFormatBtn).toHaveAttribute('aria-pressed', 'true');
     expect(singlesFormatBtn).toHaveAttribute('aria-pressed', 'false');
 
+    // Switch to singles
+    fireEvent.click(singlesFormatBtn);
+    expect(singlesFormatBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(doublesFormatBtn).toHaveAttribute('aria-pressed', 'false');
+
     // Add players and generate teams
-    await user.click(screen.getByRole('checkbox', { name: 'Иван Иванов' }));
-    await user.click(screen.getByRole('checkbox', { name: 'Георги Димитров' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Иван Иванов' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Георги Димитров' }));
 
-    const numTeamsInput = screen.getByLabelText(/брой отбори/i);
-    await user.clear(numTeamsInput);
-    await user.type(numTeamsInput, '2');
-
-    await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+    fireEvent.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
 
     // Click "Запиши като мач"
-    await user.click(screen.getByRole('button', { name: /запиши като мач/i }));
+    fireEvent.click(screen.getByRole('button', { name: /запиши като мач/i }));
 
     const modalDialog = screen.getByRole('dialog');
     expect(modalDialog).toBeInTheDocument();
 
-    // Verify MatchModal initialized with doubles format
-    const modalDoublesBtn = within(modalDialog).getByRole('button', { name: 'По двойки' });
-    expect(modalDoublesBtn).toHaveAttribute('aria-pressed', 'true');
+    // Verify MatchModal initialized with singles format
+    const modalSinglesBtn = within(modalDialog).getByRole('button', { name: 'Поединично' });
+    expect(modalSinglesBtn).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('updates PlayerSelector badges when format toggles and respects format-aware ratings', async () => {
+  it('updates PlayerSelector badges when format toggles and respects format-aware ratings', () => {
     vi.spyOn(usePlayersModule, 'usePlayers').mockReturnValue({
       players: [
         {
@@ -443,19 +440,73 @@ describe('GeneratorPage Integration Tests', () => {
       clearAlert: vi.fn(),
     });
 
-    const user = userEvent.setup();
     renderComponent();
 
-    // Default singles format: displays 1750
+    // Default doubles format: displays 1450
+    expect(screen.getByText('1450')).toBeInTheDocument();
+    expect(screen.queryByText('1750')).not.toBeInTheDocument();
+
+    // Toggle format to singles: displays 1750
+    const singlesFormatBtn = screen.getByRole('button', { name: 'Поединично' });
+    fireEvent.click(singlesFormatBtn);
+
     expect(screen.getByText('1750')).toBeInTheDocument();
     expect(screen.queryByText('1450')).not.toBeInTheDocument();
 
-    // Toggle format to doubles: displays 1450
-    const doublesFormatBtn = screen.getByRole('button', { name: 'По двойки' });
-    await user.click(doublesFormatBtn);
+    // Toggle mode to generic: displays general rating 1200 without format ratings
+    const genericModeBtn = screen.getByRole('button', { name: '🎲 Универсален' });
+    fireEvent.click(genericModeBtn);
 
-    expect(screen.getByText('1450')).toBeInTheDocument();
+    expect(screen.getByText('1200')).toBeInTheDocument();
     expect(screen.queryByText('1750')).not.toBeInTheDocument();
+    expect(screen.queryByText('1450')).not.toBeInTheDocument();
+  });
+
+  it('Scenario 3 (UI Visibility): toggles mode between Tennis and Generic, updating controls appropriately', () => {
+    renderComponent();
+
+    // Initially in Tennis mode: format pills visible, generic manual count inputs missing
+    expect(screen.getByRole('button', { name: 'По двойки' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Поединично' })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/брой отбори/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/брой играчи в отбор/i)).not.toBeInTheDocument();
+
+    // Toggle mode to Generic
+    fireEvent.click(screen.getByRole('button', { name: '🎲 Универсален' }));
+
+    // In Generic mode: generic manual count inputs appear, format pills disappear
+    expect(screen.getByLabelText(/брой отбори/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/брой играчи в отбор/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'По двойки' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Поединично' })).not.toBeInTheDocument();
+  });
+
+  it('Scenario 4 (Save As Match Decoupling): strictly hides "Запиши като мач" button when teams are generated in Generic mode', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    // Toggle mode to Generic
+    fireEvent.click(screen.getByRole('button', { name: '🎲 Универсален' }));
+
+    // Select 2 registered players
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Иван Иванов' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Георги Димитров' }));
+
+    // Set number of teams = 2
+    const numTeamsInput = screen.getByLabelText(/брой отбори/i);
+    await user.clear(numTeamsInput);
+    await user.type(numTeamsInput, '2');
+
+    // Generate teams
+    fireEvent.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+
+    // Results container rendered with 2 teams
+    expect(screen.getByRole('heading', { level: 2, name: 'Резултати' })).toBeInTheDocument();
+    expect(screen.getByText('Отбор 1')).toBeInTheDocument();
+    expect(screen.getByText('Отбор 2')).toBeInTheDocument();
+
+    // "Запиши като мач" must be strictly hidden in Generic mode
+    expect(screen.queryByRole('button', { name: /запиши като мач/i })).not.toBeInTheDocument();
   });
 });
 

@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef } from 'react';
-import { Team, AlertNotification } from '../types';
+import { useState, useCallback, useRef, useMemo } from 'react';
+import { Team, AlertNotification, GeneratorMode } from '../types';
 import { GeneratorPlayer, DatabasePlayer } from '../types/generator';
 import { fisherYatesShuffle } from '../utils/shuffle';
 import { balanceTeams } from '../utils/balance';
@@ -18,16 +18,20 @@ export function generateGuestId(): string {
 
 const resolvePlayerRating = (
   player: GeneratorPlayer,
-  fmt: 'singles' | 'doubles'
+  fmt?: 'singles' | 'doubles'
 ): number | undefined => {
   if (player.source === 'guest') return undefined;
   if (fmt === 'singles') {
     return player.singles_rating ?? player.rating;
   }
-  return player.doubles_rating ?? player.rating;
+  if (fmt === 'doubles') {
+    return player.doubles_rating ?? player.rating;
+  }
+  return player.rating;
 };
 
 export function useTeamGenerator() {
+  const [mode, setMode] = useState<GeneratorMode>('tennis');
   const [activePool, setActivePool] = useState<GeneratorPlayer[]>([]);
   const [numberOfTeams, setNumberOfTeams] = useState<number | null>(null);
   const [playersPerTeam, setPlayersPerTeam] = useState<number | null>(null);
@@ -36,7 +40,7 @@ export function useTeamGenerator() {
   const [alert, setAlert] = useState<AlertNotification | null>(null);
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [balanceByRating, setBalanceByRating] = useState<boolean>(false);
-  const [format, setFormat] = useState<'singles' | 'doubles'>('singles');
+  const [format, setFormat] = useState<'singles' | 'doubles'>('doubles');
   const lastTeamsRef = useRef<Team[] | null>(null);
   const lastFingerprintRef = useRef<string>('');
 
@@ -119,26 +123,105 @@ export function useTeamGenerator() {
     }
   }, []);
 
+  const { validationError, canGenerate } = useMemo(() => {
+    if (activePool.length === 0) {
+      return {
+        canGenerate: false,
+        validationError: null,
+      };
+    }
+
+    if (mode === 'tennis') {
+      if (format === 'doubles') {
+        if (activePool.length < 4) {
+          return {
+            canGenerate: false,
+            validationError: 'Нужни са поне 4 играчи за игра по двойки.',
+          };
+        }
+        if (activePool.length % 2 !== 0) {
+          return {
+            canGenerate: false,
+            validationError: 'Добавете още 1 играч за пълни двойки',
+          };
+        }
+        return {
+          canGenerate: true,
+          validationError: null,
+        };
+      }
+
+      // singles
+      if (activePool.length < 2) {
+        return {
+          canGenerate: false,
+          validationError: 'Нужни са поне 2-ма играчи за сформиране на сингъл срещи',
+        };
+      }
+      return {
+        canGenerate: true,
+        validationError: null,
+      };
+    }
+
+    // generic mode
+    return {
+      canGenerate: activePool.length >= 2,
+      validationError: null,
+    };
+  }, [activePool.length, mode, format]);
+
   const generateTeams = useCallback(
     (teamCount?: number, balanceByRatingParam?: boolean) => {
       if (activePool.length === 0) {
         showAlert('Списъкът с играчи е празен. Моля, въведете поне няколко имена.', 'error');
         return;
       }
-      if (activePool.length < 2) {
-        showAlert('Нужни са поне 2-ма играчи за да се сформират отбори.', 'error');
-        return;
+
+      if (mode === 'tennis') {
+        if (format === 'doubles') {
+          if (activePool.length < 4) {
+            showAlert('Нужни са поне 4 играчи за игра по двойки.', 'error');
+            return;
+          }
+          if (activePool.length % 2 !== 0) {
+            showAlert('Добавете още 1 играч за пълни двойки', 'error');
+            return;
+          }
+        }
+        if (format === 'singles') {
+          if (activePool.length < 2) {
+            showAlert('Нужни са поне 2-ма играчи за сформиране на сингъл срещи', 'error');
+            return;
+          }
+        }
+      } else {
+        if (activePool.length < 2) {
+          showAlert('Нужни са поне 2-ма играчи за да се сформират отбори.', 'error');
+          return;
+        }
       }
 
+      const effectiveFormat = mode === 'tennis' ? format : undefined;
+
+      const tennisTargetTeams =
+        format === 'doubles'
+          ? Math.floor(activePool.length / 2)
+          : activePool.length;
+
       const effectiveNumTeams =
-        typeof teamCount === 'number' && teamCount > 0
-          ? teamCount
-          : numberOfTeams !== null && !Number.isNaN(numberOfTeams) && numberOfTeams > 0
-            ? numberOfTeams
-            : null;
+        mode === 'tennis'
+          ? typeof teamCount === 'number' && teamCount > 0
+            ? teamCount
+            : tennisTargetTeams
+          : typeof teamCount === 'number' && teamCount > 0
+            ? teamCount
+            : numberOfTeams !== null && !Number.isNaN(numberOfTeams) && numberOfTeams > 0
+              ? numberOfTeams
+              : null;
 
       const pptInt =
-        playersPerTeam !== null && !Number.isNaN(playersPerTeam) && playersPerTeam > 0
+        mode === 'generic' && playersPerTeam !== null && !Number.isNaN(playersPerTeam) && playersPerTeam > 0
           ? playersPerTeam
           : null;
 
@@ -148,14 +231,16 @@ export function useTeamGenerator() {
       const hasNumTeams = effectiveNumTeams !== null && effectiveNumTeams > 0;
       const hasPpt = pptInt !== null && pptInt > 0;
 
-      if (!hasNumTeams && !hasPpt) {
-        showAlert("Моля, въведете 'Брой отбори' или 'Брой играчи в отбор'.", 'error');
-        return;
-      }
+      if (mode === 'generic') {
+        if (!hasNumTeams && !hasPpt) {
+          showAlert("Моля, въведете 'Брой отбори' или 'Брой играчи в отбор'.", 'error');
+          return;
+        }
 
-      if (hasNumTeams && effectiveNumTeams > activePool.length) {
-        showAlert('Броят на отборите не може да е по-голям от броя на играчите.', 'error');
-        return;
+        if (hasNumTeams && effectiveNumTeams > activePool.length) {
+          showAlert('Броят на отборите не може да е по-голям от броя на играчите.', 'error');
+          return;
+        }
       }
 
       const targetNumTeams = hasNumTeams
@@ -170,7 +255,7 @@ export function useTeamGenerator() {
       const maxAttempts = 15;
 
       const hasRatings = activePool.some(
-        (p) => resolvePlayerRating(p, format) !== undefined || p.rating !== undefined
+        (p) => resolvePlayerRating(p, effectiveFormat) !== undefined
       );
 
       do {
@@ -178,7 +263,7 @@ export function useTeamGenerator() {
 
         if (effectiveBalance && hasRatings && targetNumTeams) {
           const shuffled = fisherYatesShuffle(activePool);
-          generatedTeams = balanceTeams(shuffled, targetNumTeams, format);
+          generatedTeams = balanceTeams(shuffled, targetNumTeams, effectiveFormat);
         } else {
           const shuffled = fisherYatesShuffle(activePool);
 
@@ -194,7 +279,7 @@ export function useTeamGenerator() {
             shuffled.forEach((player, index) => {
               const teamIdx = index % effectiveNumTeams;
               generatedTeams[teamIdx].players.push(player);
-              const pRating = resolvePlayerRating(player, format);
+              const pRating = resolvePlayerRating(player, effectiveFormat);
               if (pRating !== undefined) {
                 generatedTeams[teamIdx].totalRating =
                   (generatedTeams[teamIdx].totalRating ?? 0) + pRating;
@@ -205,7 +290,7 @@ export function useTeamGenerator() {
             for (let i = 0; i < shuffled.length; i += pptInt) {
               const chunk = shuffled.slice(i, i + pptInt);
               const total = chunk.reduce(
-                (sum, p) => sum + (resolvePlayerRating(p, format) ?? 0),
+                (sum, p) => sum + (resolvePlayerRating(p, effectiveFormat) ?? 0),
                 0
               );
               generatedTeams.push({
@@ -233,7 +318,7 @@ export function useTeamGenerator() {
       setHistory((prev) => [fingerprint, ...prev]);
       setTeams(generatedTeams);
     },
-    [activePool, numberOfTeams, playersPerTeam, balanceByRating, showAlert, format]
+    [activePool, mode, numberOfTeams, playersPerTeam, balanceByRating, showAlert, format]
   );
 
   const shuffleSingleTeam = useCallback((teamId: string) => {
@@ -290,6 +375,11 @@ export function useTeamGenerator() {
   }, [teams, showAlert]);
 
   return {
+    mode,
+    setMode,
+    canGenerate,
+    validationError,
+    validationMessage: validationError,
     activePool,
     players: activePool,
     numberOfTeams,

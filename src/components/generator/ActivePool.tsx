@@ -76,7 +76,7 @@ export const ActivePool: React.FC<ActivePoolProps> = ({
                 ? (player.singles_rating ?? player.rating)
                 : format === 'doubles'
                   ? (player.doubles_rating ?? player.rating)
-                  : (player.rating ?? player.singles_rating ?? player.doubles_rating);
+                  : player.rating;
 
             return (
               <Badge

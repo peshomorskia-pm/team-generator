@@ -48,6 +48,10 @@ export const GeneratorPage: React.FC = () => {
     numberOfTeams,
     playersPerTeam,
     format,
+    mode,
+    setMode,
+    canGenerate,
+    validationError,
     setFormat,
     setNumberOfTeams,
     setPlayersPerTeam,
@@ -85,13 +89,16 @@ export const GeneratorPage: React.FC = () => {
     [setPlayersPerTeam]
   );
 
+  const effectiveFormat = mode === 'tennis' ? format : undefined;
+
   const hasRatings = useMemo(
     () =>
-      activePool.some(
-        (p) =>
-          ((format === 'doubles' ? p.doubles_rating : p.singles_rating) ?? p.rating) !== undefined
+      activePool.some((p) =>
+        mode === 'tennis'
+          ? ((format === 'doubles' ? p.doubles_rating : p.singles_rating) ?? p.rating) !== undefined
+          : p.rating !== undefined
       ),
-    [activePool, format]
+    [activePool, mode, format]
   );
 
   const initialTeam1 = useMemo(() => {
@@ -152,7 +159,7 @@ export const GeneratorPage: React.FC = () => {
                     error={dbError}
                     searchTerm={searchQuery}
                     onSearchChange={setSearchQuery}
-                    format={format}
+                    format={effectiveFormat}
                   />
 
                   <div className="border-t border-gray-200 dark:border-slate-700 pt-5">
@@ -168,11 +175,13 @@ export const GeneratorPage: React.FC = () => {
                     activePool={activePool}
                     onRemovePlayer={removePlayer}
                     onClearPool={handleClearPool}
-                    format={format}
+                    format={effectiveFormat}
                   />
 
                   <div className="border-t border-gray-200 dark:border-slate-700 pt-5">
                     <TeamSettings
+                      mode={mode}
+                      onModeChange={setMode}
                       numberOfTeams={numberOfTeams ?? 0}
                       onSettingsChange={handleNumberOfTeamsChange}
                       playersPerTeam={playersPerTeam}
@@ -183,6 +192,8 @@ export const GeneratorPage: React.FC = () => {
                       hasRatings={hasRatings}
                       format={format}
                       onFormatChange={setFormat}
+                      canGenerate={canGenerate}
+                      validationError={validationError}
                     />
                   </div>
                 </div>
@@ -195,11 +206,12 @@ export const GeneratorPage: React.FC = () => {
       {/* Results Section */}
       <TeamList
         teams={teams}
+        mode={mode}
         onShuffleTeam={shuffleSingleTeam}
         onCopy={copyResults}
         isCopied={isCopied}
         onSaveAsMatch={() => setIsMatchModalOpen(true)}
-        format={format}
+        format={effectiveFormat}
       />
 
       {/* Match Modal Integration */}

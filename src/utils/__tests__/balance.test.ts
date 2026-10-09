@@ -193,4 +193,21 @@ describe('balanceTeams', () => {
       expect(totalRatings[1]).toBe(1500);
     });
   });
+
+  describe('Capacity constraint enforcement', () => {
+    it('guarantees strict 2v2 sizing in doubles and prevents uneven teams (e.g. 3v1) under high rating disparity', () => {
+      // Disparate ratings where greedy LPT without capacity limit would assign (800, 700, 600) to one team
+      const players: Player[] = [
+        { id: '1', name: 'Elite', rating: 2000 },
+        { id: '2', name: 'Mid1', rating: 800 },
+        { id: '3', name: 'Mid2', rating: 700 },
+        { id: '4', name: 'Mid3', rating: 600 },
+      ];
+
+      const teams = balanceTeams(players, 2, true);
+      expect(teams).toHaveLength(2);
+      expect(teams[0].players).toHaveLength(2);
+      expect(teams[1].players).toHaveLength(2);
+    });
+  });
 });

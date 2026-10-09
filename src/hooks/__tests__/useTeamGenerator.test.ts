@@ -13,6 +13,7 @@ describe('useTeamGenerator', () => {
   it('initializes with default state', () => {
     const { result } = renderHook(() => useTeamGenerator());
 
+    expect(result.current.mode).toBe('tennis');
     expect(result.current.activePool).toEqual([]);
     expect(result.current.players).toEqual([]);
     expect(result.current.numberOfTeams).toBeNull();
@@ -21,7 +22,9 @@ describe('useTeamGenerator', () => {
     expect(result.current.history).toEqual([]);
     expect(result.current.alert).toBeNull();
     expect(result.current.balanceByRating).toBe(false);
-    expect(result.current.format).toBe('singles');
+    expect(result.current.format).toBe('doubles');
+    expect(result.current.canGenerate).toBe(false);
+    expect(result.current.validationError).toBeNull();
   });
 
   describe('guest player management', () => {
@@ -140,12 +143,12 @@ describe('useTeamGenerator', () => {
       const { result } = renderHook(() => useTeamGenerator());
 
       act(() => {
-        result.current.addGuest('Гост 1, Гост 2');
+        result.current.addGuest('Гост 1, Гост 2, Гост 3');
         result.current.toggleRegisteredPlayer({ id: 'db-1', name: 'Играч 1', rating: 1200 });
         result.current.setNumberOfTeams(2);
       });
 
-      expect(result.current.activePool).toHaveLength(3);
+      expect(result.current.activePool).toHaveLength(4);
 
       act(() => {
         result.current.generateTeams();
@@ -175,10 +178,11 @@ describe('useTeamGenerator', () => {
       });
     });
 
-    it('shows error if generating teams with fewer than 2 players', () => {
+    it('shows error if generating teams with fewer than 2 players in generic mode', () => {
       const { result } = renderHook(() => useTeamGenerator());
 
       act(() => {
+        result.current.setMode('generic');
         result.current.addGuest('Иван');
       });
 
@@ -192,10 +196,11 @@ describe('useTeamGenerator', () => {
       });
     });
 
-    it('shows error if neither numberOfTeams nor playersPerTeam is specified', () => {
+    it('shows error in generic mode if neither numberOfTeams nor playersPerTeam is specified', () => {
       const { result } = renderHook(() => useTeamGenerator());
 
       act(() => {
+        result.current.setMode('generic');
         result.current.addGuest('Иван, Петър');
       });
 
@@ -209,10 +214,11 @@ describe('useTeamGenerator', () => {
       });
     });
 
-    it('shows error if numberOfTeams is greater than pool size', () => {
+    it('shows error in generic mode if numberOfTeams is greater than pool size', () => {
       const { result } = renderHook(() => useTeamGenerator());
 
       act(() => {
+        result.current.setMode('generic');
         result.current.addGuest('Иван, Петър');
         result.current.setNumberOfTeams(3);
       });
@@ -341,7 +347,7 @@ describe('useTeamGenerator', () => {
       });
 
       act(() => {
-        result.current.addGuest('Иван, Петър');
+        result.current.addGuest('Иван, Петър, Георги, Стоян');
         result.current.setNumberOfTeams(2);
       });
 
@@ -388,17 +394,17 @@ describe('useTeamGenerator', () => {
   describe('format state and dual ratings', () => {
     it('manages format state transitions', () => {
       const { result } = renderHook(() => useTeamGenerator());
-      expect(result.current.format).toBe('singles');
-
-      act(() => {
-        result.current.setFormat('doubles');
-      });
       expect(result.current.format).toBe('doubles');
 
       act(() => {
         result.current.setFormat('singles');
       });
       expect(result.current.format).toBe('singles');
+
+      act(() => {
+        result.current.setFormat('doubles');
+      });
+      expect(result.current.format).toBe('doubles');
     });
 
     it('preserves singles_rating and doubles_rating when toggling registered player', () => {
@@ -426,7 +432,7 @@ describe('useTeamGenerator', () => {
       });
     });
 
-    it('computes team totalRating based on active format when generating teams', () => {
+    it('computes team totalRating based on active format when generating teams in tennis mode', () => {
       const { result } = renderHook(() => useTeamGenerator());
 
       act(() => {
@@ -444,7 +450,6 @@ describe('useTeamGenerator', () => {
           singles_rating: 1400,
           doubles_rating: 1700,
         });
-        result.current.setNumberOfTeams(2);
         result.current.setFormat('singles');
       });
 
@@ -455,8 +460,22 @@ describe('useTeamGenerator', () => {
       const singlesRatings = result.current.teams.map((t) => t.totalRating);
       expect(singlesRatings.sort()).toEqual([1400, 1800]);
 
-      // Switch to doubles format and regenerate
+      // Add 2 more players for tennis doubles format (requires >= 4 players)
       act(() => {
+        result.current.toggleRegisteredPlayer({
+          id: 'p3',
+          name: 'P3',
+          rating: 1200,
+          singles_rating: 1500,
+          doubles_rating: 1100,
+        });
+        result.current.toggleRegisteredPlayer({
+          id: 'p4',
+          name: 'P4',
+          rating: 1200,
+          singles_rating: 1600,
+          doubles_rating: 1500,
+        });
         result.current.setFormat('doubles');
       });
 
@@ -464,14 +483,17 @@ describe('useTeamGenerator', () => {
         result.current.generateTeams();
       });
 
+      expect(result.current.teams).toHaveLength(2);
       const doublesRatings = result.current.teams.map((t) => t.totalRating);
-      expect(doublesRatings.sort()).toEqual([1300, 1700]);
+      const totalDoubles = 1300 + 1700 + 1100 + 1500;
+      expect((doublesRatings[0] ?? 0) + (doublesRatings[1] ?? 0)).toBe(totalDoubles);
     });
 
     it('balances teams evenly by rating when playersPerTeam is specified', () => {
       const { result } = renderHook(() => useTeamGenerator());
 
       act(() => {
+        result.current.setMode('generic');
         result.current.toggleRegisteredPlayer({ id: 'p1', name: 'P1', rating: 1800 });
         result.current.toggleRegisteredPlayer({ id: 'p2', name: 'P2', rating: 1600 });
         result.current.toggleRegisteredPlayer({ id: 'p3', name: 'P3', rating: 1400 });
@@ -492,10 +514,11 @@ describe('useTeamGenerator', () => {
       expect(result.current.teams[1].totalRating).toBe(3000);
     });
 
-    it('balances teams by format-specific rating when playersPerTeam is set and format is doubles', () => {
+    it('isolates ratings in generic mode ignoring format state even if playersPerTeam is set', () => {
       const { result } = renderHook(() => useTeamGenerator());
 
       act(() => {
+        result.current.setMode('generic');
         result.current.setFormat('doubles');
         result.current.toggleRegisteredPlayer({
           id: 'p1',
@@ -532,9 +555,154 @@ describe('useTeamGenerator', () => {
       expect(result.current.teams).toHaveLength(2);
       expect(result.current.teams[0].players).toHaveLength(2);
       expect(result.current.teams[1].players).toHaveLength(2);
-      // Balanced by doubles rating: 1800+1200=3000, 1600+1400=3000
-      expect(result.current.teams[0].totalRating).toBe(3000);
-      expect(result.current.teams[1].totalRating).toBe(3000);
+      // In generic mode, balanced by general rating (1000+1000=2000), ignoring leaked doubles_rating
+      expect(result.current.teams[0].totalRating).toBe(2000);
+      expect(result.current.teams[1].totalRating).toBe(2000);
+    });
+  });
+
+  describe('Generator mode & Tennis validation', () => {
+    it('manages mode state transitions', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+      expect(result.current.mode).toBe('tennis');
+
+      act(() => {
+        result.current.setMode('generic');
+      });
+      expect(result.current.mode).toBe('generic');
+
+      act(() => {
+        result.current.setMode('tennis');
+      });
+      expect(result.current.mode).toBe('tennis');
+    });
+
+    it('enforces tennis doubles validations: blocks < 4 players or odd count', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+      expect(result.current.mode).toBe('tennis');
+      expect(result.current.format).toBe('doubles');
+
+      // Empty pool
+      expect(result.current.canGenerate).toBe(false);
+      expect(result.current.validationError).toBeNull();
+
+      // 3 players (< 4 and odd)
+      act(() => {
+        result.current.addGuest('A, B, C');
+      });
+      expect(result.current.canGenerate).toBe(false);
+      expect(result.current.validationError).toBe('Нужни са поне 4 играчи за игра по двойки.');
+
+      // Try generate: shows alert
+      act(() => {
+        result.current.generateTeams();
+      });
+      expect(result.current.alert?.message).toBe('Нужни са поне 4 играчи за игра по двойки.');
+
+      // 5 players (>= 4 but odd)
+      act(() => {
+        result.current.addGuest('D, E');
+      });
+      expect(result.current.canGenerate).toBe(false);
+      expect(result.current.validationError).toBe('Добавете още 1 играч за пълни двойки');
+
+      act(() => {
+        result.current.generateTeams();
+      });
+      expect(result.current.alert?.message).toBe('Добавете още 1 играч за пълни двойки');
+
+      // 6 players (>= 4 and even) -> valid!
+      act(() => {
+        result.current.addGuest('F');
+      });
+      expect(result.current.canGenerate).toBe(true);
+      expect(result.current.validationError).toBeNull();
+
+      act(() => {
+        result.current.generateTeams();
+      });
+      expect(result.current.teams).toHaveLength(3); // 6 / 2 = 3 teams
+    });
+
+    it('toggles to generic mode with 3 players and allows generation', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.addGuest('A, B, C');
+      });
+
+      // Invalid in tennis doubles
+      expect(result.current.canGenerate).toBe(false);
+      expect(result.current.validationError).not.toBeNull();
+
+      // Switch to generic
+      act(() => {
+        result.current.setMode('generic');
+      });
+
+      expect(result.current.canGenerate).toBe(true);
+      expect(result.current.validationError).toBeNull();
+    });
+
+    it('validates singles format in tennis mode requiring >= 2 players', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.setFormat('singles');
+        result.current.addGuest('A');
+      });
+
+      expect(result.current.canGenerate).toBe(false);
+      expect(result.current.validationError).toBe('Нужни са поне 2-ма играчи за сформиране на сингъл срещи');
+
+      act(() => {
+        result.current.generateTeams();
+      });
+      expect(result.current.alert?.message).toBe('Нужни са поне 2-ма играчи за сформиране на сингъл срещи');
+
+      act(() => {
+        result.current.addGuest('B');
+      });
+
+      expect(result.current.canGenerate).toBe(true);
+      expect(result.current.validationError).toBeNull();
+
+      act(() => {
+        result.current.generateTeams();
+      });
+      expect(result.current.teams).toHaveLength(2);
+    });
+
+    it('balances by general rating in generic mode without leaking tennis ratings', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.setMode('generic');
+        result.current.setNumberOfTeams(2);
+        result.current.setBalanceByRating(true);
+        // Player 1: general rating 1000, doubles_rating 3000
+        result.current.toggleRegisteredPlayer({
+          id: 'p-1',
+          name: 'Player 1',
+          rating: 1000,
+          doubles_rating: 3000,
+        });
+        // Player 2: general rating 1000, doubles_rating 1000
+        result.current.toggleRegisteredPlayer({
+          id: 'p-2',
+          name: 'Player 2',
+          rating: 1000,
+          doubles_rating: 1000,
+        });
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(2);
+      expect(result.current.teams[0].totalRating).toBe(1000);
+      expect(result.current.teams[1].totalRating).toBe(1000);
     });
   });
 });

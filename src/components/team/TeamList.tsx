@@ -10,17 +10,20 @@ export const TeamList = memo(function TeamList({
   isCopied = false,
   onSaveAsMatch,
   format,
+  mode = 'tennis',
 }: TeamListProps) {
   if (teams.length === 0) {
     return null;
   }
+
+  const isTennisMode = mode === 'tennis';
 
   return (
     <div id="resultsContainer" className="w-full max-w-5xl mt-10 transition-all duration-300">
       <div className="flex items-center justify-between mb-6 px-2">
         <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Резултати</h2>
         <div className="flex items-center gap-2">
-          {teams.length === 2 && onSaveAsMatch && (
+          {isTennisMode && teams.length === 2 && onSaveAsMatch && (
             <button
               type="button"
               id="saveAsMatchBtn"

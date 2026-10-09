@@ -26,7 +26,7 @@ export const PlayerSelector: React.FC<PlayerSelectorProps> = ({
   error = null,
   searchTerm,
   onSearchChange,
-  format = 'singles',
+  format,
 }) => {
   const [internalSearch, setInternalSearch] = useState('');
   const search = searchTerm !== undefined ? searchTerm : internalSearch;
@@ -202,10 +202,20 @@ export const PlayerSelector: React.FC<PlayerSelectorProps> = ({
                     {player.name}
                   </span>
                 </div>
-                <Badge variant="amber" size="sm" icon={Star} className="ml-2 shrink-0">
-                  {(format === 'doubles' ? player.doubles_rating : player.singles_rating) ??
-                    player.rating}
-                </Badge>
+                {(() => {
+                  const playerRating =
+                    format === 'doubles'
+                      ? (player.doubles_rating ?? player.rating)
+                      : format === 'singles'
+                        ? (player.singles_rating ?? player.rating)
+                        : player.rating;
+
+                  return playerRating !== undefined ? (
+                    <Badge variant="amber" size="sm" icon={Star} className="ml-2 shrink-0">
+                      {playerRating}
+                    </Badge>
+                  ) : null;
+                })()}
               </label>
             );
           })}
