@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { Shuffle, RotateCcw, Copy, Check } from 'lucide-react';
-import type { TournamentGroup, GeneratorMode } from '../../types';
+import { Shuffle, RotateCcw, Copy, Check, Calendar } from 'lucide-react';
+import type { TournamentGroup, GeneratorMode, TournamentMatch } from '../../types';
 import { GroupCard } from './GroupCard';
 import { copyTextToClipboard, formatGroupsForClipboard } from '../../utils/clipboard';
 
@@ -14,6 +14,9 @@ export interface GroupListProps {
   isCopied?: boolean;
   mode?: GeneratorMode;
   format?: 'singles' | 'doubles';
+  onGenerateSchedule?: () => void;
+  hasSchedule?: boolean;
+  schedule?: TournamentMatch[];
 }
 
 export const GroupList: React.FC<GroupListProps> = ({
@@ -26,6 +29,9 @@ export const GroupList: React.FC<GroupListProps> = ({
   isCopied: externalIsCopied,
   mode = 'tennis',
   format,
+  onGenerateSchedule,
+  hasSchedule = false,
+  schedule,
 }) => {
   const [internalIsCopied, setInternalIsCopied] = useState(false);
 
@@ -37,13 +43,13 @@ export const GroupList: React.FC<GroupListProps> = ({
       onCopy();
       return;
     }
-    const textToCopy = formatGroupsForClipboard(groups, mode, format);
+    const textToCopy = formatGroupsForClipboard(groups, mode, format, schedule);
     const success = await copyTextToClipboard(textToCopy);
     if (success) {
       setInternalIsCopied(true);
       setTimeout(() => setInternalIsCopied(false), 2000);
     }
-  }, [groups, mode, format, onCopy]);
+  }, [groups, mode, format, schedule, onCopy]);
 
   const copiedState = externalIsCopied ?? internalIsCopied;
 
@@ -59,6 +65,20 @@ export const GroupList: React.FC<GroupListProps> = ({
         </h2>
 
         <div className="flex flex-wrap items-center gap-2">
+          {onGenerateSchedule && !hasSchedule && (
+            <button
+              type="button"
+              id="generateScheduleBtn"
+              onClick={onGenerateSchedule}
+              title="Генерирай програма с мачове за турнира"
+              aria-label="Генерирай програма с мачове"
+              className="text-sm font-semibold flex items-center bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-3.5 py-1.5 rounded-lg shadow-sm transition-colors cursor-pointer"
+            >
+              <Calendar className="w-4 h-4 mr-1.5" />
+              <span>📅 Генерирай програма с мачове</span>
+            </button>
+          )}
+
           {handleRedraw && (
             <button
               type="button"

@@ -6,6 +6,7 @@ import { Alert } from '../components/ui/Alert';
 import { TeamSettings } from '../components/team/TeamSettings';
 import { TeamList } from '../components/team/TeamList';
 import { GroupList } from '../components/group/GroupList';
+import { MatchScheduleList } from '../components/group/MatchScheduleList';
 import { MatchModal, type MatchParticipant } from '../components/match/MatchModal';
 import { PlayerSelector } from '../components/generator/PlayerSelector';
 import { GuestInput } from '../components/generator/GuestInput';
@@ -48,6 +49,9 @@ export const GeneratorPage: React.FC = () => {
     groups,
     drawGroups,
     resetGroups,
+    schedule,
+    generateSchedule,
+    resetSchedule,
     alert,
     isCopied,
     balanceByRating,
@@ -213,13 +217,25 @@ export const GeneratorPage: React.FC = () => {
 
       {/* Results Section */}
       {groups.length > 0 ? (
-        <GroupList
-          groups={groups}
-          onRedraw={drawGroups}
-          onReset={resetGroups}
-          mode={mode}
-          format={effectiveFormat}
-        />
+        <>
+          <GroupList
+            groups={groups}
+            onRedraw={teams.length >= 6 ? drawGroups : undefined}
+            onReset={teams.length >= 6 ? resetGroups : undefined}
+            onGenerateSchedule={generateSchedule}
+            hasSchedule={schedule.length > 0}
+            schedule={schedule}
+            mode={mode}
+            format={effectiveFormat}
+          />
+          {schedule.length > 0 && (
+            <MatchScheduleList
+              schedule={schedule}
+              onReset={resetSchedule}
+              onRegenerate={generateSchedule}
+            />
+          )}
+        </>
       ) : (
         <TeamList
           teams={teams}

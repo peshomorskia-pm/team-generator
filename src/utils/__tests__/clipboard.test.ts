@@ -308,6 +308,69 @@ describe('clipboard utils', () => {
       expect(text).toContain('📌 Група Б:');
       expect(text).toContain('- Отбор 3: Георги (★ 1600)');
     });
+
+    it('appends match schedule with rounds and byes to groups clipboard text', () => {
+      const dummyGroups: TournamentGroup[] = [
+        {
+          id: 'group-0',
+          name: 'Група А',
+          teams: [
+            { id: 'team-1', name: 'Отбор 1', players: [{ id: 'p1', name: 'Иван' }] },
+            { id: 'team-2', name: 'Отбор 2', players: [{ id: 'p2', name: 'Петър' }] },
+            { id: 'team-3', name: 'Отбор 3', players: [{ id: 'p3', name: 'Георги' }] },
+          ],
+        },
+      ];
+
+      const schedule = [
+        {
+          id: 'match-group-0-r1-m1',
+          groupId: 'group-0',
+          groupName: 'Група А',
+          round: 1,
+          team1: dummyGroups[0].teams[1],
+          team2: dummyGroups[0].teams[2],
+          byeTeam: dummyGroups[0].teams[0],
+        },
+      ];
+
+      const text = formatGroupsForClipboard(dummyGroups, 'tennis', 'singles', schedule);
+      expect(text).toContain('📅 Програма на срещите:');
+      expect(text).toContain('Кръг 1:');
+      expect(text).toContain('- Отбор 2 vs Отбор 3');
+      expect(text).toContain('Почива: Отбор 1');
+    });
+  });
+
+  describe('formatTeamsForClipboard with schedule', () => {
+    it('appends round-robin schedule to teams clipboard text', () => {
+      const teams: Team[] = [
+        { id: 't1', name: 'Отбор 1', players: [{ id: 'p1', name: 'Иван' }] },
+        { id: 't2', name: 'Отбор 2', players: [{ id: 'p2', name: 'Петър' }] },
+        { id: 't3', name: 'Отбор 3', players: [{ id: 'p3', name: 'Георги' }] },
+      ];
+
+      const schedule = [
+        {
+          id: 'match-group-0-r1-m1',
+          groupId: 'group-0',
+          groupName: 'Група А',
+          round: 1,
+          team1: teams[0],
+          team2: teams[1],
+          byeTeam: teams[2],
+        },
+      ];
+
+      const text = formatTeamsForClipboard(teams, 'tennis', 'singles', schedule);
+      expect(text).toContain('🎾 Тенис - Поединично');
+      expect(text).toContain('Отбор 1:');
+      expect(text).toContain('📅 Програма на срещите:');
+      expect(text).toContain('📌 Група А:');
+      expect(text).toContain('Кръг 1:');
+      expect(text).toContain('- Отбор 1 vs Отбор 2');
+      expect(text).toContain('Почива: Отбор 3');
+    });
   });
 });
 

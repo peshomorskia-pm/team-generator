@@ -42,7 +42,7 @@ export const TeamList = memo(function TeamList({
       <div className="flex items-center justify-between mb-6 px-2">
         <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Резултати</h2>
         <div className="flex items-center gap-2">
-          {isTennisMode && teams.length >= 3 && onDrawGroups && (
+          {isTennisMode && teams.length >= 6 && onDrawGroups && (
             <button
               type="button"
               id="drawGroupsBtn"
