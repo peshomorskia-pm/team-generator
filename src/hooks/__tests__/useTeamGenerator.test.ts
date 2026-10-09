@@ -229,7 +229,7 @@ describe('useTeamGenerator', () => {
 
       expect(result.current.alert).toEqual({
         type: 'error',
-        message: 'Броят на отборите не може да е по-голям от броя на играчите.',
+        message: 'Броят отбори (3) не може да надвишава наличните играчи (2).',
       });
     });
   });
@@ -787,6 +787,123 @@ describe('useTeamGenerator', () => {
       expect(result.current.teams).toHaveLength(2);
       expect(result.current.teams[0].totalRating).toBe(1000);
       expect(result.current.teams[1].totalRating).toBe(1000);
+    });
+  });
+
+  describe('generic mode validation rules', () => {
+    const add10Players = (result: { current: ReturnType<typeof useTeamGenerator> }) => {
+      act(() => {
+        result.current.setMode('generic');
+        result.current.addGuest('P1, P2, P3, P4, P5, P6, P7, P8, P9, P10');
+      });
+    };
+
+    it('validates playersPerTeam = 12 with 10 players (canGenerate = false and Bulgarian error string)', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+      add10Players(result);
+
+      act(() => {
+        result.current.setPlayersPerTeam(12);
+      });
+
+      expect(result.current.canGenerate).toBe(false);
+      expect(result.current.validationError).toBe(
+        'Броят играчи в отбор (12) не може да бъде по-голям или равен на общия брой играчи (10). Нужни са играчи за поне 2 отбора.'
+      );
+
+      // Guard clause prevents generateTeams from executing
+      act(() => {
+        result.current.generateTeams();
+      });
+      expect(result.current.teams).toHaveLength(0);
+      expect(result.current.alert?.message).toBe(
+        'Броят играчи в отбор (12) не може да бъде по-голям или равен на общия брой играчи (10). Нужни са играчи за поне 2 отбора.'
+      );
+    });
+
+    it('validates playersPerTeam = 10 with 10 players (canGenerate = false)', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+      add10Players(result);
+
+      act(() => {
+        result.current.setPlayersPerTeam(10);
+      });
+
+      expect(result.current.canGenerate).toBe(false);
+      expect(result.current.validationError).toBe(
+        'Броят играчи в отбор (10) не може да бъде по-голям или равен на общия брой играчи (10). Нужни са играчи за поне 2 отбора.'
+      );
+    });
+
+    it('validates numberOfTeams = 12 with 10 players (canGenerate = false)', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+      add10Players(result);
+
+      act(() => {
+        result.current.setNumberOfTeams(12);
+      });
+
+      expect(result.current.canGenerate).toBe(false);
+      expect(result.current.validationError).toBe(
+        'Броят отбори (12) не може да надвишава наличните играчи (10).'
+      );
+
+      // Guard clause prevents generateTeams from executing
+      act(() => {
+        result.current.generateTeams();
+      });
+      expect(result.current.teams).toHaveLength(0);
+      expect(result.current.alert?.message).toBe(
+        'Броят отбори (12) не може да надвишава наличните играчи (10).'
+      );
+    });
+
+    it('validates numberOfTeams = 1 with 10 players (canGenerate = false)', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+      add10Players(result);
+
+      act(() => {
+        result.current.setNumberOfTeams(1);
+      });
+
+      expect(result.current.canGenerate).toBe(false);
+      expect(result.current.validationError).toBe('Нужни са поне 2 отбора за разпределение.');
+
+      // Guard clause prevents generateTeams from executing
+      act(() => {
+        result.current.generateTeams();
+      });
+      expect(result.current.teams).toHaveLength(0);
+      expect(result.current.alert?.message).toBe('Нужни са поне 2 отбора за разпределение.');
+    });
+
+    it('validates playersPerTeam = 3 with 10 players (canGenerate = true and validationError = null)', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+      add10Players(result);
+
+      act(() => {
+        result.current.setPlayersPerTeam(3);
+      });
+
+      expect(result.current.canGenerate).toBe(true);
+      expect(result.current.validationError).toBeNull();
+
+      act(() => {
+        result.current.generateTeams();
+      });
+      expect(result.current.teams.length).toBeGreaterThan(0);
+    });
+
+    it('validates playersPerTeam < 1 with 10 players (canGenerate = false)', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+      add10Players(result);
+
+      act(() => {
+        result.current.setPlayersPerTeam(0);
+      });
+
+      expect(result.current.canGenerate).toBe(false);
+      expect(result.current.validationError).toBe('Броят играчи в отбор трябва да бъде поне 1.');
     });
   });
 });

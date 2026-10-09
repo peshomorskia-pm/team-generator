@@ -28,8 +28,8 @@ export type GeneratorMode = 'tennis' | 'generic';
 export interface TeamSettingsProps {
   mode?: GeneratorMode;
   onModeChange?: (mode: GeneratorMode) => void;
-  numberOfTeams?: number;
-  onSettingsChange?: (teams: number) => void;
+  numberOfTeams?: number | null;
+  onSettingsChange?: (teams: number | null) => void;
   onGenerate: () => void;
   playersPerTeam?: number | null;
   onPlayersPerTeamChange?: (count: number | null) => void;

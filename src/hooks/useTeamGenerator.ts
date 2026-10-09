@@ -164,17 +164,69 @@ export function useTeamGenerator() {
       };
     }
 
-    // generic mode
+    // Generic mode
+    if (activePool.length < 2) {
+      return {
+        canGenerate: false,
+        validationError: 'Нужни са поне 2-ма играчи за да се сформират отбори.',
+      };
+    }
+
+    if (playersPerTeam !== null && !Number.isNaN(playersPerTeam)) {
+      if (playersPerTeam < 1) {
+        return {
+          canGenerate: false,
+          validationError: 'Броят играчи в отбор трябва да бъде поне 1.',
+        };
+      }
+      if (playersPerTeam >= activePool.length) {
+        return {
+          canGenerate: false,
+          validationError: `Броят играчи в отбор (${playersPerTeam}) не може да бъде по-голям или равен на общия брой играчи (${activePool.length}). Нужни са играчи за поне 2 отбора.`,
+        };
+      }
+      return {
+        canGenerate: true,
+        validationError: null,
+      };
+    }
+
+    if (numberOfTeams !== null && !Number.isNaN(numberOfTeams)) {
+      if (numberOfTeams < 2) {
+        return {
+          canGenerate: false,
+          validationError: 'Нужни са поне 2 отбора за разпределение.',
+        };
+      }
+      if (numberOfTeams > activePool.length) {
+        return {
+          canGenerate: false,
+          validationError: `Броят отбори (${numberOfTeams}) не може да надвишава наличните играчи (${activePool.length}).`,
+        };
+      }
+      return {
+        canGenerate: true,
+        validationError: null,
+      };
+    }
+
     return {
-      canGenerate: activePool.length >= 2,
+      canGenerate: true,
       validationError: null,
     };
-  }, [activePool.length, mode, format]);
+  }, [activePool.length, mode, format, playersPerTeam, numberOfTeams]);
 
   const generateTeams = useCallback(
     (teamCount?: number, balanceByRatingParam?: boolean) => {
       if (activePool.length === 0) {
         showAlert('Списъкът с играчи е празен. Моля, въведете поне няколко имена.', 'error');
+        return;
+      }
+
+      if (!canGenerate && typeof teamCount !== 'number') {
+        if (validationError) {
+          showAlert(validationError, 'error');
+        }
         return;
       }
 
@@ -242,7 +294,22 @@ export function useTeamGenerator() {
         }
 
         if (hasNumTeams && effectiveNumTeams > activePool.length) {
-          showAlert('Броят на отборите не може да е по-голям от броя на играчите.', 'error');
+          showAlert(`Броят отбори (${effectiveNumTeams}) не може да надвишава наличните играчи (${activePool.length}).`, 'error');
+          return;
+        }
+
+        if (hasNumTeams && effectiveNumTeams < 2) {
+          showAlert('Нужни са поне 2 отбора за разпределение.', 'error');
+          return;
+        }
+
+        if (hasPpt && pptInt < 1) {
+          showAlert('Броят играчи в отбор трябва да бъде поне 1.', 'error');
+          return;
+        }
+
+        if (hasPpt && pptInt >= activePool.length) {
+          showAlert(`Броят играчи в отбор (${pptInt}) не може да бъде по-голям или равен на общия брой играчи (${activePool.length}). Нужни са играчи за поне 2 отбора.`, 'error');
           return;
         }
       }
@@ -327,7 +394,7 @@ export function useTeamGenerator() {
       setHistory((prev) => [fingerprint, ...prev]);
       setTeams(generatedTeams);
     },
-    [activePool, mode, numberOfTeams, playersPerTeam, balanceByRating, showAlert, format]
+    [activePool, mode, numberOfTeams, playersPerTeam, balanceByRating, showAlert, format, canGenerate, validationError]
   );
 
   const shuffleSingleTeam = useCallback((teamId: string) => {

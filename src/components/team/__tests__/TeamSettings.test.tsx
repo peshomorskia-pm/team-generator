@@ -117,7 +117,7 @@ describe('TeamSettings', () => {
       const handleSettingsChange = vi.fn();
 
       const Wrapper = () => {
-        const [teams, setTeams] = useState(2);
+        const [teams, setTeams] = useState<number | null>(2);
         return (
           <TeamSettings
             mode="generic"
@@ -167,6 +167,38 @@ describe('TeamSettings', () => {
       await user.type(pptInput, '5');
 
       expect(handlePptChange).toHaveBeenCalledWith(5);
+    });
+
+    it('renders validation error in generic mode and disables generate button', () => {
+      render(
+        <TeamSettings
+          mode="generic"
+          numberOfTeams={12}
+          validationError="Броят отбори (12) не може да надвишава наличните играчи (10)."
+          onGenerate={vi.fn()}
+        />
+      );
+
+      expect(
+        screen.getByText('Броят отбори (12) не може да надвишава наличните играчи (10).')
+      ).toBeInTheDocument();
+      const generateBtn = screen.getByRole('button', { name: /разпредели в отбори/i });
+      expect(generateBtn).toBeDisabled();
+    });
+
+    it('enables generate button when no validation error is present in generic mode', () => {
+      render(
+        <TeamSettings
+          mode="generic"
+          numberOfTeams={2}
+          validationError={null}
+          canGenerate={true}
+          onGenerate={vi.fn()}
+        />
+      );
+
+      const generateBtn = screen.getByRole('button', { name: /разпредели в отбори/i });
+      expect(generateBtn).not.toBeDisabled();
     });
   });
 

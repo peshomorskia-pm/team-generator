@@ -511,5 +511,38 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
     // "Запиши като мач" must be strictly hidden in Generic mode
     expect(screen.queryByRole('button', { name: /запиши като мач/i })).not.toBeInTheDocument();
   });
+
+  it('displays validation error and disables generate button when generic settings are invalid', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    // Toggle mode to Generic
+    fireEvent.click(screen.getByRole('button', { name: '🎲 Универсален' }));
+
+    // Select 2 registered players
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Иван Иванов' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Георги Димитров' }));
+
+    // Configure invalid playersPerTeam = 2 (which is >= activePool.length = 2)
+    const pptInput = screen.getByLabelText(/брой играчи в отбор/i);
+    await user.type(pptInput, '2');
+
+    // Assert validation error banner is displayed
+    const expectedError =
+      'Броят играчи в отбор (2) не може да бъде по-голям или равен на общия брой играчи (2). Нужни са играчи за поне 2 отбора.';
+    expect(screen.getByText(expectedError)).toBeInTheDocument();
+
+    // Assert generate button is disabled
+    const generateBtn = screen.getByRole('button', { name: /разпредели в отбори/i });
+    expect(generateBtn).toBeDisabled();
+
+    // Now set numberOfTeams to 3 (which is > activePool.length = 2)
+    const numTeamsInput = screen.getByLabelText(/брой отбори/i);
+    await user.type(numTeamsInput, '3');
+
+    const expectedTeamError = 'Броят отбори (3) не може да надвишава наличните играчи (2).';
+    expect(screen.getByText(expectedTeamError)).toBeInTheDocument();
+    expect(generateBtn).toBeDisabled();
+  });
 });
 

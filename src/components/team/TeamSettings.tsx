@@ -6,7 +6,7 @@ import { Button, Input } from '../ui';
 export const TeamSettings = memo(function TeamSettings({
   mode = 'tennis',
   onModeChange,
-  numberOfTeams = 0,
+  numberOfTeams = null,
   onSettingsChange,
   onGenerate,
   playersPerTeam = null,
@@ -16,6 +16,7 @@ export const TeamSettings = memo(function TeamSettings({
   hasRatings = false,
   format = 'doubles',
   onFormatChange,
+  canGenerate: _canGenerate = true,
   validationError = null,
 }: TeamSettingsProps) {
   return (
@@ -101,36 +102,48 @@ export const TeamSettings = memo(function TeamSettings({
         </div>
       ) : (
         /* Generic Settings Inputs */
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Input
-            type="number"
-            id="numTeams"
-            label="Брой отбори"
-            min="1"
-            value={numberOfTeams || ''}
-            onChange={(e) => {
-              const val = e.target.value === '' ? 0 : parseInt(e.target.value, 10);
-              onSettingsChange?.(Number.isNaN(val) ? 0 : val);
-            }}
-            placeholder="Напр. 2"
-          />
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              type="number"
+              id="numTeams"
+              label="Брой отбори"
+              min="1"
+              value={numberOfTeams ?? ''}
+              onChange={(e) => {
+                const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                onSettingsChange?.(val !== null && Number.isNaN(val) ? null : val);
+              }}
+              placeholder="Напр. 2"
+            />
 
-          <Input
-            type="number"
-            id="playersPerTeam"
-            label={
-              <>
-                <span className="opacity-80 font-normal mr-1">(или)</span> Брой играчи в отбор
-              </>
-            }
-            min="1"
-            value={playersPerTeam ?? ''}
-            onChange={(e) => {
-              const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
-              onPlayersPerTeamChange?.(val !== null && Number.isNaN(val) ? null : val);
-            }}
-            placeholder="Напр. 5"
-          />
+            <Input
+              type="number"
+              id="playersPerTeam"
+              label={
+                <>
+                  <span className="opacity-80 font-normal mr-1">(или)</span> Брой играчи в отбор
+                </>
+              }
+              min="1"
+              value={playersPerTeam ?? ''}
+              onChange={(e) => {
+                const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                onPlayersPerTeamChange?.(val !== null && Number.isNaN(val) ? null : val);
+              }}
+              placeholder="Напр. 5"
+            />
+          </div>
+
+          {/* Validation Warning */}
+          {validationError && (
+            <div
+              data-testid="generic-validation-warning"
+              className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-200"
+            >
+              {validationError}
+            </div>
+          )}
         </div>
       )}
 
@@ -158,6 +171,7 @@ export const TeamSettings = memo(function TeamSettings({
         id="generateBtn"
         size="lg"
         onClick={onGenerate}
+        disabled={Boolean(validationError)}
         className="w-full flex items-center justify-center space-x-2 cursor-pointer py-4"
       >
         <Shuffle className="w-5 h-5" />

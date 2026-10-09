@@ -76,8 +76,8 @@ export const GeneratorPage: React.FC = () => {
   }, [clearPool]);
 
   const handleNumberOfTeamsChange = useCallback(
-    (val: number) => {
-      setNumberOfTeams(val > 0 ? val : null);
+    (val: number | null) => {
+      setNumberOfTeams(val);
     },
     [setNumberOfTeams]
   );
@@ -184,7 +184,7 @@ export const GeneratorPage: React.FC = () => {
                     <TeamSettings
                       mode={mode}
                       onModeChange={setMode}
-                      numberOfTeams={numberOfTeams ?? 0}
+                      numberOfTeams={numberOfTeams}
                       onSettingsChange={handleNumberOfTeamsChange}
                       playersPerTeam={playersPerTeam}
                       onPlayersPerTeamChange={handlePlayersPerTeamChange}
