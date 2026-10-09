@@ -1,10 +1,11 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
-import { Team, AlertNotification, GeneratorMode } from '../types';
+import { Team, AlertNotification, GeneratorMode, TournamentGroup, UseTeamGeneratorReturn } from '../types';
 import { GeneratorPlayer, DatabasePlayer } from '../types/generator';
 import { fisherYatesShuffle } from '../utils/shuffle';
 import { balanceTeams } from '../utils/balance';
 import { saveMatchup, generateTeamsFingerprint, areTeamConfigsEqual } from '../utils/history';
 import { copyTextToClipboard, formatTeamsForClipboard } from '../utils/clipboard';
+import { drawTournamentGroups } from '../utils/groupPartition';
 
 export function generateGuestId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -31,12 +32,13 @@ const resolvePlayerRating = (
   return player.rating;
 };
 
-export function useTeamGenerator() {
+export function useTeamGenerator(): UseTeamGeneratorReturn {
   const [mode, setMode] = useState<GeneratorMode>('tennis');
   const [activePool, setActivePool] = useState<GeneratorPlayer[]>([]);
   const [numberOfTeams, setNumberOfTeams] = useState<number | null>(null);
   const [playersPerTeam, setPlayersPerTeam] = useState<number | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [groups, setGroups] = useState<TournamentGroup[]>([]);
   const [history, setHistory] = useState<string[]>([]);
   const [alert, setAlert] = useState<AlertNotification | null>(null);
   const [isCopied, setIsCopied] = useState<boolean>(false);
@@ -44,6 +46,15 @@ export function useTeamGenerator() {
   const [format, setFormat] = useState<'singles' | 'doubles'>('doubles');
   const lastTeamsRef = useRef<Team[] | null>(null);
   const lastFingerprintRef = useRef<string>('');
+
+  const resetGroups = useCallback(() => {
+    setGroups([]);
+  }, []);
+
+  const handleSetMode = useCallback((newMode: GeneratorMode) => {
+    setMode(newMode);
+    setGroups([]);
+  }, []);
 
   const showAlert = useCallback((message: string, type: 'error' | 'success' = 'error') => {
     setAlert({ message, type });
@@ -68,6 +79,7 @@ export function useTeamGenerator() {
     }));
 
     setActivePool((prev) => [...prev, ...newGuests]);
+    setGroups([]);
   }, []);
 
   const toggleRegisteredPlayer = useCallback(
@@ -97,17 +109,20 @@ export function useTeamGenerator() {
         };
         return [...prev, newPlayer];
       });
+      setGroups([]);
     },
     []
   );
 
   const removePlayer = useCallback((id: string) => {
     setActivePool((prev) => prev.filter((p) => p.id !== id));
+    setGroups([]);
   }, []);
 
   const clearPool = useCallback(() => {
     setActivePool([]);
     setTeams([]);
+    setGroups([]);
   }, []);
 
   const handleNumTeamsChange = useCallback((val: number | null) => {
@@ -394,9 +409,17 @@ export function useTeamGenerator() {
       saveMatchup(generatedTeams);
       setHistory((prev) => [fingerprint, ...prev]);
       setTeams(generatedTeams);
+      setGroups([]);
     },
     [activePool, mode, numberOfTeams, playersPerTeam, balanceByRating, showAlert, format, canGenerate, validationError]
   );
+
+  const drawGroups = useCallback(() => {
+    if (teams.length >= 3 && mode === 'tennis') {
+      const drawn = drawTournamentGroups(teams);
+      setGroups(drawn);
+    }
+  }, [teams, mode]);
 
   const shuffleSingleTeam = useCallback((teamId: string) => {
     setTeams((prevTeams) => {
@@ -438,7 +461,7 @@ export function useTeamGenerator() {
 
   return {
     mode,
-    setMode,
+    setMode: handleSetMode,
     canGenerate,
     validationError,
     validationMessage: validationError,
@@ -449,6 +472,10 @@ export function useTeamGenerator() {
     playersPerTeam,
     setPlayersPerTeam: handlePlayersPerTeamChange,
     teams,
+    groups,
+    drawGroups,
+    resetGroups,
+    clearGroups: resetGroups,
     history,
     alert,
     showAlert,

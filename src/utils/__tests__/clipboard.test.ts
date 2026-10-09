@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { copyTextToClipboard, formatTeamsForClipboard } from '../clipboard';
-import type { Team } from '../../types';
+import { copyTextToClipboard, formatTeamsForClipboard, formatGroupsForClipboard } from '../clipboard';
+import type { Team, TournamentGroup } from '../../types';
 
 describe('clipboard utils', () => {
   describe('copyTextToClipboard', () => {
@@ -263,4 +263,51 @@ describe('clipboard utils', () => {
       expect(output).toContain('- Георги (★ 1400)');
     });
   });
+
+  describe('formatGroupsForClipboard', () => {
+    it('returns empty string if groups array is empty', () => {
+      expect(formatGroupsForClipboard([])).toBe('');
+    });
+
+    it('formats tournament groups into structured Bulgarian plaintext', () => {
+      const dummyGroups: TournamentGroup[] = [
+        {
+          id: 'group-0',
+          name: 'Група А',
+          teams: [
+            {
+              id: 'team-1',
+              name: 'Отбор 1',
+              players: [{ id: 'p1', name: 'Иван', rating: 1500 }],
+            },
+            {
+              id: 'team-2',
+              name: 'Отбор 2',
+              players: [{ id: 'p2', name: 'Петър', rating: 1400 }],
+            },
+          ],
+        },
+        {
+          id: 'group-1',
+          name: 'Група Б',
+          teams: [
+            {
+              id: 'team-3',
+              name: 'Отбор 3',
+              players: [{ id: 'p3', name: 'Георги', rating: 1600 }],
+            },
+          ],
+        },
+      ];
+
+      const text = formatGroupsForClipboard(dummyGroups, 'tennis');
+      expect(text).toContain('🏆 Турнирни групи');
+      expect(text).toContain('📌 Група А:');
+      expect(text).toContain('- Отбор 1: Иван (★ 1500)');
+      expect(text).toContain('- Отбор 2: Петър (★ 1400)');
+      expect(text).toContain('📌 Група Б:');
+      expect(text).toContain('- Отбор 3: Георги (★ 1600)');
+    });
+  });
 });
+

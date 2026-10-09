@@ -125,4 +125,49 @@ describe('TeamList Component', () => {
       expect(screen.queryByRole('button', { name: /запиши като мач/i })).not.toBeInTheDocument();
     });
   });
+
+  describe('Tournament groups draw button', () => {
+    it('renders "🎲 Тегли жребий за групи" when tennis mode, >= 3 teams, and onDrawGroups provided', async () => {
+      const user = userEvent.setup();
+      const onDrawGroupsMock = vi.fn();
+
+      render(
+        <TeamList
+          teams={mockTeams3}
+          mode="tennis"
+          onDrawGroups={onDrawGroupsMock}
+        />
+      );
+
+      const drawBtn = screen.getByRole('button', { name: /тегли жребий за групи/i });
+      expect(drawBtn).toBeInTheDocument();
+
+      await user.click(drawBtn);
+      expect(onDrawGroupsMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not render draw button when teams count is less than 3', () => {
+      render(
+        <TeamList
+          teams={mockTeams2}
+          mode="tennis"
+          onDrawGroups={vi.fn()}
+        />
+      );
+
+      expect(screen.queryByRole('button', { name: /тегли жребий за групи/i })).not.toBeInTheDocument();
+    });
+
+    it('does not render draw button when mode is generic', () => {
+      render(
+        <TeamList
+          teams={mockTeams3}
+          mode="generic"
+          onDrawGroups={vi.fn()}
+        />
+      );
+
+      expect(screen.queryByRole('button', { name: /тегли жребий за групи/i })).not.toBeInTheDocument();
+    });
+  });
 });
