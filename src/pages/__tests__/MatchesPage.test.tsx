@@ -323,6 +323,47 @@ describe('MatchesPage Integration Tests', () => {
     expect(screen.getByText(/Няма намерени мачове за/i)).toBeInTheDocument();
   });
 
+  it('filters match cards by group name, team 1 name, or team 2 name through search bar', async () => {
+    mockMatchesData = [
+      {
+        ...sampleMatches[0],
+        id: 'm-tournament-1',
+        team_1_name: 'Червени Дяволи',
+        team_2_name: 'Бели Орли',
+        group_name: 'Група Б',
+      },
+      {
+        ...sampleMatches[1],
+        id: 'm-tournament-2',
+        team_1_name: 'Зелени Вълци',
+        team_2_name: 'Сини Акули',
+        group_name: 'Група В',
+      },
+    ];
+
+    const user = userEvent.setup();
+    renderPage();
+
+    const searchInput = screen.getByPlaceholderText('Търсене по име на играч или гост...');
+
+    // Search by group name
+    await user.type(searchInput, 'Група Б');
+    expect(screen.getByText('Червени Дяволи')).toBeInTheDocument();
+    expect(screen.queryByText('Зелени Вълци')).not.toBeInTheDocument();
+
+    // Search by team 1 name
+    await user.clear(searchInput);
+    await user.type(searchInput, 'Зелени');
+    expect(screen.getByText('Зелени Вълци')).toBeInTheDocument();
+    expect(screen.queryByText('Червени Дяволи')).not.toBeInTheDocument();
+
+    // Search by team 2 name
+    await user.clear(searchInput);
+    await user.type(searchInput, 'Бели Орли');
+    expect(screen.getByText('Червени Дяволи')).toBeInTheDocument();
+    expect(screen.queryByText('Зелени Вълци')).not.toBeInTheDocument();
+  });
+
   it('opens MatchModal on "Нов мач" button click', async () => {
     const user = userEvent.setup();
     renderPage();

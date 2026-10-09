@@ -132,7 +132,13 @@ export const MatchesPage: React.FC = () => {
             p.players?.name?.toLowerCase().includes(query) ||
             p.guest_name?.toLowerCase().includes(query)
         );
-        if (!matchesPlayer) return false;
+        const matchesGroupName = Boolean(m.group_name?.toLowerCase().includes(query));
+        const matchesTeam1Name = Boolean(m.team_1_name?.toLowerCase().includes(query));
+        const matchesTeam2Name = Boolean(m.team_2_name?.toLowerCase().includes(query));
+
+        if (!matchesPlayer && !matchesGroupName && !matchesTeam1Name && !matchesTeam2Name) {
+          return false;
+        }
       }
 
       return true;
