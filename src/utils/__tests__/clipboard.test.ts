@@ -490,6 +490,36 @@ describe('clipboard utils', () => {
       expect(output).toContain('- Отбор 1 vs Отбор 2');
       expect(output).toContain('Почива: Отбор 3');
     });
+
+    it('formats multi-group schedule with byes in each group correctly', () => {
+      const schedule: TournamentMatch[] = [
+        {
+          id: 'm-ga-r1',
+          groupId: 'group-A',
+          groupName: 'Група А',
+          round: 1,
+          team1: { id: 't1', name: 'Отбор 1', players: [{ id: 'p1', name: 'Иван' }] },
+          team2: { id: 't2', name: 'Отбор 2', players: [{ id: 'p2', name: 'Петър' }] },
+          byeTeam: { id: 't3', name: 'Отбор 3', players: [{ id: 'p3', name: 'Георги' }] },
+        },
+        {
+          id: 'm-gb-r1',
+          groupId: 'group-B',
+          groupName: 'Група Б',
+          round: 1,
+          team1: { id: 't4', name: 'Отбор 4', players: [{ id: 'p4', name: 'Димитър' }] },
+          team2: { id: 't5', name: 'Отбор 5', players: [{ id: 'p5', name: 'Стоян' }] },
+          byeTeam: { id: 't6', name: 'Отбор 6', players: [{ id: 'p6', name: 'Николай' }] },
+        },
+      ];
+
+      const output = formatScheduleForClipboard(schedule);
+
+      expect(output).toContain('📌 Група А:');
+      expect(output).toContain('Почива: Отбор 3 (Георги)');
+      expect(output).toContain('📌 Група Б:');
+      expect(output).toContain('Почива: Отбор 6 (Николай)');
+    });
   });
 });
 
