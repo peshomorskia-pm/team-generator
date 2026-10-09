@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import type { AlertNotification } from '../types';
+import type { AlertNotification, TournamentMatch } from '../types';
 import type { PlayerRow } from '../types/database.types';
 import type { MatchDetail, MatchFormData, MatchFormat, MatchPlayerDetail } from '../types/matches';
 import { calculateMatchElo } from '../utils/elo';
@@ -15,6 +15,10 @@ export interface UseMatchesReturn {
   createMatch: (data: MatchFormData) => Promise<boolean>;
   updateMatch: (id: string, data: MatchFormData) => Promise<void>;
   deleteMatch: (id: string) => Promise<void>;
+  bulkCreateMatches: (
+    schedule: TournamentMatch[],
+    format: 'singles' | 'doubles'
+  ) => Promise<{ count: number; error: Error | null }>;
   clearAlert: () => void;
 }
 
@@ -561,6 +565,116 @@ export function useMatches(): UseMatchesReturn {
     [matches, syncRatingsAndStats]
   );
 
+  const bulkCreateMatches = useCallback(
+    async (
+      schedule: TournamentMatch[],
+      format: 'singles' | 'doubles'
+    ): Promise<{ count: number; error: Error | null }> => {
+      if (!schedule || schedule.length === 0) {
+        return { count: 0, error: null };
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        if (!isSupabaseConfigured()) {
+          const msg = 'Supabase не е конфигуриран.';
+          setError(msg);
+          setAlert({ type: 'error', message: msg });
+          return { count: 0, error: new Error(msg) };
+        }
+
+        const matchRows: {
+          id: string;
+          match_format: 'singles' | 'doubles';
+          team_1_score: null;
+          team_2_score: null;
+          played_at: string;
+        }[] = [];
+
+        const matchPlayerRows: {
+          match_id: string;
+          team_side: 'team_1' | 'team_2';
+          player_id: string | null;
+          guest_name: string | null;
+        }[] = [];
+
+        const playedAt = new Date().toISOString();
+
+        for (const item of schedule) {
+          const matchId = crypto.randomUUID();
+
+          matchRows.push({
+            id: matchId,
+            match_format: format,
+            team_1_score: null,
+            team_2_score: null,
+            played_at: playedAt,
+          });
+
+          for (const p of item.team1.players) {
+            const isGuest = Boolean(
+              (p as { is_guest?: boolean }).is_guest ||
+              (p as { source?: string }).source === 'guest' ||
+              !p.id
+            );
+            matchPlayerRows.push({
+              match_id: matchId,
+              team_side: 'team_1',
+              player_id: isGuest ? null : p.id,
+              guest_name: isGuest ? p.name : null,
+            });
+          }
+
+          for (const p of item.team2.players) {
+            const isGuest = Boolean(
+              (p as { is_guest?: boolean }).is_guest ||
+              (p as { source?: string }).source === 'guest' ||
+              !p.id
+            );
+            matchPlayerRows.push({
+              match_id: matchId,
+              team_side: 'team_2',
+              player_id: isGuest ? null : p.id,
+              guest_name: isGuest ? p.name : null,
+            });
+          }
+        }
+
+        const { error: matchesError } = await supabase.from('matches').insert(matchRows);
+        if (matchesError) {
+          throw matchesError;
+        }
+
+        if (matchPlayerRows.length > 0) {
+          const { error: playersError } = await supabase.from('match_players').insert(matchPlayerRows);
+          if (playersError) {
+            try {
+              const matchIds = matchRows.map((m) => m.id);
+              await supabase.from('matches').delete().in('id', matchIds);
+            } catch {
+              // Best-effort compensation rollback
+            }
+            throw playersError;
+          }
+        }
+
+        await fetchMatches();
+        return { count: matchRows.length, error: null };
+      } catch (err: unknown) {
+        const msg = getErrorMessage(err, 'Грешка при записване на турнирните мачове.');
+        const errObj = err instanceof Error ? err : new Error(msg);
+        setError(msg);
+        setAlert({ type: 'error', message: msg });
+        return { count: 0, error: errObj };
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fetchMatches]
+  );
+
   useEffect(() => {
     let isMounted = true;
 
@@ -625,6 +739,7 @@ export function useMatches(): UseMatchesReturn {
     createMatch,
     updateMatch,
     deleteMatch,
+    bulkCreateMatches,
     clearAlert,
   };
 }

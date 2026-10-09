@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Swords, Plus, Search, Loader2, Calendar } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
@@ -12,6 +13,12 @@ import type { MatchDetail, MatchFormData } from '../types/matches';
 
 export type StatusFilter = 'all' | 'completed' | 'upcoming';
 export type PeriodFilter = 'all' | 'this_week' | 'this_month' | 'custom';
+
+interface BulkCreateLocationState {
+  fromBulkCreate?: boolean;
+  matchCount?: number;
+  statusFilter?: StatusFilter;
+}
 
 const isWithinThisWeek = (dateStr: string): boolean => {
   const matchDate = new Date(dateStr);
@@ -41,6 +48,10 @@ const isWithinThisMonth = (dateStr: string): boolean => {
 };
 
 export const MatchesPage: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const locationState = location.state as BulkCreateLocationState | null;
+
   const {
     matches,
     loading: matchesLoading,
@@ -53,7 +64,27 @@ export const MatchesPage: React.FC = () => {
 
   const { players: availablePlayers } = usePlayers();
 
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(() => {
+    if (locationState?.fromBulkCreate || locationState?.statusFilter === 'upcoming') {
+      return 'upcoming';
+    }
+    return 'all';
+  });
+
+  const [bulkSuccessMessage, setBulkSuccessMessage] = useState<string | null>(() => {
+    if (locationState?.fromBulkCreate) {
+      const count = locationState.matchCount ?? 0;
+      return `Успешно създадени ${count} предстоящи мача от турнира!`;
+    }
+    return null;
+  });
+
+  useEffect(() => {
+    if (locationState?.fromBulkCreate) {
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [locationState, location.pathname, navigate]);
+
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
@@ -151,6 +182,17 @@ export const MatchesPage: React.FC = () => {
           <span>Нов мач</span>
         </Button>
       </div>
+
+      {/* Bulk Creation Success Alert */}
+      {bulkSuccessMessage && (
+        <div className="mb-6">
+          <Alert
+            type="success"
+            message={bulkSuccessMessage}
+            onDismiss={() => setBulkSuccessMessage(null)}
+          />
+        </div>
+      )}
 
       {/* Alert Notification */}
       {alert && (

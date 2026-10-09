@@ -3,6 +3,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useMatches } from '../useMatches';
 import * as supabaseModule from '../../lib/supabase';
 import type { MatchDetail, MatchFormData } from '../../types/matches';
+import type { TournamentMatch } from '../../types';
 
 const mockFrom = vi.fn();
 
@@ -1211,6 +1212,302 @@ describe('useMatches hook', () => {
       });
       expect(playerUpdateEqMock).toHaveBeenCalledWith('id', 'p-1');
       expect(playerUpdateEqMock).toHaveBeenCalledWith('id', 'p-2');
+    });
+  });
+
+  describe('bulkCreateMatches', () => {
+    it('returns { count: 0, error: null } when schedule is empty', async () => {
+      const orderMock = vi.fn().mockResolvedValue({ data: [], error: null });
+      const selectMock = vi.fn().mockReturnValue({ order: orderMock });
+      mockFrom.mockReturnValue({ select: selectMock });
+
+      const { result } = renderHook(() => useMatches());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      const res = await result.current.bulkCreateMatches([], 'singles');
+      expect(res).toEqual({ count: 0, error: null });
+    });
+
+    it('successfully inserts matches and match_players with correct payload mappings', async () => {
+      const uuidSpy = vi
+        .spyOn(crypto, 'randomUUID')
+        .mockReturnValueOnce('uuid-match-1' as `${string}-${string}-${string}-${string}-${string}`)
+        .mockReturnValueOnce('uuid-match-2' as `${string}-${string}-${string}-${string}-${string}`);
+
+      const orderMock = vi.fn().mockResolvedValue({ data: [], error: null });
+      const initialSelect = vi.fn().mockReturnValue({ order: orderMock });
+
+      const matchesInsertMock = vi.fn().mockResolvedValue({ error: null });
+      const matchPlayersInsertMock = vi.fn().mockResolvedValue({ error: null });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'matches') {
+          return {
+            select: initialSelect,
+            insert: matchesInsertMock,
+          };
+        }
+        if (table === 'match_players') {
+          return {
+            insert: matchPlayersInsertMock,
+          };
+        }
+        return {};
+      });
+
+      const schedule: TournamentMatch[] = [
+        {
+          id: 'match-1',
+          groupId: 'group-0',
+          groupName: 'Група А',
+          round: 1,
+          team1: {
+            id: 't-1',
+            name: 'Отбор 1',
+            players: [{ id: 'player-1', name: 'Иван Иванов' }],
+          },
+          team2: {
+            id: 't-2',
+            name: 'Отбор 2',
+            players: [
+              {
+                id: 'guest-1',
+                name: 'Петър Гост',
+                is_guest: true,
+              } as unknown as { id: string; name: string },
+            ],
+          },
+        },
+        {
+          id: 'match-2',
+          groupId: 'group-0',
+          groupName: 'Група А',
+          round: 2,
+          team1: {
+            id: 't-3',
+            name: 'Отбор 3',
+            players: [
+              { id: 'player-2', name: 'Георги' },
+              { id: 'player-3', name: 'Димитър' },
+            ],
+          },
+          team2: {
+            id: 't-4',
+            name: 'Отбор 4',
+            players: [
+              { id: 'player-4', name: 'Стоян' },
+              { id: 'guest-2', name: 'Никола Гост', source: 'guest' } as unknown as { id: string; name: string },
+            ],
+          },
+        },
+      ];
+
+      const { result } = renderHook(() => useMatches());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      let response: { count: number; error: Error | null } | undefined;
+      await act(async () => {
+        response = await result.current.bulkCreateMatches(schedule, 'singles');
+      });
+
+      expect(response).toEqual({ count: 2, error: null });
+
+      // 1. Matches insert payload
+      expect(matchesInsertMock).toHaveBeenCalledTimes(1);
+      const insertedMatches = matchesInsertMock.mock.calls[0][0];
+      expect(insertedMatches).toHaveLength(2);
+      expect(insertedMatches[0]).toEqual({
+        id: 'uuid-match-1',
+        match_format: 'singles',
+        team_1_score: null,
+        team_2_score: null,
+        played_at: expect.any(String),
+      });
+      expect(insertedMatches[1]).toEqual({
+        id: 'uuid-match-2',
+        match_format: 'singles',
+        team_1_score: null,
+        team_2_score: null,
+        played_at: expect.any(String),
+      });
+
+      // 2. Match players insert payload
+      expect(matchPlayersInsertMock).toHaveBeenCalledTimes(1);
+      const insertedPlayers = matchPlayersInsertMock.mock.calls[0][0];
+      expect(insertedPlayers).toHaveLength(6);
+
+      // Match 1 - Team 1 (registered)
+      expect(insertedPlayers[0]).toEqual({
+        match_id: 'uuid-match-1',
+        team_side: 'team_1',
+        player_id: 'player-1',
+        guest_name: null,
+      });
+
+      // Match 1 - Team 2 (guest with is_guest: true)
+      expect(insertedPlayers[1]).toEqual({
+        match_id: 'uuid-match-1',
+        team_side: 'team_2',
+        player_id: null,
+        guest_name: 'Петър Гост',
+      });
+
+      // Match 2 - Team 1 (registered player 2 and player 3)
+      expect(insertedPlayers[2]).toEqual({
+        match_id: 'uuid-match-2',
+        team_side: 'team_1',
+        player_id: 'player-2',
+        guest_name: null,
+      });
+      expect(insertedPlayers[3]).toEqual({
+        match_id: 'uuid-match-2',
+        team_side: 'team_1',
+        player_id: 'player-3',
+        guest_name: null,
+      });
+
+      // Match 2 - Team 2 (registered player 4 and guest with source: 'guest')
+      expect(insertedPlayers[4]).toEqual({
+        match_id: 'uuid-match-2',
+        team_side: 'team_2',
+        player_id: 'player-4',
+        guest_name: null,
+      });
+      expect(insertedPlayers[5]).toEqual({
+        match_id: 'uuid-match-2',
+        team_side: 'team_2',
+        player_id: null,
+        guest_name: 'Никола Гост',
+      });
+
+      // 3. Verifies fetchMatches was triggered
+      expect(initialSelect).toHaveBeenCalled();
+
+      uuidSpy.mockRestore();
+    });
+
+    it('handles error when matches insert fails', async () => {
+      const orderMock = vi.fn().mockResolvedValue({ data: [], error: null });
+      const initialSelect = vi.fn().mockReturnValue({ order: orderMock });
+
+      const matchesInsertMock = vi.fn().mockResolvedValue({ error: new Error('DB write failure') });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'matches') {
+          return {
+            select: initialSelect,
+            insert: matchesInsertMock,
+          };
+        }
+        return {};
+      });
+
+      const schedule: TournamentMatch[] = [
+        {
+          id: 'match-1',
+          groupId: 'group-0',
+          groupName: 'Група А',
+          round: 1,
+          team1: { id: 't-1', name: 'Отбор 1', players: [{ id: 'p-1', name: 'Играч 1' }] },
+          team2: { id: 't-2', name: 'Отбор 2', players: [{ id: 'p-2', name: 'Играч 2' }] },
+        },
+      ];
+
+      const { result } = renderHook(() => useMatches());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      let res: { count: number; error: Error | null } | undefined;
+      await act(async () => {
+        res = await result.current.bulkCreateMatches(schedule, 'singles');
+      });
+
+      expect(res?.count).toBe(0);
+      expect(res?.error?.message).toBe('DB write failure');
+      expect(result.current.error).toBe('DB write failure');
+      expect(result.current.alert).toEqual({
+        type: 'error',
+        message: 'DB write failure',
+      });
+    });
+
+    it('executes compensation rollback when match_players insert fails', async () => {
+      vi.spyOn(crypto, 'randomUUID').mockReturnValue('rollback-uuid' as `${string}-${string}-${string}-${string}-${string}`);
+
+      const orderMock = vi.fn().mockResolvedValue({ data: [], error: null });
+      const initialSelect = vi.fn().mockReturnValue({ order: orderMock });
+
+      const matchesInsertMock = vi.fn().mockResolvedValue({ error: null });
+      const matchPlayersInsertMock = vi.fn().mockResolvedValue({ error: new Error('FK constraint violation') });
+
+      const deleteInMock = vi.fn().mockResolvedValue({ error: null });
+      const deleteMock = vi.fn().mockReturnValue({ in: deleteInMock });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'matches') {
+          return {
+            select: initialSelect,
+            insert: matchesInsertMock,
+            delete: deleteMock,
+          };
+        }
+        if (table === 'match_players') {
+          return {
+            insert: matchPlayersInsertMock,
+          };
+        }
+        return {};
+      });
+
+      const schedule: TournamentMatch[] = [
+        {
+          id: 'match-1',
+          groupId: 'group-0',
+          groupName: 'Група А',
+          round: 1,
+          team1: { id: 't-1', name: 'Отбор 1', players: [{ id: 'p-1', name: 'Играч 1' }] },
+          team2: { id: 't-2', name: 'Отбор 2', players: [{ id: 'p-2', name: 'Играч 2' }] },
+        },
+      ];
+
+      const { result } = renderHook(() => useMatches());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      let res: { count: number; error: Error | null } | undefined;
+      await act(async () => {
+        res = await result.current.bulkCreateMatches(schedule, 'singles');
+      });
+
+      expect(res?.count).toBe(0);
+      expect(res?.error?.message).toBe('FK constraint violation');
+
+      // Verify compensation rollback deleted created match
+      expect(deleteMock).toHaveBeenCalledTimes(1);
+      expect(deleteInMock).toHaveBeenCalledWith('id', ['rollback-uuid']);
+    });
+
+    it('returns error when Supabase is not configured', async () => {
+      vi.mocked(supabaseModule.isSupabaseConfigured).mockReturnValue(false);
+
+      const { result } = renderHook(() => useMatches());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      const schedule: TournamentMatch[] = [
+        {
+          id: 'match-1',
+          groupId: 'group-0',
+          groupName: 'Група А',
+          round: 1,
+          team1: { id: 't-1', name: 'Отбор 1', players: [{ id: 'p-1', name: 'Играч 1' }] },
+          team2: { id: 't-2', name: 'Отбор 2', players: [{ id: 'p-2', name: 'Играч 2' }] },
+        },
+      ];
+
+      let res: { count: number; error: Error | null } | undefined;
+      await act(async () => {
+        res = await result.current.bulkCreateMatches(schedule, 'singles');
+      });
+      expect(res?.count).toBe(0);
+      expect(res?.error?.message).toBe('Supabase не е конфигуриран.');
     });
   });
 });
