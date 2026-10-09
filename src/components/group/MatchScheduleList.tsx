@@ -1,20 +1,44 @@
-import React from 'react';
-import { Calendar, RotateCcw } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Calendar, RotateCcw, Copy, Check } from 'lucide-react';
 import type { TournamentMatch } from '../../types';
+import { copyTextToClipboard, formatScheduleForClipboard } from '../../utils/clipboard';
 
 export interface MatchScheduleListProps {
   schedule: TournamentMatch[];
   onReset?: () => void;
   onClear?: () => void;
-  onRegenerate?: () => void;
 }
 
 export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
   schedule,
   onReset,
   onClear,
-  onRegenerate,
 }) => {
+  const [isCopied, setIsCopied] = useState(false);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleCopy = useCallback(async () => {
+    const textToCopy = formatScheduleForClipboard(schedule);
+    const success = await copyTextToClipboard(textToCopy);
+    if (success) {
+      setIsCopied(true);
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+      copyTimeoutRef.current = setTimeout(() => {
+        setIsCopied(false);
+      }, 2000);
+    }
+  }, [schedule]);
+
   const handleReset = onReset || onClear;
 
   if (!schedule || schedule.length === 0) {
@@ -34,19 +58,30 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
         </h2>
 
         <div className="flex flex-wrap items-center gap-2">
-          {onRegenerate && (
-            <button
-              type="button"
-              id="regenerateScheduleBtn"
-              onClick={onRegenerate}
-              title="Генерирай нова програма"
-              aria-label="Нова програма"
-              className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium flex items-center bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 transition-colors cursor-pointer"
-            >
-              <Calendar className="w-4 h-4 mr-1 text-indigo-500" />
-              <span>Нова програма</span>
-            </button>
-          )}
+          <button
+            type="button"
+            id="copyScheduleBtn"
+            onClick={handleCopy}
+            title={isCopied ? 'Копирано!' : 'Копирай програмата'}
+            aria-label={isCopied ? 'Копирано!' : 'Копирай програмата'}
+            className={`text-sm font-medium flex items-center px-3 py-1.5 rounded-lg shadow-sm border transition-colors cursor-pointer ${
+              isCopied
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
+                : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300'
+            }`}
+          >
+            {isCopied ? (
+              <>
+                <Check className="w-4 h-4 mr-1 text-emerald-500" />
+                <span>Копирано!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-4 h-4 mr-1 text-indigo-500" />
+                <span>Копирай програмата</span>
+              </>
+            )}
+          </button>
 
           {handleReset && (
             <button

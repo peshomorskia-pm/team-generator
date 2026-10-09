@@ -232,7 +232,6 @@ export const GeneratorPage: React.FC = () => {
             <MatchScheduleList
               schedule={schedule}
               onReset={resetSchedule}
-              onRegenerate={generateSchedule}
             />
           )}
         </>

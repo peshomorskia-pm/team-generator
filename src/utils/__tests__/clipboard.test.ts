@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { copyTextToClipboard, formatTeamsForClipboard, formatGroupsForClipboard } from '../clipboard';
-import type { Team, TournamentGroup } from '../../types';
+import {
+  copyTextToClipboard,
+  formatTeamsForClipboard,
+  formatGroupsForClipboard,
+  formatScheduleForClipboard,
+} from '../clipboard';
+import type { Team, TournamentGroup, TournamentMatch } from '../../types';
 
 describe('clipboard utils', () => {
   describe('copyTextToClipboard', () => {
@@ -309,7 +314,7 @@ describe('clipboard utils', () => {
       expect(text).toContain('- Отбор 3: Георги (★ 1600)');
     });
 
-    it('appends match schedule with rounds and byes to groups clipboard text', () => {
+    it('appends match schedule with rounds, byes, and player names to groups clipboard text', () => {
       const dummyGroups: TournamentGroup[] = [
         {
           id: 'group-0',
@@ -322,7 +327,7 @@ describe('clipboard utils', () => {
         },
       ];
 
-      const schedule = [
+      const schedule: TournamentMatch[] = [
         {
           id: 'match-group-0-r1-m1',
           groupId: 'group-0',
@@ -337,20 +342,69 @@ describe('clipboard utils', () => {
       const text = formatGroupsForClipboard(dummyGroups, 'tennis', 'singles', schedule);
       expect(text).toContain('📅 Програма на срещите:');
       expect(text).toContain('Кръг 1:');
-      expect(text).toContain('- Отбор 2 vs Отбор 3');
-      expect(text).toContain('Почива: Отбор 1');
+      expect(text).toContain('- Отбор 2 (Петър) vs Отбор 3 (Георги)');
+      expect(text).toContain('Почива: Отбор 1 (Иван)');
     });
   });
 
   describe('formatTeamsForClipboard with schedule', () => {
-    it('appends round-robin schedule to teams clipboard text', () => {
+    it('appends round-robin schedule with player names to teams clipboard text', () => {
       const teams: Team[] = [
-        { id: 't1', name: 'Отбор 1', players: [{ id: 'p1', name: 'Иван' }] },
-        { id: 't2', name: 'Отбор 2', players: [{ id: 'p2', name: 'Петър' }] },
-        { id: 't3', name: 'Отбор 3', players: [{ id: 'p3', name: 'Георги' }] },
+        {
+          id: 't1',
+          name: 'Отбор 1',
+          players: [
+            { id: 'p1', name: 'Преси' },
+            { id: 'p2', name: 'Иван' },
+          ],
+        },
+        {
+          id: 't2',
+          name: 'Отбор 2',
+          players: [
+            { id: 'p3', name: 'Иван' },
+            { id: 'p4', name: 'Петър' },
+          ],
+        },
+        {
+          id: 't3',
+          name: 'Отбор 3',
+          players: [
+            { id: 'p5', name: 'Георги' },
+            { id: 'p6', name: 'Стоян' },
+          ],
+        },
       ];
 
-      const schedule = [
+      const schedule: TournamentMatch[] = [
+        {
+          id: 'match-group-0-r1-m1',
+          groupId: 'group-0',
+          groupName: 'Група А',
+          round: 1,
+          team1: teams[1],
+          team2: teams[2],
+          byeTeam: teams[0],
+        },
+      ];
+
+      const text = formatTeamsForClipboard(teams, 'tennis', 'doubles', schedule);
+      expect(text).toContain('🎾 Тенис - По двойки');
+      expect(text).toContain('Отбор 1:');
+      expect(text).toContain('📅 Програма на срещите:');
+      expect(text).toContain('📌 Група А:');
+      expect(text).toContain('Кръг 1:');
+      expect(text).toContain('- Отбор 2 (Иван, Петър) vs Отбор 3 (Георги, Стоян)');
+      expect(text).toContain('Почива: Отбор 1 (Преси, Иван)');
+    });
+
+    it('falls back to team name if players array is empty', () => {
+      const teams: Team[] = [
+        { id: 't1', name: 'Отбор 1', players: [] },
+        { id: 't2', name: 'Отбор 2', players: [] },
+      ];
+
+      const schedule: TournamentMatch[] = [
         {
           id: 'match-group-0-r1-m1',
           groupId: 'group-0',
@@ -358,18 +412,83 @@ describe('clipboard utils', () => {
           round: 1,
           team1: teams[0],
           team2: teams[1],
-          byeTeam: teams[2],
         },
       ];
 
-      const text = formatTeamsForClipboard(teams, 'tennis', 'singles', schedule);
-      expect(text).toContain('🎾 Тенис - Поединично');
-      expect(text).toContain('Отбор 1:');
-      expect(text).toContain('📅 Програма на срещите:');
-      expect(text).toContain('📌 Група А:');
-      expect(text).toContain('Кръг 1:');
+      const text = formatTeamsForClipboard(teams, 'tennis', 'doubles', schedule);
       expect(text).toContain('- Отбор 1 vs Отбор 2');
-      expect(text).toContain('Почива: Отбор 3');
+    });
+  });
+
+  describe('formatScheduleForClipboard', () => {
+    it('returns empty string when schedule is empty', () => {
+      expect(formatScheduleForClipboard([])).toBe('');
+    });
+
+    it('formats round-robin schedule with player names for matches and byes', () => {
+      const schedule: TournamentMatch[] = [
+        {
+          id: 'match-group-0-r1-m1',
+          groupId: 'group-0',
+          groupName: 'Група А',
+          round: 1,
+          team1: {
+            id: 't2',
+            name: 'Отбор 2',
+            players: [
+              { id: 'p3', name: 'Данков' },
+              { id: 'p4', name: 'Йов' },
+            ],
+          },
+          team2: {
+            id: 't3',
+            name: 'Отбор 3',
+            players: [
+              { id: 'p5', name: 'Бамзе' },
+              { id: 'p6', name: 'Ивайло' },
+            ],
+          },
+          byeTeam: {
+            id: 't1',
+            name: 'Отбор 1',
+            players: [
+              { id: 'p1', name: 'Преси' },
+              { id: 'p2', name: 'Иван' },
+            ],
+          },
+        },
+      ];
+
+      const output = formatScheduleForClipboard(schedule);
+
+      expect(output).toBe(
+        [
+          '📅 Програма на срещите:',
+          '📌 Група А:',
+          '  Кръг 1:',
+          '    - Отбор 2 (Данков, Йов) vs Отбор 3 (Бамзе, Ивайло)',
+          '    Почива: Отбор 1 (Преси, Иван)',
+        ].join('\n')
+      );
+    });
+
+    it('falls back to team name when team has no players in formatScheduleForClipboard', () => {
+      const schedule: TournamentMatch[] = [
+        {
+          id: 'match-group-0-r1-m1',
+          groupId: 'group-0',
+          groupName: 'Група А',
+          round: 1,
+          team1: { id: 't1', name: 'Отбор 1', players: [] },
+          team2: { id: 't2', name: 'Отбор 2', players: [] },
+          byeTeam: { id: 't3', name: 'Отбор 3', players: [] },
+        },
+      ];
+
+      const output = formatScheduleForClipboard(schedule);
+
+      expect(output).toContain('- Отбор 1 vs Отбор 2');
+      expect(output).toContain('Почива: Отбор 3');
     });
   });
 });

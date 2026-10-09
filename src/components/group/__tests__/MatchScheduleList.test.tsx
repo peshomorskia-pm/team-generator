@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MatchScheduleList } from '../MatchScheduleList';
 import type { TournamentMatch, Team } from '../../../types';
+import * as clipboardModule from '../../../utils/clipboard';
 
 function createMockTeam(id: string, name: string, rating?: number, playerName = 'Играч'): Team {
   return {
@@ -122,8 +123,7 @@ describe('MatchScheduleList Component', () => {
     expect(onReset).toHaveBeenCalledTimes(1);
   });
 
-  it('invokes onRegenerate when "Нова програма" button is clicked', () => {
-    const onRegenerate = vi.fn();
+  it('does not render "Нова програма" button', () => {
     const team1 = createMockTeam('t1', 'Отбор 1');
     const team2 = createMockTeam('t2', 'Отбор 2');
 
@@ -138,12 +138,51 @@ describe('MatchScheduleList Component', () => {
       },
     ];
 
-    render(<MatchScheduleList schedule={schedule} onRegenerate={onRegenerate} />);
+    render(<MatchScheduleList schedule={schedule} />);
+    expect(screen.queryByRole('button', { name: /нова програма/i })).not.toBeInTheDocument();
+  });
 
-    const regenBtn = screen.getByRole('button', { name: /нова програма/i });
-    expect(regenBtn).toBeInTheDocument();
+  it('renders "Копирай програмата" button, triggers copy, and temporarily shows "Копирано!"', async () => {
+    const copySpy = vi.spyOn(clipboardModule, 'copyTextToClipboard').mockResolvedValue(true);
+    vi.useFakeTimers();
 
-    fireEvent.click(regenBtn);
-    expect(onRegenerate).toHaveBeenCalledTimes(1);
+    const team1 = createMockTeam('t1', 'Отбор 1', 1200, 'Иван');
+    const team2 = createMockTeam('t2', 'Отбор 2', 1300, 'Петър');
+
+    const schedule: TournamentMatch[] = [
+      {
+        id: 'match-group-0-r1-m1',
+        groupId: 'group-0',
+        groupName: 'Група А',
+        round: 1,
+        team1,
+        team2,
+      },
+    ];
+
+    render(<MatchScheduleList schedule={schedule} />);
+
+    const copyBtn = screen.getByRole('button', { name: /копирай програмата/i });
+    expect(copyBtn).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(copyBtn);
+    });
+
+    expect(copySpy).toHaveBeenCalledTimes(1);
+    expect(copySpy).toHaveBeenCalledWith(expect.stringContaining('📅 Програма на срещите:'));
+
+    // Status changes to "Копирано!"
+    expect(screen.getByRole('button', { name: /копирано!/i })).toBeInTheDocument();
+
+    // Advance 2 seconds
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    // Reverts back to "Копирай програмата"
+    expect(screen.getByRole('button', { name: /копирай програмата/i })).toBeInTheDocument();
+
+    vi.useRealTimers();
   });
 });

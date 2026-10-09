@@ -70,15 +70,31 @@ export async function copyTextToClipboard(text: string): Promise<boolean> {
 }
 
 /**
- * Helper to append round-robin match schedule lines to plain text.
+ * Formats a team name with player names in parentheses if available.
+ * E.g., 'Отбор 2 (Данков, Йов)' or 'Отбор 1' if no players.
  */
-function appendScheduleLines(lines: string[], schedule: TournamentMatch[]): void {
+function formatTeamWithPlayers(team: Team): string {
+  if (team.players && team.players.length > 0) {
+    const playerNames = team.players
+      .map((p) => p.name)
+      .filter(Boolean)
+      .join(', ');
+    if (playerNames) {
+      return `${team.name} (${playerNames})`;
+    }
+  }
+  return team.name;
+}
+
+/**
+ * Builds round-robin match schedule lines for plain text clipboard export.
+ */
+function buildScheduleLines(schedule: TournamentMatch[]): string[] {
   if (!schedule || schedule.length === 0) {
-    return;
+    return [];
   }
 
-  lines.push('');
-  lines.push('📅 Програма на срещите:');
+  const lines: string[] = ['📅 Програма на срещите:'];
 
   const groupIds: string[] = [];
   schedule.forEach((m) => {
@@ -106,14 +122,39 @@ function appendScheduleLines(lines: string[], schedule: TournamentMatch[]): void
       const roundMatches = groupMatches.filter((m) => m.round === rNum);
       lines.push(`  Кръг ${rNum}:`);
       roundMatches.forEach((m) => {
-        lines.push(`    - ${m.team1.name} vs ${m.team2.name}`);
+        lines.push(`    - ${formatTeamWithPlayers(m.team1)} vs ${formatTeamWithPlayers(m.team2)}`);
       });
       const bye = roundMatches.find((m) => m.byeTeam)?.byeTeam;
       if (bye) {
-        lines.push(`    Почива: ${bye.name}`);
+        lines.push(`    Почива: ${formatTeamWithPlayers(bye)}`);
       }
     });
   });
+
+  return lines;
+}
+
+/**
+ * Formats tournament match schedule into clean, human-readable plain text
+ * suitable for chat apps (Viber, WhatsApp) and text editors.
+ *
+ * @param schedule - Array of tournament matches
+ * @returns Cleanly formatted string
+ */
+export function formatScheduleForClipboard(schedule: TournamentMatch[]): string {
+  const lines = buildScheduleLines(schedule);
+  return lines.length > 0 ? lines.join('\n') : '';
+}
+
+/**
+ * Helper to append round-robin match schedule lines to plain text.
+ */
+function appendScheduleLines(lines: string[], schedule: TournamentMatch[]): void {
+  const scheduleLines = buildScheduleLines(schedule);
+  if (scheduleLines.length > 0) {
+    lines.push('');
+    lines.push(...scheduleLines);
+  }
 }
 
 /**
