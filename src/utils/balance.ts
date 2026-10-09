@@ -57,7 +57,8 @@ export function balanceTeams(
   }
 
   const formatStr = typeof format === 'string' ? format : undefined;
-  const maxCapacity = Math.ceil(players.length / numTeams);
+  const baseSize = Math.floor(players.length / numTeams);
+  const remainder = players.length % numTeams;
 
   // Sort players descending by rating (default rating 0 if undefined).
   // When ratings are equal, preserve the relative order from the input array
@@ -72,9 +73,16 @@ export function balanceTeams(
   });
 
   // Distribute players greedily to eligible candidate teams with lowest total rating,
-  // respecting maxCapacity to guarantee strict sizing and prevent uneven teams (e.g. 3v1).
+  // respecting dynamic capacity quota to guarantee max(size) - min(size) <= 1.
   for (const player of sortedPlayers) {
-    const eligibleTeams = teams.filter((t) => t.players.length < maxCapacity);
+    const eligibleTeams = teams.filter((t) => {
+      if (t.players.length < baseSize) return true;
+      if (t.players.length === baseSize) {
+        const expandedCount = teams.filter((team) => team.players.length === baseSize + 1).length;
+        return expandedCount < remainder;
+      }
+      return false;
+    });
 
     let minRating = Infinity;
     for (const team of eligibleTeams) {

@@ -226,7 +226,11 @@ export function useTeamGenerator() {
           : null;
 
       const effectiveBalance =
-        typeof balanceByRatingParam === 'boolean' ? balanceByRatingParam : balanceByRating;
+        mode === 'generic'
+          ? false
+          : typeof balanceByRatingParam === 'boolean'
+            ? balanceByRatingParam
+            : balanceByRating;
 
       const hasNumTeams = effectiveNumTeams !== null && effectiveNumTeams > 0;
       const hasPpt = pptInt !== null && pptInt > 0;

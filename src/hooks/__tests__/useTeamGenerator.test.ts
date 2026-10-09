@@ -547,16 +547,16 @@ describe('useTeamGenerator', () => {
       expect((doublesRatings[0] ?? 0) + (doublesRatings[1] ?? 0)).toBe(totalDoubles);
     });
 
-    it('balances teams evenly by rating when playersPerTeam is specified', () => {
+    it('balances teams evenly by rating in tennis mode', () => {
       const { result } = renderHook(() => useTeamGenerator());
 
       act(() => {
-        result.current.setMode('generic');
+        result.current.setMode('tennis');
+        result.current.setFormat('doubles');
         result.current.toggleRegisteredPlayer({ id: 'p1', name: 'P1', rating: 1800 });
         result.current.toggleRegisteredPlayer({ id: 'p2', name: 'P2', rating: 1600 });
         result.current.toggleRegisteredPlayer({ id: 'p3', name: 'P3', rating: 1400 });
         result.current.toggleRegisteredPlayer({ id: 'p4', name: 'P4', rating: 1200 });
-        result.current.setPlayersPerTeam(2);
         result.current.setBalanceByRating(true);
       });
 
@@ -570,6 +570,32 @@ describe('useTeamGenerator', () => {
       // Perfect balance: 1800+1200=3000 and 1600+1400=3000
       expect(result.current.teams[0].totalRating).toBe(3000);
       expect(result.current.teams[1].totalRating).toBe(3000);
+    });
+
+    it('partitions 10 players with playersPerTeam = 3 into sizes [3, 3, 2, 2] in generic mode even if balanceByRating is true', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.setMode('tennis');
+        result.current.setBalanceByRating(true);
+        result.current.setMode('generic');
+        for (let i = 1; i <= 10; i++) {
+          result.current.toggleRegisteredPlayer({
+            id: `p-${i}`,
+            name: `Player ${i}`,
+            rating: i === 1 ? 5000 : 1000,
+          });
+        }
+        result.current.setPlayersPerTeam(3);
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(4);
+      const sizes = result.current.teams.map((t) => t.players.length).sort((a, b) => b - a);
+      expect(sizes).toEqual([3, 3, 2, 2]);
     });
 
     it('isolates ratings in generic mode ignoring format state even if playersPerTeam is set', () => {
