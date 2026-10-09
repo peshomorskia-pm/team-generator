@@ -11,6 +11,7 @@ export const TeamList = memo(function TeamList({
   onSaveAsMatch,
   format,
   mode = 'tennis',
+  onDrawGroups,
 }: TeamListProps) {
   if (teams.length === 0) {
     return null;
@@ -23,6 +24,16 @@ export const TeamList = memo(function TeamList({
       <div className="flex items-center justify-between mb-6 px-2">
         <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Резултати</h2>
         <div className="flex items-center gap-2">
+          {isTennisMode && teams.length >= 3 && onDrawGroups && (
+            <button
+              type="button"
+              id="drawGroupsBtn"
+              onClick={onDrawGroups}
+              className="text-sm text-indigo-700 dark:text-indigo-300 hover:text-indigo-900 dark:hover:text-indigo-100 font-semibold flex items-center bg-indigo-50 dark:bg-indigo-950/60 px-3 py-1.5 rounded-lg shadow-sm border border-indigo-200 dark:border-indigo-800 transition-colors cursor-pointer"
+            >
+              <span>🎲 Тегли жребий за групи</span>
+            </button>
+          )}
           {isTennisMode && teams.length === 2 && onSaveAsMatch && (
             <button
               type="button"

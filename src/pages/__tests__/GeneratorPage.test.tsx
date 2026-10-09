@@ -544,5 +544,74 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
     expect(screen.getByText(expectedTeamError)).toBeInTheDocument();
     expect(generateBtn).toBeDisabled();
   });
+
+  describe('Tournament groups draw integration', () => {
+    it('shows "🎲 Тегли жребий за групи" button in tennis mode with >= 3 teams and allows drawing and resetting groups', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      // Switch to singles
+      await user.click(screen.getByRole('button', { name: 'Поединично' }));
+
+      // Add 4 guests -> 4 teams
+      const guestInput = screen.getByPlaceholderText('напр. Иван, Петър, Георги');
+      await user.type(guestInput, 'А1, А2, А3, А4');
+      await user.click(screen.getByRole('button', { name: /добави/i }));
+
+      // Generate teams
+      await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+
+      // "Резултати" heading is visible
+      expect(screen.getByRole('heading', { level: 2, name: 'Резултати' })).toBeInTheDocument();
+
+      // "🎲 Тегли жребий за групи" button is visible
+      const drawBtn = screen.getByRole('button', { name: /тегли жребий за групи/i });
+      expect(drawBtn).toBeInTheDocument();
+
+      // Click to draw groups
+      await user.click(drawBtn);
+
+      // GroupList is mounted, showing "Турнирни групи"
+      expect(screen.getByRole('heading', { level: 2, name: 'Турнирни групи' })).toBeInTheDocument();
+      expect(screen.getByText('Група А')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /нов жребий/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /изчисти жребия/i })).toBeInTheDocument();
+
+      // Click "Изчисти жребия" to clear groups
+      await user.click(screen.getByRole('button', { name: /изчисти жребия/i }));
+
+      // Groups cleared, TeamList returned
+      expect(screen.queryByRole('heading', { level: 2, name: 'Турнирни групи' })).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 2, name: 'Резултати' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /тегли жребий за групи/i })).toBeInTheDocument();
+    });
+
+    it('does not display "🎲 Тегли жребий за групи" button when mode is generic even with >= 3 teams', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      // Switch to generic
+      await user.click(screen.getByRole('button', { name: '🎲 Универсален' }));
+
+      // Add 4 guests
+      const guestInput = screen.getByPlaceholderText('напр. Иван, Петър, Георги');
+      await user.type(guestInput, 'Г1, Г2, Г3, Г4');
+      await user.click(screen.getByRole('button', { name: /добави/i }));
+
+      // Number of teams = 3
+      const numTeamsInput = screen.getByLabelText(/брой отбори/i);
+      await user.clear(numTeamsInput);
+      await user.type(numTeamsInput, '3');
+
+      // Generate teams
+      await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+
+      // Results rendered
+      expect(screen.getByRole('heading', { level: 2, name: 'Резултати' })).toBeInTheDocument();
+
+      // Group draw button must NOT exist
+      expect(screen.queryByRole('button', { name: /тегли жребий за групи/i })).not.toBeInTheDocument();
+    });
+  });
 });
 

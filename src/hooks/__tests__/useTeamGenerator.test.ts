@@ -968,5 +968,151 @@ describe('useTeamGenerator', () => {
       expect(result.current.validationError).toBe('Броят играчи в отбор трябва да бъде поне 1.');
     });
   });
+
+  describe('tournament group draw lifecycle', () => {
+    it('initializes groups as empty array', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+      expect(result.current.groups).toEqual([]);
+    });
+
+    it('does not draw groups if mode is generic or teams length < 3', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.setMode('generic');
+        result.current.addGuest('P1, P2, P3, P4');
+        result.current.setNumberOfTeams(2);
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(2);
+
+      act(() => {
+        result.current.drawGroups();
+      });
+
+      expect(result.current.groups).toEqual([]);
+    });
+
+    it('draws groups when teams >= 3 and mode is tennis', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.setMode('tennis');
+        result.current.setFormat('singles');
+        result.current.addGuest('P1, P2, P3, P4, P5, P6');
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(6);
+
+      act(() => {
+        result.current.drawGroups();
+      });
+
+      expect(result.current.groups).toHaveLength(2);
+      expect(result.current.groups[0].name).toBe('Група А');
+      expect(result.current.groups[1].name).toBe('Група Б');
+      expect(result.current.groups[0].teams).toHaveLength(3);
+      expect(result.current.groups[1].teams).toHaveLength(3);
+
+      // Verify resetGroups / clearGroups
+      act(() => {
+        result.current.resetGroups();
+      });
+      expect(result.current.groups).toEqual([]);
+
+      // Draw again and clear with clearGroups alias
+      act(() => {
+        result.current.drawGroups();
+      });
+      expect(result.current.groups).toHaveLength(2);
+
+      act(() => {
+        result.current.clearGroups();
+      });
+      expect(result.current.groups).toEqual([]);
+    });
+
+    it('clears groups when pool changes or generateTeams is executed', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.setMode('tennis');
+        result.current.setFormat('singles');
+        result.current.addGuest('P1, P2, P3, P4, P5, P6');
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      act(() => {
+        result.current.drawGroups();
+      });
+
+      expect(result.current.groups).toHaveLength(2);
+
+      // Adding guest resets groups
+      act(() => {
+        result.current.addGuest('P7');
+      });
+      expect(result.current.groups).toEqual([]);
+
+      // Re-generate and draw
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      act(() => {
+        result.current.drawGroups();
+      });
+      expect(result.current.groups.length).toBeGreaterThan(0);
+
+      // Changing mode resets groups
+      act(() => {
+        result.current.setMode('generic');
+      });
+      expect(result.current.groups).toEqual([]);
+
+      // Re-generate in tennis and draw
+      act(() => {
+        result.current.setMode('tennis');
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      act(() => {
+        result.current.drawGroups();
+      });
+      expect(result.current.groups.length).toBeGreaterThan(0);
+
+      // Re-running generateTeams resets groups
+      act(() => {
+        result.current.generateTeams();
+      });
+      expect(result.current.groups).toEqual([]);
+
+      // Draw again, then clearPool resets groups
+      act(() => {
+        result.current.drawGroups();
+      });
+      expect(result.current.groups.length).toBeGreaterThan(0);
+
+      act(() => {
+        result.current.clearPool();
+      });
+      expect(result.current.groups).toEqual([]);
+    });
+  });
 });
+
 

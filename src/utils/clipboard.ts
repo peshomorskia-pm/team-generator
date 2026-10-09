@@ -1,4 +1,4 @@
-import { Team, GeneratorMode } from '../types';
+import { Team, GeneratorMode, TournamentGroup } from '../types';
 
 /**
  * Copies plain text to system clipboard using modern Clipboard API with
@@ -134,3 +134,53 @@ export function formatTeamsForClipboard(
 
   return lines.join('\n');
 }
+
+/**
+ * Formats tournament groups into clean, human-readable plain text
+ * suitable for chat apps (Viber, WhatsApp) and text editors.
+ *
+ * @param groups - Array of tournament groups
+ * @param mode - Generator mode ('tennis' | 'generic')
+ * @param format - Tennis format ('singles' | 'doubles')
+ * @returns Cleanly formatted string
+ */
+export function formatGroupsForClipboard(
+  groups: TournamentGroup[],
+  mode: GeneratorMode = 'tennis',
+  format?: 'singles' | 'doubles'
+): string {
+  if (!groups || groups.length === 0) {
+    return '';
+  }
+
+  const isTennis = mode === 'tennis';
+  const lines: string[] = ['🏆 Турнирни групи', ''];
+
+  groups.forEach((group, gIndex) => {
+    lines.push(`📌 ${group.name}:`);
+
+    group.teams.forEach((team) => {
+      const playerDescriptions = team.players
+        .map((p) => {
+          const r = isTennis
+            ? (format === 'singles' ? p.singles_rating : p.doubles_rating) ?? p.rating
+            : p.rating;
+          return r !== undefined && r !== null ? `${p.name} (★ ${r})` : p.name;
+        })
+        .join(', ');
+
+      if (playerDescriptions) {
+        lines.push(`  - ${team.name}: ${playerDescriptions}`);
+      } else {
+        lines.push(`  - ${team.name}`);
+      }
+    });
+
+    if (gIndex < groups.length - 1) {
+      lines.push('');
+    }
+  });
+
+  return lines.join('\n');
+}
+

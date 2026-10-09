@@ -5,6 +5,7 @@ import { Card } from '../components/ui/Card';
 import { Alert } from '../components/ui/Alert';
 import { TeamSettings } from '../components/team/TeamSettings';
 import { TeamList } from '../components/team/TeamList';
+import { GroupList } from '../components/group/GroupList';
 import { MatchModal, type MatchParticipant } from '../components/match/MatchModal';
 import { PlayerSelector } from '../components/generator/PlayerSelector';
 import { GuestInput } from '../components/generator/GuestInput';
@@ -42,6 +43,9 @@ export const GeneratorPage: React.FC = () => {
   const {
     activePool,
     teams,
+    groups,
+    drawGroups,
+    resetGroups,
     alert,
     isCopied,
     balanceByRating,
@@ -206,15 +210,26 @@ export const GeneratorPage: React.FC = () => {
       </div>
 
       {/* Results Section */}
-      <TeamList
-        teams={teams}
-        mode={mode}
-        onShuffleTeam={shuffleSingleTeam}
-        onCopy={copyResults}
-        isCopied={isCopied}
-        onSaveAsMatch={() => setIsMatchModalOpen(true)}
-        format={effectiveFormat}
-      />
+      {groups.length > 0 ? (
+        <GroupList
+          groups={groups}
+          onRedraw={drawGroups}
+          onReset={resetGroups}
+          mode={mode}
+          format={effectiveFormat}
+        />
+      ) : (
+        <TeamList
+          teams={teams}
+          mode={mode}
+          onShuffleTeam={shuffleSingleTeam}
+          onCopy={copyResults}
+          isCopied={isCopied}
+          onSaveAsMatch={() => setIsMatchModalOpen(true)}
+          format={effectiveFormat}
+          onDrawGroups={drawGroups}
+        />
+      )}
 
       {/* Match Modal Integration */}
       <MatchModal
