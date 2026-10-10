@@ -68,12 +68,12 @@ describe('TournamentsPage', () => {
     );
   };
 
-  it('renders header, total count badge, and + Нов турнир button', () => {
+  it('renders header, total count badge, and Нов турнир button', () => {
     renderComponent();
 
     expect(screen.getByRole('heading', { level: 1, name: /турнири/i })).toBeInTheDocument();
     expect(screen.getAllByText('3').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByRole('button', { name: /\+ нов турнир/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /нов турнир/i })).toBeInTheDocument();
   });
 
   it('renders stats summary row with total, in progress, draft, and completed counts', () => {
@@ -180,7 +180,7 @@ describe('TournamentsPage', () => {
 
     renderComponent();
 
-    fireEvent.click(screen.getByRole('button', { name: /\+ нов турнир/i }));
+    fireEvent.click(screen.getByRole('button', { name: /нов турнир/i }));
 
     expect(screen.getByRole('heading', { name: 'Нов турнир' })).toBeInTheDocument();
 

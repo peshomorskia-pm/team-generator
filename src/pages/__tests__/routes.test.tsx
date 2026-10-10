@@ -132,7 +132,7 @@ describe('App Route Smoke and Integration Tests', () => {
     renderAppRoute('/tournaments');
     expect(screen.getByRole('heading', { name: /турнири/i, level: 1 })).toBeInTheDocument();
     expect(
-      screen.getAllByRole('button', { name: /\+ нов турнир/i }).length
+      screen.getAllByRole('button', { name: /нов турнир/i }).length
     ).toBeGreaterThanOrEqual(1);
   });
 

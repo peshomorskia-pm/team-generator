@@ -107,7 +107,7 @@ export const TournamentsPage: React.FC = () => {
           className="flex items-center gap-2 self-start sm:self-auto shadow-sm"
         >
           <Plus className="w-4 h-4" />
-          <span>+ Нов турнир</span>
+          <span>Нов турнир</span>
         </Button>
       </div>
 
@@ -266,7 +266,7 @@ export const TournamentsPage: React.FC = () => {
             className="inline-flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            <span>+ Нов турнир</span>
+            <span>Нов турнир</span>
           </Button>
         </div>
       ) : filteredTournaments.length === 0 ? (
