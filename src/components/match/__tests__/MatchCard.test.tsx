@@ -208,4 +208,38 @@ describe('MatchCard Component', () => {
     expect(screen.getByText('Отбор 1')).toBeInTheDocument();
     expect(screen.getByText('Отбор 2')).toBeInTheDocument();
   });
+
+  it('renders round badge when round is provided and > 0', () => {
+    const matchWithRound: MatchDetail = {
+      ...sampleMatch,
+      round: 1,
+    };
+
+    render(<MatchCard match={matchWithRound} onEdit={vi.fn()} onDelete={vi.fn()} />);
+
+    expect(screen.getByText('Кръг 1')).toBeInTheDocument();
+  });
+
+  it('does not render round badge when round is null or undefined', () => {
+    const matchWithoutRound: MatchDetail = {
+      ...sampleMatch,
+      round: null,
+    };
+
+    render(<MatchCard match={matchWithoutRound} onEdit={vi.fn()} onDelete={vi.fn()} />);
+
+    expect(screen.queryByText(/Кръг/)).not.toBeInTheDocument();
+
+    const matchUndefinedRound: MatchDetail = {
+      ...sampleMatch,
+      round: undefined,
+    };
+
+    const { unmount } = render(
+      <MatchCard match={matchUndefinedRound} onEdit={vi.fn()} onDelete={vi.fn()} />
+    );
+
+    expect(screen.queryByText(/Кръг/)).not.toBeInTheDocument();
+    unmount();
+  });
 });

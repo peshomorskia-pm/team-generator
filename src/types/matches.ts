@@ -12,6 +12,7 @@ export interface MatchDetail extends MatchRow {
   team_1_name?: string | null;
   team_2_name?: string | null;
   group_name?: string | null;
+  round?: number | null;
 }
 
 export type MatchFormat = 'singles' | 'doubles';
@@ -26,4 +27,5 @@ export interface MatchFormData {
   team_1_name?: string | null;
   team_2_name?: string | null;
   group_name?: string | null;
+  round?: number | null;
 }

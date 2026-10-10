@@ -276,6 +276,7 @@ describe('useMatches hook', () => {
         team_1_name: 'Отбор 1',
         team_2_name: 'Отбор 2',
         group_name: null,
+        round: null,
       });
       expect(playersInsertMock).toHaveBeenCalledWith([
         {
@@ -361,6 +362,7 @@ describe('useMatches hook', () => {
         team_1_name: 'Отбор 1',
         team_2_name: 'Отбор 2',
         group_name: null,
+        round: null,
       });
       expect(result.current.matches[0].id).toBe('match-upcoming-future');
       expect(result.current.matches[0].team_1_score).toBeNull();
@@ -426,10 +428,75 @@ describe('useMatches hook', () => {
         team_1_name: 'Лъвове',
         team_2_name: 'Тигри',
         group_name: 'Група Б',
+        round: null,
       });
       expect(result.current.matches[0].team_1_name).toBe('Лъвове');
       expect(result.current.matches[0].team_2_name).toBe('Тигри');
       expect(result.current.matches[0].group_name).toBe('Група Б');
+    });
+
+    it('creates match with specified round number', async () => {
+      const orderMock = vi.fn().mockResolvedValue({ data: [], error: null });
+      const initialSelect = vi.fn().mockReturnValue({ order: orderMock });
+
+      const createdMatchRow = {
+        id: 'match-round-2',
+        team_1_score: 3,
+        team_2_score: 1,
+        played_at: '2026-10-04T15:00:00Z',
+        team_1_name: 'Отбор 1',
+        team_2_name: 'Отбор 2',
+        group_name: 'Група А',
+        round: 2,
+      };
+
+      const matchSingleMock = vi.fn().mockResolvedValue({ data: createdMatchRow, error: null });
+      const matchInsertSelect = vi.fn().mockReturnValue({ single: matchSingleMock });
+      const matchInsertMock = vi.fn().mockReturnValue({ select: matchInsertSelect });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'matches') {
+          return {
+            select: initialSelect,
+            insert: matchInsertMock,
+          };
+        }
+        if (table === 'match_players') {
+          return {
+            insert: vi.fn().mockReturnValue({ select: vi.fn().mockResolvedValue({ data: [], error: null }) }),
+          };
+        }
+        return {};
+      });
+
+      const { result } = renderHook(() => useMatches());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      const newMatchData: MatchFormData = {
+        team_1_score: 3,
+        team_2_score: 1,
+        played_at: '2026-10-04T15:00:00Z',
+        team_1_players: [],
+        team_2_players: [],
+        group_name: 'Група А',
+        round: 2,
+      };
+
+      await act(async () => {
+        await result.current.createMatch(newMatchData);
+      });
+
+      expect(matchInsertMock).toHaveBeenCalledWith({
+        match_format: 'singles',
+        team_1_score: 3,
+        team_2_score: 1,
+        played_at: '2026-10-04T15:00:00Z',
+        team_1_name: 'Отбор 1',
+        team_2_name: 'Отбор 2',
+        group_name: 'Група А',
+        round: 2,
+      });
+      expect(result.current.matches[0].round).toBe(2);
     });
 
     it('handles create match error when matches insert fails', async () => {
@@ -793,6 +860,69 @@ describe('useMatches hook', () => {
       expect(result.current.matches[0].team_1_name).toBe('Орли');
       expect(result.current.matches[0].team_2_name).toBe('Соколи');
       expect(result.current.matches[0].group_name).toBe('Група C');
+    });
+
+    it('updates match with specified round number', async () => {
+      const orderMock = vi.fn().mockResolvedValue({
+        data: [...sampleMatches],
+        error: null,
+      });
+      const initialSelect = vi.fn().mockReturnValue({ order: orderMock });
+
+      const updatedMatchRow = {
+        id: 'match-1',
+        team_1_score: 3,
+        team_2_score: 2,
+        played_at: '2026-10-02T19:00:00Z',
+        team_1_name: 'Отбор 1',
+        team_2_name: 'Отбор 2',
+        group_name: 'Група A',
+        round: 4,
+      };
+
+      const singleMock = vi.fn().mockResolvedValue({ data: updatedMatchRow, error: null });
+      const selectMock = vi.fn().mockReturnValue({ single: singleMock });
+      const eqMock = vi.fn().mockReturnValue({ select: selectMock });
+      const updateMock = vi.fn().mockReturnValue({ eq: eqMock });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'matches') {
+          return {
+            select: initialSelect,
+            update: updateMock,
+          };
+        }
+        if (table === 'match_players') {
+          return {
+            delete: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
+            insert: vi.fn().mockReturnValue({ select: vi.fn().mockResolvedValue({ data: [], error: null }) }),
+          };
+        }
+        return {};
+      });
+
+      const { result } = renderHook(() => useMatches());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      await act(async () => {
+        await result.current.updateMatch('match-1', {
+          team_1_score: 3,
+          team_2_score: 2,
+          played_at: '2026-10-02T19:00:00Z',
+          team_1_players: [],
+          team_2_players: [],
+          round: 4,
+        });
+      });
+
+      expect(updateMock).toHaveBeenCalledWith({
+        match_format: 'singles',
+        team_1_score: 3,
+        team_2_score: 2,
+        played_at: '2026-10-02T19:00:00Z',
+        round: 4,
+      });
+      expect(result.current.matches[0].round).toBe(4);
     });
 
     it('sets error on update when Supabase is not configured', async () => {
@@ -1464,6 +1594,7 @@ describe('useMatches hook', () => {
         team_1_name: 'Отбор 1',
         team_2_name: 'Отбор 2',
         group_name: 'Група А',
+        round: 1,
       });
       expect(insertedMatches[1]).toEqual({
         id: 'uuid-match-2',
@@ -1474,6 +1605,7 @@ describe('useMatches hook', () => {
         team_1_name: 'Отбор 3',
         team_2_name: 'Отбор 4',
         group_name: 'Група А',
+        round: 2,
       });
 
       // 2. Match players insert payload
