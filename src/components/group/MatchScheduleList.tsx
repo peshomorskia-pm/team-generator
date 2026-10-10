@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Calendar, RotateCcw, Copy, Check, Zap, Loader2 } from 'lucide-react';
-import type { TournamentMatch } from '../../types';
+import type { TournamentMatch, Team } from '../../types';
 import { copyTextToClipboard, formatScheduleForClipboard } from '../../utils/clipboard';
 
 export interface MatchScheduleListProps {
@@ -48,6 +48,8 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
   if (!schedule || schedule.length === 0) {
     return null;
   }
+
+  const hasMultipleGroups = new Set(schedule.map((m) => m.groupId)).size > 1;
 
   // Extract unique rounds sorted ascending
   const roundNumbers = Array.from(new Set(schedule.map((m) => m.round))).sort((a, b) => a - b);
@@ -138,7 +140,13 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
       <div className="space-y-6">
         {roundNumbers.map((roundNum) => {
           const roundMatches = schedule.filter((m) => m.round === roundNum);
-          const byeTeam = roundMatches.find((m) => m.byeTeam)?.byeTeam;
+          const byesMap = new Map<string, { team: Team; groupName: string }>();
+          roundMatches.forEach((m) => {
+            if (m.byeTeam && !byesMap.has(m.groupId)) {
+              byesMap.set(m.groupId, { team: m.byeTeam, groupName: m.groupName });
+            }
+          });
+          const byeEntries = Array.from(byesMap.values());
 
           return (
             <div
@@ -150,13 +158,19 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
                 <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100">
                   Кръг {roundNum}
                 </h3>
-                {byeTeam && (
-                  <span
-                    data-testid="bye-team-badge"
-                    className="text-xs bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-medium px-2.5 py-1 rounded-full"
-                  >
-                    Почива: {byeTeam.name}
-                  </span>
+                {byeEntries.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {byeEntries.map(({ team, groupName }) => (
+                      <span
+                        key={team.id}
+                        data-testid="bye-team-badge"
+                        className="text-xs bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 font-medium px-2.5 py-1 rounded-full shadow-xs"
+                      >
+                        Почива: {team.name}
+                        {hasMultipleGroups && groupName ? ` (${groupName})` : ''}
+                      </span>
+                    ))}
+                  </div>
                 )}
               </div>
 
