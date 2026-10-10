@@ -8,10 +8,9 @@ import { GeneratorPage } from '../GeneratorPage';
 import { PlayersPage } from '../PlayersPage';
 import { MatchesPage } from '../MatchesPage';
 import { TournamentsPage } from '../TournamentsPage';
+import { TournamentDetailPage } from '../TournamentDetailPage';
 import { RankingsPage } from '../RankingsPage';
 import { NotFoundPage } from '../NotFoundPage';
-import { PlaceholderPage } from '../../components/layout/PlaceholderPage';
-import { Trophy, ArrowLeft } from 'lucide-react';
 
 vi.mock('../../hooks/usePlayers', () => ({
   usePlayers: () => ({
@@ -43,7 +42,19 @@ vi.mock('../../hooks/useMatches', () => ({
 
 vi.mock('../../hooks/useTournaments', () => ({
   useTournaments: () => ({
-    tournaments: [],
+    tournaments: [
+      {
+        id: 'test-tournament-123',
+        title: 'Тестов турнир',
+        date: '2026-10-10',
+        format: 'doubles',
+        status: 'in_progress',
+        winner_team_name: null,
+        notes: null,
+        created_at: '2026-10-01',
+        updated_at: '2026-10-01',
+      },
+    ],
     loading: false,
     error: null,
     fetchTournaments: vi.fn(),
@@ -64,21 +75,7 @@ const renderAppRoute = (initialRoute: string) => {
             <Route path="players" element={<PlayersPage />} />
             <Route path="matches" element={<MatchesPage />} />
             <Route path="tournaments" element={<TournamentsPage />} />
-            <Route
-              path="tournaments/:id"
-              element={
-                <PlaceholderPage
-                  title="Турнирен панел"
-                  description="Детайлният турнирен панел е в процес на разработка (PR 3)."
-                  icon={Trophy}
-                  cardTitle="Турнирен панел"
-                  cardDescription="Детайлният турнирен панел е в процес на разработка (PR 3)."
-                  ctaText="Към турнири"
-                  ctaTo="/tournaments"
-                  ctaIcon={ArrowLeft}
-                />
-              }
-            />
+            <Route path="tournaments/:id" element={<TournamentDetailPage />} />
             <Route path="rankings" element={<RankingsPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
@@ -136,12 +133,11 @@ describe('App Route Smoke and Integration Tests', () => {
     ).toBeGreaterThanOrEqual(1);
   });
 
-  it('renders PlaceholderPage on "/tournaments/:id"', () => {
+  it('renders TournamentDetailPage on "/tournaments/:id"', () => {
     renderAppRoute('/tournaments/test-tournament-123');
-    expect(screen.getByRole('heading', { name: 'Турнирен панел', level: 2 })).toBeInTheDocument();
     expect(
-      screen.getAllByText(/детайлният турнирен панел е в процес на разработка/i).length
-    ).toBeGreaterThanOrEqual(1);
+      screen.getByRole('heading', { name: /тестов турнир/i, level: 1 })
+    ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /към турнири/i })).toHaveAttribute('href', '/tournaments');
   });
 

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { GeneratorPage } from '../GeneratorPage';
 import { ThemeProvider } from '../../context/ThemeContext';
 import * as usePlayersModule from '../../hooks/usePlayers';
@@ -13,6 +14,43 @@ vi.mock('react-router-dom', async () => {
     useNavigate: () => mockNavigate,
   };
 });
+
+const mockTournaments = [
+  {
+    id: 't-1',
+    title: 'Есенен турнир 2026',
+    date: '2026-10-15',
+    format: 'doubles',
+    status: 'in_progress',
+    winner_team_name: null,
+    notes: 'Тенис кортове Диана',
+    created_at: '2026-10-01',
+    updated_at: '2026-10-01',
+  },
+  {
+    id: 't-singles',
+    title: 'Турнир поединично',
+    date: '2026-10-20',
+    format: 'singles',
+    status: 'draft',
+    winner_team_name: null,
+    notes: null,
+    created_at: '2026-10-01',
+    updated_at: '2026-10-01',
+  },
+];
+
+vi.mock('../../hooks/useTournaments', () => ({
+  useTournaments: () => ({
+    tournaments: mockTournaments,
+    loading: false,
+    error: null,
+    fetchTournaments: vi.fn(),
+    createTournament: vi.fn(),
+    updateTournament: vi.fn(),
+    deleteTournament: vi.fn(),
+  }),
+}));
 
 const mockCreateMatch = vi.fn();
 const mockBulkCreateMatches = vi.fn();
@@ -75,10 +113,12 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
     });
   });
 
-  const renderComponent = () => {
+  const renderComponent = (initialRoute = '/generator') => {
     return render(
       <ThemeProvider>
-        <GeneratorPage />
+        <MemoryRouter initialEntries={[initialRoute]}>
+          <GeneratorPage />
+        </MemoryRouter>
       </ThemeProvider>
     );
   };
@@ -780,6 +820,62 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
       expect(screen.getByRole('button', { name: /запиши като мач/i })).toBeEnabled();
       // Validation warning is cleared
       expect(screen.queryByTestId('tennis-validation-warning')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Tournament Context Integration (?tournamentId)', () => {
+    it('renders tournament contextual header banner with title, format and back link', () => {
+      renderComponent('/generator?tournamentId=t-1');
+
+      expect(screen.getByText(/Турнир: Есенен турнир 2026 \(По двойки\)/i)).toBeInTheDocument();
+      const backLink = screen.getByRole('link', { name: /обратно към турнира/i });
+      expect(backLink).toBeInTheDocument();
+      expect(backLink).toHaveAttribute('href', '/tournaments/t-1');
+    });
+
+    it('locks mode to tennis and syncs format to tournament format (singles)', () => {
+      renderComponent('/generator?tournamentId=t-singles');
+
+      expect(screen.getByText(/Турнир: Турнир поединично \(Поединично\)/i)).toBeInTheDocument();
+      const singlesBtn = screen.getByRole('button', { name: 'Поединично' });
+      expect(singlesBtn).toHaveAttribute('aria-pressed', 'true');
+
+      // Attempting to toggle format or mode is prevented
+      const doublesBtn = screen.getByRole('button', { name: 'По двойки' });
+      fireEvent.click(doublesBtn);
+      expect(singlesBtn).toHaveAttribute('aria-pressed', 'true');
+
+      const genericBtn = screen.getByRole('button', { name: '🎲 Универсален' });
+      fireEvent.click(genericBtn);
+      expect(screen.queryByLabelText(/брой отбори/i)).not.toBeInTheDocument();
+    });
+
+    it('calls bulkCreateMatches with tournamentId and redirects to /tournaments/:tournamentId upon saving all matches', async () => {
+      const user = userEvent.setup();
+      renderComponent('/generator?tournamentId=t-1');
+
+      // Add 8 guests -> 4 doubles teams
+      const guestInput = screen.getByPlaceholderText('напр. Иван, Петър, Георги');
+      await user.type(guestInput, 'И1, И2, И3, И4, И5, И6, И7, И8');
+      await user.click(screen.getByRole('button', { name: /добави/i }));
+
+      // Generate teams
+      await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
+
+      // Generate schedule
+      await user.click(screen.getByRole('button', { name: /генерирай програма с мачове/i }));
+
+      const saveAllBtn = screen.getByRole('button', { name: /запиши всички мачове/i });
+      expect(saveAllBtn).toBeInTheDocument();
+      await user.click(saveAllBtn);
+
+      expect(mockBulkCreateMatches).toHaveBeenCalledWith(expect.any(Array), 'doubles', 't-1');
+      expect(mockNavigate).toHaveBeenCalledWith('/tournaments/t-1', {
+        state: {
+          fromBulkCreate: true,
+          matchCount: 6,
+        },
+      });
     });
   });
 });

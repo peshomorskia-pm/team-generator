@@ -17,7 +17,8 @@ export interface UseMatchesReturn {
   deleteMatch: (id: string) => Promise<void>;
   bulkCreateMatches: (
     schedule: TournamentMatch[],
-    format: 'singles' | 'doubles'
+    format: 'singles' | 'doubles',
+    tournamentId?: string | null
   ) => Promise<{ count: number; error: Error | null }>;
   clearAlert: () => void;
 }
@@ -212,18 +213,34 @@ export function useMatches(): UseMatchesReturn {
         const isCompleted =
           data.team_1_score !== null && data.team_2_score !== null;
 
+        const insertPayload: {
+          match_format: MatchFormat;
+          team_1_score: number | null;
+          team_2_score: number | null;
+          played_at: string;
+          team_1_name: string;
+          team_2_name: string;
+          group_name: string | null;
+          round: number | null;
+          tournament_id?: string | null;
+        } = {
+          match_format: format,
+          team_1_score: data.team_1_score,
+          team_2_score: data.team_2_score,
+          played_at: data.played_at,
+          team_1_name: data.team_1_name ?? 'Отбор 1',
+          team_2_name: data.team_2_name ?? 'Отбор 2',
+          group_name: data.group_name ?? null,
+          round: data.round ?? null,
+        };
+
+        if (data.tournament_id !== undefined) {
+          insertPayload.tournament_id = data.tournament_id;
+        }
+
         const { data: matchData, error: matchError } = await supabase
           .from('matches')
-          .insert({
-            match_format: format,
-            team_1_score: data.team_1_score,
-            team_2_score: data.team_2_score,
-            played_at: data.played_at,
-            team_1_name: data.team_1_name ?? 'Отбор 1',
-            team_2_name: data.team_2_name ?? 'Отбор 2',
-            group_name: data.group_name ?? null,
-            round: data.round ?? null,
-          })
+          .insert(insertPayload)
           .select()
           .single();
 
@@ -419,6 +436,7 @@ export function useMatches(): UseMatchesReturn {
           team_2_name?: string | null;
           group_name?: string | null;
           round?: number | null;
+          tournament_id?: string | null;
         } = {
           match_format: format,
           team_1_score: data.team_1_score,
@@ -437,6 +455,9 @@ export function useMatches(): UseMatchesReturn {
         }
         if (data.round !== undefined) {
           updatePayload.round = data.round;
+        }
+        if (data.tournament_id !== undefined) {
+          updatePayload.tournament_id = data.tournament_id;
         }
 
         const { data: matchData, error: matchError } = await supabase
@@ -596,7 +617,8 @@ export function useMatches(): UseMatchesReturn {
   const bulkCreateMatches = useCallback(
     async (
       schedule: TournamentMatch[],
-      format: 'singles' | 'doubles'
+      format: 'singles' | 'doubles',
+      tournamentId?: string | null
     ): Promise<{ count: number; error: Error | null }> => {
       if (!schedule || schedule.length === 0) {
         return { count: 0, error: null };
@@ -623,6 +645,7 @@ export function useMatches(): UseMatchesReturn {
           team_2_name: string;
           group_name: string | null;
           round: number | null;
+          tournament_id: string | null;
         }[] = [];
 
         const matchPlayerRows: {
@@ -647,6 +670,7 @@ export function useMatches(): UseMatchesReturn {
             team_2_name: item.team2.name,
             group_name: item.groupName ?? null,
             round: item.round ?? null,
+            tournament_id: tournamentId ?? null,
           });
 
           for (const p of item.team1.players) {

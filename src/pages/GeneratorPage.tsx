@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { Trophy, ArrowLeft } from 'lucide-react';
 import { GeneratorHeader } from '../components/team/GeneratorHeader';
 import { Card } from '../components/ui/Card';
 import { Alert } from '../components/ui/Alert';
@@ -14,6 +15,7 @@ import { ActivePool } from '../components/generator/ActivePool';
 import { useTeamGenerator } from '../hooks/useTeamGenerator';
 import { usePlayers } from '../hooks/usePlayers';
 import { useMatches } from '../hooks/useMatches';
+import { useTournaments } from '../hooks/useTournaments';
 import type { Team } from '../types';
 import type { MatchFormData } from '../types/matches';
 import type { GeneratorPlayer } from '../types/generator';
@@ -32,6 +34,14 @@ const mapTeamToParticipants = (team?: Team): MatchParticipant[] => {
 
 export const GeneratorPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const tournamentId = searchParams.get('tournamentId');
+
+  const { tournaments } = useTournaments();
+  const activeTournament = useMemo(
+    () => (tournamentId ? tournaments.find((t) => t.id === tournamentId) : undefined),
+    [tournaments, tournamentId]
+  );
 
   const {
     players: dbPlayers,
@@ -80,6 +90,33 @@ export const GeneratorPage: React.FC = () => {
     shuffleSingleTeam,
     copyResults,
   } = useTeamGenerator();
+
+  useEffect(() => {
+    if (activeTournament) {
+      if (mode !== 'tennis') {
+        setMode('tennis');
+      }
+      if (format !== activeTournament.format) {
+        setFormat(activeTournament.format);
+      }
+    }
+  }, [activeTournament, mode, format, setMode, setFormat]);
+
+  const handleModeChange = useCallback(
+    (newMode: Parameters<typeof setMode>[0]) => {
+      if (activeTournament) return;
+      setMode(newMode);
+    },
+    [activeTournament, setMode]
+  );
+
+  const handleFormatChange = useCallback(
+    (newFormat: 'singles' | 'doubles') => {
+      if (activeTournament) return;
+      setFormat(newFormat);
+    },
+    [activeTournament, setFormat]
+  );
 
   const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
   const [isSavingMatches, setIsSavingMatches] = useState(false);
@@ -134,38 +171,56 @@ export const GeneratorPage: React.FC = () => {
 
   const handleSaveMatch = useCallback(
     async (data: MatchFormData) => {
-      const success = await createMatch(data);
+      const matchData = tournamentId
+        ? { ...data, tournament_id: tournamentId }
+        : data;
+      const success = await createMatch(matchData);
       if (!success) {
         throw new Error('Failed to create match');
       }
       setIsMatchModalOpen(false);
-      navigate('/matches');
+      if (tournamentId) {
+        navigate(`/tournaments/${tournamentId}`);
+      } else {
+        navigate('/matches');
+      }
     },
-    [createMatch, navigate]
+    [createMatch, navigate, tournamentId]
   );
 
   const handleSaveAllMatches = useCallback(async () => {
     if (schedule.length === 0) return;
     setIsSavingMatches(true);
     try {
-      const { count, error } = await bulkCreateMatches(schedule, format);
+      const { count, error } = tournamentId
+        ? await bulkCreateMatches(schedule, format, tournamentId)
+        : await bulkCreateMatches(schedule, format);
       if (error) {
         showAlert('Възникна грешка при записване на турнирните мачове.', 'error');
       } else {
-        navigate('/matches', {
-          state: {
-            fromBulkCreate: true,
-            matchCount: count,
-            statusFilter: 'upcoming',
-          },
-        });
+        if (tournamentId) {
+          navigate(`/tournaments/${tournamentId}`, {
+            state: {
+              fromBulkCreate: true,
+              matchCount: count,
+            },
+          });
+        } else {
+          navigate('/matches', {
+            state: {
+              fromBulkCreate: true,
+              matchCount: count,
+              statusFilter: 'upcoming',
+            },
+          });
+        }
       }
     } catch {
       showAlert('Възникна грешка при записване на турнирните мачове.', 'error');
     } finally {
       setIsSavingMatches(false);
     }
-  }, [schedule, format, bulkCreateMatches, showAlert, navigate]);
+  }, [schedule, format, tournamentId, bulkCreateMatches, showAlert, navigate]);
 
   const activeAlert = alert || matchAlert;
 
@@ -184,6 +239,25 @@ export const GeneratorPage: React.FC = () => {
                 onDismiss={matchAlert ? clearMatchAlert : undefined}
                 className="mb-4"
               />
+            )}
+
+            {/* Contextual Tournament Banner */}
+            {tournamentId && activeTournament && (
+              <div className="bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 rounded-xl p-3.5 mb-6 flex flex-wrap items-center justify-between gap-3 text-indigo-900 dark:text-indigo-200 shadow-xs">
+                <div className="flex items-center gap-2.5">
+                  <Trophy className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  <span className="font-semibold text-sm">
+                    Турнир: {activeTournament.title} ({activeTournament.format === 'doubles' ? 'По двойки' : 'Поединично'})
+                  </span>
+                </div>
+                <Link
+                  to={`/tournaments/${tournamentId}`}
+                  className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Обратно към турнира
+                </Link>
+              </div>
             )}
 
             {/* Split Layout: Selection (Left) vs Pool & Settings (Right) */}
@@ -223,7 +297,7 @@ export const GeneratorPage: React.FC = () => {
                   <div className="border-t border-gray-200 dark:border-slate-700 pt-5">
                     <TeamSettings
                       mode={mode}
-                      onModeChange={setMode}
+                      onModeChange={handleModeChange}
                       numberOfTeams={numberOfTeams}
                       onSettingsChange={handleNumberOfTeamsChange}
                       playersPerTeam={playersPerTeam}
@@ -233,7 +307,7 @@ export const GeneratorPage: React.FC = () => {
                       onBalanceToggle={setBalanceByRating}
                       hasRatings={hasRatings}
                       format={format}
-                      onFormatChange={setFormat}
+                      onFormatChange={handleFormatChange}
                       canGenerate={canGenerate}
                       validationError={validationError}
                     />
