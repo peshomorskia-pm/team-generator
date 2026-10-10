@@ -4,7 +4,7 @@
 [![Vercel Status](https://img.shields.io/badge/Hosted%20On-Vercel-black?logo=vercel)](https://team-generator-psi.vercel.app)
 [![Database](https://img.shields.io/badge/Database-Supabase%20Cloud-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
 
-A scalable Multi-Page Application (SPA) with a responsive App Shell, client-side routing, and light/dark theme support for randomly assigning and balancing players into competitive teams. Built with **React 19**, **TypeScript**, **Vite**, **Tailwind CSS**, **React Router v7**, **Vitest** (493 tests across 43 test files, 100% pass rate), **happy-dom**, and **React Testing Library**, alongside **Supabase** backend integration.
+A scalable Multi-Page Application (SPA) with a responsive App Shell, client-side routing, and light/dark theme support for randomly assigning and balancing players into competitive teams. Built with **React 19**, **TypeScript**, **Vite**, **Tailwind CSS**, **React Router v7**, **Vitest** (524 tests across 47 test files, 100% pass rate), **happy-dom**, and **React Testing Library**, alongside **Supabase** backend integration.
 
 * **Live Production Application:** [https://team-generator-psi.vercel.app](https://team-generator-psi.vercel.app)
 
@@ -18,7 +18,7 @@ A scalable Multi-Page Application (SPA) with a responsive App Shell, client-side
 * **Hybrid Team Generator (Stage 3):** Combines registered database players with transient session guests (`activePool`), supporting bulk/single guest adding, unrated guest rating balancing, and zero-mutation database guarantees.
 * **In-Place Team Slot Substitution & Pruning:** Instant removal of withdrawing players from active teams with automatic team container pruning if empty, dynamic slot substitution for arriving players without global reshuffling, format-aware rating recalculations, dashed `"+ Свободно място"` placeholders, validation warnings (`"Добавете още 1 играч за пълни двойки"`), and strict action gating preventing match saving and group draws on incomplete teams.
 * **Tennis Tournament Groups & Round-Robin Match Schedule:** Automated mathematical partitioning of teams into round-robin groups (with single-group auto-assignment for 3-5 participants and multi-group draw for 6+ participants), Berger circle round-robin schedule generation with odd-count bye handling ([`roundRobin.ts`](file:///D:/Projects/team-generator/src/utils/roundRobin.ts)), round-by-round match schedule presentation ([`MatchScheduleList.tsx`](file:///D:/Projects/team-generator/src/components/group/MatchScheduleList.tsx)), database round persistence (`round INTEGER NULL` in `public.matches`), localized `Кръг {round}` match cards, and dedicated clipboard export with player name rosters and interactive copy feedback ("Копирай програмата" / "Копирано!").
-* **Tournament Module Foundation (Schema & Data Hook):** Parent `tournaments` entity in PostgreSQL (`public.tournaments` table with constraints, composite index `idx_tournaments_date_status`, and `update_tournaments_updated_at` trigger), nullable foreign key `matches.tournament_id` with `ON DELETE SET NULL` cascade safety, unified TypeScript domain models, and reactive CRUD hook (`useTournaments.ts`) with Bulgarian localized error reporting.
+* **Tournament Module Hub & Navigation (PR 2):** Dedicated tournament dashboard (`TournamentsPage`) with statistics summary, status filtering (All, Upcoming, Active, Completed), search bar, `TournamentCard`, `TournamentModal` (create/edit with date/status/format validation), `DeleteTournamentModal`, sidebar navigation route `/tournaments` with `Trophy` icon, full Bulgarian localization, and accessible modals.
 * **Responsive App Shell & Client-Side Routing:** Built with React Router v7 and an App Shell featuring desktop header (`Navbar`), mobile bottom bar (`MobileNav`), and responsive padding.
 * **Light/Dark Theme Persistence:** Dynamic theme switching synchronized with `document.documentElement` (`<html>`) and persisted in `localStorage`.
 * **Localized User Interface:** The application UI is localized in Bulgarian for the primary user base, while development and engineering adhere to strict English standards.
@@ -31,6 +31,7 @@ A scalable Multi-Page Application (SPA) with a responsive App Shell, client-side
 
 * **`/`** — Landing Page (Hero, feature highlights, balance visual, and primary CTA)
 * **`/generator`** — Team Generator (Player management, team settings, greedy balancing & shuffling)
+* **`/tournaments`** — Tournament Hub (Tournament dashboard with status filtering, stats summary, search, create/edit/delete modals, and tournament navigation)
 * **`/players`** — Players Database (Production CRUD management interface with search filtering, ELO rating tiers, responsive desktop table / mobile cards, and accessible modals)
 * **`/matches`** — Match History & Tracker (Live CRUD management for match records, nullable scores for upcoming fixtures `- : -`, participant rosters with `PlayerCombobox` cross-team exclusion, multi-dimensional filters, and stat aggregation summaries)
 * **`/rankings`** — League Rankings / Leaderboard (Themed placeholder for ELO player standings)
