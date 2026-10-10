@@ -56,6 +56,7 @@ export interface Database {
           team_1_name?: string | null; // text
           team_2_name?: string | null; // text
           group_name?: string | null; // text
+          round?: number | null; // integer
           team_1_score: number | null; // integer
           team_2_score: number | null; // integer
           played_at: string; // timestamptz
@@ -68,6 +69,7 @@ export interface Database {
           team_1_name?: string | null;
           team_2_name?: string | null;
           group_name?: string | null;
+          round?: number | null;
           team_1_score?: number | null;
           team_2_score?: number | null;
           played_at?: string;
@@ -80,6 +82,7 @@ export interface Database {
           team_1_name?: string | null;
           team_2_name?: string | null;
           group_name?: string | null;
+          round?: number | null;
           team_1_score?: number | null;
           team_2_score?: number | null;
           played_at?: string;
