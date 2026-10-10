@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Shuffle, Sliders } from 'lucide-react';
+import { Shuffle, Sliders, LayoutGrid } from 'lucide-react';
 import { TeamSettingsProps } from '../../types';
 import { Button, Input } from '../ui';
 
@@ -18,6 +18,11 @@ export const TeamSettings = memo(function TeamSettings({
   onFormatChange,
   canGenerate: _canGenerate = true,
   validationError = null,
+  formationMode = 'auto',
+  onFormationModeChange,
+  manualTeamCount = 4,
+  onManualTeamCountChange,
+  onCreateBlankTeams,
 }: TeamSettingsProps) {
   return (
     <div className="space-y-6">
@@ -57,6 +62,39 @@ export const TeamSettings = memo(function TeamSettings({
       {/* Mode-specific Controls */}
       {mode === 'tennis' ? (
         <div className="space-y-4">
+          {/* Formation Mode Selector */}
+          <div className="flex flex-col space-y-1.5">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Режим на сформиране
+            </span>
+            <div className="flex items-center rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700 self-start">
+              <button
+                type="button"
+                onClick={() => onFormationModeChange?.('auto')}
+                className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  formationMode === 'auto'
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+                aria-pressed={formationMode === 'auto'}
+              >
+                🤖 Автоматично
+              </button>
+              <button
+                type="button"
+                onClick={() => onFormationModeChange?.('manual')}
+                className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                  formationMode === 'manual'
+                    ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+                aria-pressed={formationMode === 'manual'}
+              >
+                📋 Интерактивна дъска (Ръчно)
+              </button>
+            </div>
+          </div>
+
           {/* Format Selector Pills */}
           <div className="flex flex-col space-y-1.5">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -90,8 +128,28 @@ export const TeamSettings = memo(function TeamSettings({
             </div>
           </div>
 
+          {formationMode === 'manual' && (
+            <div className="flex flex-col space-y-1.5">
+              <label htmlFor="manualTeamCountSelect" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Брой отбори
+              </label>
+              <select
+                id="manualTeamCountSelect"
+                value={manualTeamCount}
+                onChange={(e) => onManualTeamCountChange?.(parseInt(e.target.value, 10))}
+                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500 dark:text-white"
+              >
+                {[2, 3, 4, 5, 6, 8, 10, 12, 16].map((count) => (
+                  <option key={count} value={count}>
+                    {count} отбора
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Validation Warning */}
-          {validationError && (
+          {formationMode === 'auto' && validationError && (
             <div
               data-testid="tennis-validation-warning"
               className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-200"
@@ -165,18 +223,31 @@ export const TeamSettings = memo(function TeamSettings({
         </div>
       )}
 
-      {/* Generate Button */}
-      <Button
-        type="button"
-        id="generateBtn"
-        size="lg"
-        onClick={onGenerate}
-        disabled={Boolean(validationError)}
-        className="w-full flex items-center justify-center space-x-2 cursor-pointer py-4"
-      >
-        <Shuffle className="w-5 h-5" />
-        <span>Разпредели в отбори</span>
-      </Button>
+      {/* Generate / Create Blank Teams Button */}
+      {formationMode === 'manual' && mode === 'tennis' ? (
+        <Button
+          type="button"
+          id="createBlankTeamsBtn"
+          size="lg"
+          onClick={onCreateBlankTeams}
+          className="w-full flex items-center justify-center space-x-2 cursor-pointer py-4"
+        >
+          <LayoutGrid className="w-5 h-5" />
+          <span>📋 Създай празни отбори</span>
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          id="generateBtn"
+          size="lg"
+          onClick={onGenerate}
+          disabled={Boolean(validationError)}
+          className="w-full flex items-center justify-center space-x-2 cursor-pointer py-4"
+        >
+          <Shuffle className="w-5 h-5" />
+          <span>Разпредели в отбори</span>
+        </Button>
+      )}
     </div>
   );
 });

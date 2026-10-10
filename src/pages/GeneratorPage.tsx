@@ -6,6 +6,7 @@ import { Card } from '../components/ui/Card';
 import { Alert } from '../components/ui/Alert';
 import { TeamSettings } from '../components/team/TeamSettings';
 import { TeamList } from '../components/team/TeamList';
+import { TeamSlotPickerModal } from '../components/team/TeamSlotPickerModal';
 import { GroupList } from '../components/group/GroupList';
 import { MatchScheduleList } from '../components/group/MatchScheduleList';
 import { MatchModal, type MatchParticipant } from '../components/match/MatchModal';
@@ -89,7 +90,19 @@ export const GeneratorPage: React.FC = () => {
     generateTeams,
     shuffleSingleTeam,
     copyResults,
+    formationMode,
+    setFormationMode,
+    unassignedPoolPlayers,
+    initializeBlankTeams,
+    assignPlayerToTeam,
+    removePlayerFromTeam,
+    autoFillRemainingSlots,
   } = useTeamGenerator();
+
+  const [isPickerModalOpen, setIsPickerModalOpen] = useState(false);
+  const [activeSlotTeamId, setActiveSlotTeamId] = useState<string | null>(null);
+  const [activeSlotTeamName, setActiveSlotTeamName] = useState<string | undefined>(undefined);
+  const [manualTeamCount, setManualTeamCount] = useState<number>(4);
 
   useEffect(() => {
     if (activeTournament) {
@@ -142,6 +155,21 @@ export const GeneratorPage: React.FC = () => {
     },
     [setPlayersPerTeam]
   );
+
+  const handleSelectEmptySlot = useCallback(
+    (teamId: string) => {
+      const targetTeam = teams.find((t) => t.id === teamId);
+      setActiveSlotTeamId(teamId);
+      setActiveSlotTeamName(targetTeam?.name);
+      setIsPickerModalOpen(true);
+    },
+    [teams]
+  );
+
+  const handleCreateBlankTeams = useCallback(() => {
+    const ppt = format === 'singles' ? 1 : 2;
+    initializeBlankTeams(manualTeamCount, ppt);
+  }, [format, initializeBlankTeams, manualTeamCount]);
 
   const effectiveFormat = mode === 'tennis' ? format : undefined;
 
@@ -310,6 +338,11 @@ export const GeneratorPage: React.FC = () => {
                       onFormatChange={handleFormatChange}
                       canGenerate={canGenerate}
                       validationError={validationError}
+                      formationMode={formationMode}
+                      onFormationModeChange={setFormationMode}
+                      manualTeamCount={manualTeamCount}
+                      onManualTeamCountChange={setManualTeamCount}
+                      onCreateBlankTeams={handleCreateBlankTeams}
                     />
                   </div>
                 </div>
@@ -353,6 +386,10 @@ export const GeneratorPage: React.FC = () => {
           onDrawGroups={drawGroups}
           hasIncompleteTeams={hasIncompleteTeams}
           targetTeamSize={targetTeamSize}
+          formationMode={formationMode}
+          onSelectEmptySlot={handleSelectEmptySlot}
+          onRemovePlayer={removePlayerFromTeam}
+          onAutoFillRemaining={autoFillRemainingSlots}
         />
       )}
 
@@ -365,6 +402,17 @@ export const GeneratorPage: React.FC = () => {
         initialTeam1={initialTeam1}
         initialTeam2={initialTeam2}
         initialFormat={format}
+      />
+
+      {/* Team Slot Picker Modal Integration */}
+      <TeamSlotPickerModal
+        isOpen={isPickerModalOpen}
+        onClose={() => setIsPickerModalOpen(false)}
+        teamId={activeSlotTeamId}
+        teamName={activeSlotTeamName}
+        unassignedPlayers={unassignedPoolPlayers}
+        onSelectPlayer={assignPlayerToTeam}
+        format={effectiveFormat}
       />
     </div>
   );

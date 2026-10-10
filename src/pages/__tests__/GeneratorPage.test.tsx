@@ -878,5 +878,69 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
       });
     });
   });
+
+  describe('Interactive Team Board (Manual & Hybrid Slot Mode) Integration', () => {
+    it('supports manual board workflow: switch mode -> create blank teams -> pick player -> auto-fill remaining -> draw groups', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      // Add 12 guests so we have players for 6 doubles teams
+      const guestInput = screen.getByPlaceholderText('напр. Иван, Петър, Георги');
+      await user.type(guestInput, 'И1, И2, И3, И4, И5, И6, И7, И8, И9, И10, И11, И12');
+      await user.click(screen.getByRole('button', { name: /добави/i }));
+
+      // Switch to manual mode
+      const manualModeBtn = screen.getByRole('button', { name: /интерактивна дъска \(ръчно\)/i });
+      await user.click(manualModeBtn);
+
+      // Select 6 teams
+      const teamCountSelect = screen.getByLabelText(/брой отбори/i);
+      await user.selectOptions(teamCountSelect, '6');
+
+      // Click "📋 Създай празни отбори"
+      const createBlankBtn = screen.getByRole('button', { name: /създай празни отбори/i });
+      await user.click(createBlankBtn);
+
+      // Verify 6 team cards are rendered and "🎲 Тегли жребий за групи" is disabled
+      expect(screen.getByText('Отбор 1')).toBeInTheDocument();
+      expect(screen.getByText('Отбор 6')).toBeInTheDocument();
+      const drawGroupsBtn = screen.getByRole('button', { name: /тегли жребий за групи/i });
+      expect(drawGroupsBtn).toBeDisabled();
+
+      // Click empty slot in Team 1 to open slot picker modal
+      const firstSlotBtn = screen.getAllByRole('button', { name: 'Избери играч за Отбор 1' })[0];
+      await user.click(firstSlotBtn);
+
+      // Slot picker modal should be open
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByText('Избери играч за Отбор 1')).toBeInTheDocument();
+
+      // Pick player И1
+      const playerItemBtn = screen.getByRole('button', { name: /^и1(\s+гост)?$/i });
+      await user.click(playerItemBtn);
+
+      // Modal closed, player И1 assigned to Team 1
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.getAllByText('И1')).toHaveLength(2);
+
+      // Draw groups button is still disabled because teams are incomplete
+      expect(screen.getByRole('button', { name: /тегли жребий за групи/i })).toBeDisabled();
+
+      // Click "✨ Попълни останалите автоматично"
+      const autoFillBtn = screen.getByRole('button', { name: /попълни останалите автоматично/i });
+      expect(autoFillBtn).toBeInTheDocument();
+      await user.click(autoFillBtn);
+
+      // Now all slots are filled, draw groups button is enabled!
+      const enabledDrawBtn = screen.getByRole('button', { name: /тегли жребий за групи/i });
+      expect(enabledDrawBtn).not.toBeDisabled();
+
+      // Click draw groups!
+      await user.click(enabledDrawBtn);
+
+      // Tournament groups are drawn
+      expect(screen.getByRole('heading', { level: 2, name: 'Турнирни групи' })).toBeInTheDocument();
+    });
+  });
 });
 
