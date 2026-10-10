@@ -12,6 +12,7 @@ export interface Match {
   team_2_name?: string | null;
   group_name?: string | null;
   round?: number | null;
+  tournament_id?: string | null;
 }
 
 export interface MatchPlayer {
@@ -35,6 +36,7 @@ export interface CreateMatchInput {
   team_2_name?: string | null;
   group_name?: string | null;
   round?: number | null;
+  tournament_id?: string | null;
 }
 
 export interface UpdateMatchInput {
@@ -48,6 +50,7 @@ export interface UpdateMatchInput {
   team_2_name?: string | null;
   group_name?: string | null;
   round?: number | null;
+  tournament_id?: string | null;
 }
 
 export * from './matches';
