@@ -135,8 +135,12 @@ export const MatchesPage: React.FC = () => {
         const matchesGroupName = Boolean(m.group_name?.toLowerCase().includes(query));
         const matchesTeam1Name = Boolean(m.team_1_name?.toLowerCase().includes(query));
         const matchesTeam2Name = Boolean(m.team_2_name?.toLowerCase().includes(query));
+        const matchesRound = Boolean(
+          (m.round !== null && m.round !== undefined && `кръг ${m.round}`.toLowerCase().includes(query)) ||
+          (m.round !== null && m.round !== undefined && String(m.round) === query)
+        );
 
-        if (!matchesPlayer && !matchesGroupName && !matchesTeam1Name && !matchesTeam2Name) {
+        if (!matchesPlayer && !matchesGroupName && !matchesTeam1Name && !matchesTeam2Name && !matchesRound) {
           return false;
         }
       }

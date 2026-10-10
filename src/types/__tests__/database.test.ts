@@ -102,6 +102,7 @@ describe('Database Types Contract Tests', () => {
     it('accepts compliant MatchRow and MatchPlayerRow records', () => {
       const matchRow: MatchRow = {
         id: 'match-123',
+        round: 1,
         team_1_score: 5,
         team_2_score: 3,
         played_at: '2026-10-03T10:00:00.000Z',
@@ -120,6 +121,7 @@ describe('Database Types Contract Tests', () => {
       };
 
       expect(matchRow.id).toBe('match-123');
+      expect(matchRow.round).toBe(1);
       expect(matchRow.team_1_score).toBe(5);
       expect(matchRow.team_2_score).toBe(3);
       expect(matchPlayerRow.team_side).toBe('team_1');
@@ -127,9 +129,10 @@ describe('Database Types Contract Tests', () => {
       expect(matchPlayerRow.guest_name).toBeNull();
     });
 
-    it('accepts MatchRow with nullable scores for upcoming fixtures', () => {
+    it('accepts MatchRow with nullable scores and round for upcoming fixtures', () => {
       const upcomingMatchRow: MatchRow = {
         id: 'match-upcoming',
+        round: null,
         team_1_score: null,
         team_2_score: null,
         played_at: '2026-10-04T10:00:00.000Z',
@@ -137,6 +140,7 @@ describe('Database Types Contract Tests', () => {
         updated_at: '2026-10-03T10:00:00.000Z',
       };
 
+      expect(upcomingMatchRow.round).toBeNull();
       expect(upcomingMatchRow.team_1_score).toBeNull();
       expect(upcomingMatchRow.team_2_score).toBeNull();
     });
@@ -144,6 +148,7 @@ describe('Database Types Contract Tests', () => {
     it('maps correctly to the application domain MatchDetail model with mock Supabase response', () => {
       const mockSupabaseResponse: MatchDetail = {
         id: 'm-456',
+        round: 2,
         team_1_score: 4,
         team_2_score: 2,
         played_at: '2026-10-03T11:00:00.000Z',
@@ -177,6 +182,7 @@ describe('Database Types Contract Tests', () => {
       };
 
       expect(mockSupabaseResponse.id).toBe('m-456');
+      expect(mockSupabaseResponse.round).toBe(2);
       expect(mockSupabaseResponse.match_players).toHaveLength(2);
       expect(mockSupabaseResponse.match_players[0].players?.name).toBe('Красимир Балъков');
       expect(mockSupabaseResponse.match_players[1].guest_name).toBe('Иван Гост');
@@ -184,14 +190,16 @@ describe('Database Types Contract Tests', () => {
   });
 
   describe('MatchInsert and MatchPlayerInsert type contracts', () => {
-    it('accepts insert payloads with scores or with null scores', () => {
+    it('accepts insert payloads with scores or with null scores and round', () => {
       const matchInsert: MatchInsert = {
+        round: 1,
         team_1_score: 2,
         team_2_score: 1,
         played_at: '2026-10-03T12:00:00.000Z',
       };
 
       const upcomingInsert: MatchInsert = {
+        round: null,
         team_1_score: null,
         team_2_score: null,
         played_at: '2026-10-04T12:00:00.000Z',
@@ -204,7 +212,9 @@ describe('Database Types Contract Tests', () => {
         team_side: 'team_1',
       };
 
+      expect(matchInsert.round).toBe(1);
       expect(matchInsert.team_1_score).toBe(2);
+      expect(upcomingInsert.round).toBeNull();
       expect(upcomingInsert.team_1_score).toBeNull();
       expect(upcomingInsert.team_2_score).toBeNull();
       expect(matchPlayerInsert.team_side).toBe('team_1');
@@ -212,18 +222,22 @@ describe('Database Types Contract Tests', () => {
   });
 
   describe('MatchUpdate type contract', () => {
-    it('allows updating scores to null or values', () => {
+    it('allows updating scores and round to null or values', () => {
       const matchUpdateNull: MatchUpdate = {
+        round: null,
         team_1_score: null,
         team_2_score: null,
       };
 
       const matchUpdateValues: MatchUpdate = {
+        round: 3,
         team_1_score: 3,
         team_2_score: 0,
       };
 
+      expect(matchUpdateNull.round).toBeNull();
       expect(matchUpdateNull.team_1_score).toBeNull();
+      expect(matchUpdateValues.round).toBe(3);
       expect(matchUpdateValues.team_1_score).toBe(3);
     });
   });

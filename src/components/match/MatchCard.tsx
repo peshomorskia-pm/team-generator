@@ -47,6 +47,14 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, onEdit, onDelete })
               {match.group_name}
             </Badge>
           )}
+          {match.round != null && match.round > 0 && (
+            <Badge
+              variant="outline"
+              className="text-xs font-semibold bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800"
+            >
+              Кръг {match.round}
+            </Badge>
+          )}
           {isUpcoming && (
             <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
               Предстоящ

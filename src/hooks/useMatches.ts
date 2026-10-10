@@ -222,6 +222,7 @@ export function useMatches(): UseMatchesReturn {
             team_1_name: data.team_1_name ?? 'Отбор 1',
             team_2_name: data.team_2_name ?? 'Отбор 2',
             group_name: data.group_name ?? null,
+            round: data.round ?? null,
           })
           .select()
           .single();
@@ -417,6 +418,7 @@ export function useMatches(): UseMatchesReturn {
           team_1_name?: string | null;
           team_2_name?: string | null;
           group_name?: string | null;
+          round?: number | null;
         } = {
           match_format: format,
           team_1_score: data.team_1_score,
@@ -432,6 +434,9 @@ export function useMatches(): UseMatchesReturn {
         }
         if (data.group_name !== undefined) {
           updatePayload.group_name = data.group_name;
+        }
+        if (data.round !== undefined) {
+          updatePayload.round = data.round;
         }
 
         const { data: matchData, error: matchError } = await supabase
@@ -617,6 +622,7 @@ export function useMatches(): UseMatchesReturn {
           team_1_name: string;
           team_2_name: string;
           group_name: string | null;
+          round: number | null;
         }[] = [];
 
         const matchPlayerRows: {
@@ -640,6 +646,7 @@ export function useMatches(): UseMatchesReturn {
             team_1_name: item.team1.name,
             team_2_name: item.team2.name,
             group_name: item.groupName ?? null,
+            round: item.round ?? null,
           });
 
           for (const p of item.team1.players) {

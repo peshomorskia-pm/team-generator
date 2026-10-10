@@ -364,6 +364,41 @@ describe('MatchesPage Integration Tests', () => {
     expect(screen.queryByText('Зелени Вълци')).not.toBeInTheDocument();
   });
 
+  it('filters match cards by round number through search bar', async () => {
+    mockMatchesData = [
+      {
+        ...sampleMatches[0],
+        id: 'm-round-1',
+        round: 1,
+        team_1_name: 'Отбор Алфа',
+        team_2_name: 'Отбор Бета',
+      },
+      {
+        ...sampleMatches[1],
+        id: 'm-round-2',
+        round: 2,
+        team_1_name: 'Отбор Гама',
+        team_2_name: 'Отбор Делта',
+      },
+    ];
+
+    const user = userEvent.setup();
+    renderPage();
+
+    const searchInput = screen.getByPlaceholderText('Търсене по име на играч или гост...');
+
+    // Search by "Кръг 1"
+    await user.type(searchInput, 'Кръг 1');
+    expect(screen.getByText('Отбор Алфа')).toBeInTheDocument();
+    expect(screen.queryByText('Отбор Гама')).not.toBeInTheDocument();
+
+    // Search by exact round number "2"
+    await user.clear(searchInput);
+    await user.type(searchInput, '2');
+    expect(screen.getByText('Отбор Гама')).toBeInTheDocument();
+    expect(screen.queryByText('Отбор Алфа')).not.toBeInTheDocument();
+  });
+
   it('opens MatchModal on "Нов мач" button click', async () => {
     const user = userEvent.setup();
     renderPage();
