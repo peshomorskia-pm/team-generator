@@ -57,6 +57,7 @@ export interface Database {
           team_2_name?: string | null; // text
           group_name?: string | null; // text
           round?: number | null; // integer
+          tournament_id?: string | null; // uuid
           team_1_score: number | null; // integer
           team_2_score: number | null; // integer
           played_at: string; // timestamptz
@@ -70,6 +71,7 @@ export interface Database {
           team_2_name?: string | null;
           group_name?: string | null;
           round?: number | null;
+          tournament_id?: string | null;
           team_1_score?: number | null;
           team_2_score?: number | null;
           played_at?: string;
@@ -83,9 +85,46 @@ export interface Database {
           team_2_name?: string | null;
           group_name?: string | null;
           round?: number | null;
+          tournament_id?: string | null;
           team_1_score?: number | null;
           team_2_score?: number | null;
           played_at?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      tournaments: {
+        Row: {
+          id: string; // uuid
+          title: string; // text
+          date: string; // date
+          format: 'singles' | 'doubles'; // text
+          status: 'draft' | 'in_progress' | 'completed'; // text
+          winner_team_name: string | null; // text
+          notes: string | null; // text
+          created_at: string; // timestamptz
+          updated_at: string; // timestamptz
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          date?: string;
+          format?: 'singles' | 'doubles';
+          status?: 'draft' | 'in_progress' | 'completed';
+          winner_team_name?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          date?: string;
+          format?: 'singles' | 'doubles';
+          status?: 'draft' | 'in_progress' | 'completed';
+          winner_team_name?: string | null;
+          notes?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -163,3 +202,7 @@ export type MatchUpdate = Database['public']['Tables']['matches']['Update'];
 export type MatchPlayerRow = Database['public']['Tables']['match_players']['Row'];
 export type MatchPlayerInsert = Database['public']['Tables']['match_players']['Insert'];
 export type MatchPlayerUpdate = Database['public']['Tables']['match_players']['Update'];
+
+export type TournamentRow = Database['public']['Tables']['tournaments']['Row'];
+export type TournamentInsert = Database['public']['Tables']['tournaments']['Insert'];
+export type TournamentUpdate = Database['public']['Tables']['tournaments']['Update'];
