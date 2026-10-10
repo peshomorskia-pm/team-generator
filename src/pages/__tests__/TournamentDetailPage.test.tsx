@@ -250,6 +250,9 @@ describe('TournamentDetailPage Integration Tests', () => {
     // Match of t-other should NOT be rendered
     expect(screen.queryByText('Играч 1')).not.toBeInTheDocument();
     expect(screen.queryByText('Играч 2')).not.toBeInTheDocument();
+
+    // Generator launch CTA banner is hidden when tournament already has matches
+    expect(screen.queryByText('🎲 Стартирай генератор за турнира')).not.toBeInTheDocument();
   });
 
   it('filters tournament matches by status (Всички, Изиграни, Предстоящи)', () => {

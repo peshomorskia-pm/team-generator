@@ -133,23 +133,42 @@ export const TournamentDetailPage: React.FC = () => {
     return { total, played, upcoming };
   }, [tournamentMatches]);
 
-  // Filtered matches
+  // Filtered and sorted matches
   const filteredMatches = useMemo(() => {
-    return tournamentMatches.filter((m) => {
-      // 1. Status Filter
-      if (matchStatusFilter === 'completed') {
-        if (m.team_1_score === null || m.team_2_score === null) return false;
-      } else if (matchStatusFilter === 'upcoming') {
-        if (m.team_1_score !== null && m.team_2_score !== null) return false;
-      }
+    return tournamentMatches
+      .filter((m) => {
+        // 1. Status Filter
+        if (matchStatusFilter === 'completed') {
+          if (m.team_1_score === null || m.team_2_score === null) return false;
+        } else if (matchStatusFilter === 'upcoming') {
+          if (m.team_1_score !== null && m.team_2_score !== null) return false;
+        }
 
-      // 2. Group Filter
-      if (groupFilter !== 'all') {
-        if (m.group_name !== groupFilter) return false;
-      }
+        // 2. Group Filter
+        if (groupFilter !== 'all') {
+          if (m.group_name !== groupFilter) return false;
+        }
 
-      return true;
-    });
+        return true;
+      })
+      .sort((a, b) => {
+        // 1. Sort by round ascending (1, 2, 3...)
+        const roundA = a.round ?? 999;
+        const roundB = b.round ?? 999;
+        if (roundA !== roundB) {
+          return roundA - roundB;
+        }
+
+        // 2. Sort by group name ascending (Група А, Група Б...)
+        const groupA = a.group_name ?? '';
+        const groupB = b.group_name ?? '';
+        if (groupA !== groupB) {
+          return groupA.localeCompare(groupB);
+        }
+
+        // 3. Fallback to played_at or created_at
+        return (a.played_at || a.created_at || '').localeCompare(b.played_at || b.created_at || '');
+      });
   }, [tournamentMatches, matchStatusFilter, groupFilter]);
 
   // Status changer handler
@@ -374,24 +393,26 @@ export const TournamentDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Generator Launch CTA Section */}
-      <div className="bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 dark:from-indigo-950/40 dark:via-purple-950/40 dark:to-pink-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-2xl p-6 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
-        <div>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
-            <span>🎲 Стартирай генератор за турнира</span>
-          </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            Изберете играчи, генерирайте отбори и автоматично създайте програма от мачове за този турнир.
-          </p>
+      {/* Generator Launch CTA Section (only shown when tournament has no matches) */}
+      {tournamentMatches.length === 0 && (
+        <div className="bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 dark:from-indigo-950/40 dark:via-purple-950/40 dark:to-pink-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-2xl p-6 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+              <span>🎲 Стартирай генератор за турнира</span>
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Изберете играчи, генерирайте отбори и автоматично създайте програма от мачове за този турнир.
+            </p>
+          </div>
+          <Link
+            to={`/generator?tournamentId=${tournament.id}`}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-colors shrink-0"
+          >
+            <Play className="w-4 h-4 fill-white" />
+            <span>Към генератора</span>
+          </Link>
         </div>
-        <Link
-          to={`/generator?tournamentId=${tournament.id}`}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-colors shrink-0"
-        >
-          <Play className="w-4 h-4 fill-white" />
-          <span>Към генератора</span>
-        </Link>
-      </div>
+      )}
 
       {/* Matches List Section */}
       <div className="space-y-4">
