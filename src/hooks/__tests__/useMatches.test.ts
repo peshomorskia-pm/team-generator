@@ -1595,6 +1595,7 @@ describe('useMatches hook', () => {
         team_2_name: 'Отбор 2',
         group_name: 'Група А',
         round: 1,
+        tournament_id: null,
       });
       expect(insertedMatches[1]).toEqual({
         id: 'uuid-match-2',
@@ -1606,6 +1607,7 @@ describe('useMatches hook', () => {
         team_2_name: 'Отбор 4',
         group_name: 'Група А',
         round: 2,
+        tournament_id: null,
       });
 
       // 2. Match players insert payload
@@ -1661,6 +1663,54 @@ describe('useMatches hook', () => {
       expect(initialSelect).toHaveBeenCalled();
 
       uuidSpy.mockRestore();
+    });
+
+    it('attaches tournament_id to matchRows payload when tournamentId is passed', async () => {
+      const orderMock = vi.fn().mockResolvedValue({ data: [], error: null });
+      const initialSelect = vi.fn().mockReturnValue({ order: orderMock });
+
+      const matchesInsertMock = vi.fn().mockResolvedValue({ error: null });
+      const matchPlayersInsertMock = vi.fn().mockResolvedValue({ error: null });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'matches') {
+          return {
+            select: initialSelect,
+            insert: matchesInsertMock,
+          };
+        }
+        if (table === 'match_players') {
+          return {
+            insert: matchPlayersInsertMock,
+          };
+        }
+        return {};
+      });
+
+      const schedule: TournamentMatch[] = [
+        {
+          id: 'match-1',
+          groupId: 'group-0',
+          groupName: 'Група А',
+          round: 1,
+          team1: { id: 't-1', name: 'Отбор 1', players: [{ id: 'p-1', name: 'Играч 1' }] },
+          team2: { id: 't-2', name: 'Отбор 2', players: [{ id: 'p-2', name: 'Играч 2' }] },
+        },
+      ];
+
+      const { result } = renderHook(() => useMatches());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      let res: { count: number; error: Error | null } | undefined;
+      await act(async () => {
+        res = await result.current.bulkCreateMatches(schedule, 'doubles', 'tourn-999');
+      });
+
+      expect(res).toEqual({ count: 1, error: null });
+      expect(matchesInsertMock).toHaveBeenCalledTimes(1);
+      const inserted = matchesInsertMock.mock.calls[0][0];
+      expect(inserted[0].tournament_id).toBe('tourn-999');
+      expect(inserted[0].match_format).toBe('doubles');
     });
 
     it('handles error when matches insert fails', async () => {
