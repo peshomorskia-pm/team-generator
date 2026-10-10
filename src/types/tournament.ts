@@ -1,6 +1,39 @@
 import type { Team, GeneratorMode, AlertNotification } from './index';
 import type { GeneratorPlayer, DatabasePlayer } from './generator';
 
+export type TournamentStatus = 'draft' | 'in_progress' | 'completed';
+export type TournamentFormat = 'singles' | 'doubles';
+
+export interface Tournament {
+  id: string;
+  title: string;
+  date: string;
+  format: TournamentFormat;
+  status: TournamentStatus;
+  winner_team_name: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateTournamentInput {
+  title: string;
+  date?: string;
+  format?: TournamentFormat;
+  status?: TournamentStatus;
+  winner_team_name?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdateTournamentInput {
+  title?: string;
+  date?: string;
+  format?: TournamentFormat;
+  status?: TournamentStatus;
+  winner_team_name?: string | null;
+  notes?: string | null;
+}
+
 export interface TournamentGroup {
   id: string; // e.g. 'group-0'
   name: string; // e.g. 'Група А'
