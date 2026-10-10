@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Shuffle, Star } from 'lucide-react';
+import { User, Shuffle, Star, X, UserPlus } from 'lucide-react';
 import { TeamCardProps } from '../../types';
 import { Badge } from '../ui/Badge';
 
@@ -10,6 +10,8 @@ export const TeamCard: React.FC<TeamCardProps> = ({
   format,
   mode = 'tennis',
   targetSize,
+  onSelectEmptySlot,
+  onRemovePlayer,
 }) => {
   const emptySlotsCount =
     targetSize !== undefined && targetSize > team.players.length
@@ -84,23 +86,55 @@ export const TeamCard: React.FC<TeamCardProps> = ({
                   <User className="w-4 h-4 mr-2 text-indigo-400 shrink-0" />
                   <span className="truncate">{player.name}</span>
                 </div>
-                {mode !== 'generic' && playerRating !== undefined && (
-                  <span className="text-xs text-amber-500 font-medium ml-2 shrink-0">
-                    ★ {playerRating}
-                  </span>
-                )}
+                <div className="flex items-center space-x-1.5 shrink-0">
+                  {mode !== 'generic' && playerRating !== undefined && (
+                    <span className="text-xs text-amber-500 font-medium ml-2 shrink-0">
+                      ★ {playerRating}
+                    </span>
+                  )}
+                  {onRemovePlayer && (
+                    <button
+                      type="button"
+                      onClick={() => onRemovePlayer(team.id, player.id)}
+                      aria-label={`Премахни ${player.name} от отбора`}
+                      title={`Премахни ${player.name} от отбора`}
+                      className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 p-0.5 rounded transition-colors cursor-pointer ml-1"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </li>
             );
           })}
           {emptySlotsCount > 0 &&
             Array.from({ length: emptySlotsCount }).map((_, slotIdx) => (
-              <li
-                key={`empty-slot-${slotIdx}`}
-                data-testid="empty-slot"
-                className="flex items-center text-gray-400 dark:text-slate-500 text-sm border border-dashed border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-gray-50/50 dark:bg-slate-800/40"
-              >
-                <User className="w-4 h-4 mr-2 text-gray-400 dark:text-slate-500 shrink-0" />
-                <span className="italic">Свободно място</span>
+              <li key={`empty-slot-${slotIdx}`}>
+                {onSelectEmptySlot ? (
+                  <button
+                    type="button"
+                    data-testid="empty-slot"
+                    onClick={() => onSelectEmptySlot(team.id)}
+                    aria-label={`Избери играч за ${team.name}`}
+                    className="w-full flex items-center justify-between text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 text-sm border border-dashed border-indigo-300 dark:border-indigo-700 hover:border-indigo-500 dark:hover:border-indigo-500 rounded-lg px-3 py-2 bg-indigo-50/40 dark:bg-slate-800/60 hover:bg-indigo-50 dark:hover:bg-slate-700/50 transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center min-w-0">
+                      <UserPlus className="w-4 h-4 mr-2 text-indigo-500 dark:text-indigo-400 shrink-0 group-hover:scale-110 transition-transform" />
+                      <span className="font-medium">+ Избери играч</span>
+                    </div>
+                    <span className="text-xs text-indigo-400/80 dark:text-indigo-400/60 italic hidden sm:inline">
+                      Свободно място
+                    </span>
+                  </button>
+                ) : (
+                  <div
+                    data-testid="empty-slot"
+                    className="flex items-center text-gray-400 dark:text-slate-500 text-sm border border-dashed border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-gray-50/50 dark:bg-slate-800/40"
+                  >
+                    <User className="w-4 h-4 mr-2 text-gray-400 dark:text-slate-500 shrink-0" />
+                    <span className="italic">Свободно място</span>
+                  </div>
+                )}
               </li>
             ))}
           {team.players.length === 0 && emptySlotsCount === 0 && (
