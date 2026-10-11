@@ -1666,6 +1666,67 @@ describe('useTeamGenerator', () => {
       expect(result.current.unassignedPoolPlayers[0].id).toBe('p-1');
     });
 
+    it('addBlankTeam adds a new team dynamically without resetting existing teams', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      const mockPlayer = { id: 'p-1', name: 'Иван', source: 'registered' as const, rating: 1200 };
+
+      act(() => {
+        result.current.toggleRegisteredPlayer(mockPlayer);
+        result.current.initializeBlankTeams(2, 2);
+      });
+
+      act(() => {
+        result.current.assignPlayerToTeam('team-1', mockPlayer);
+      });
+
+      expect(result.current.teams).toHaveLength(2);
+      expect(result.current.teams[0].players).toHaveLength(1);
+
+      // Dynamically add a 3rd team
+      act(() => {
+        result.current.addBlankTeam();
+      });
+
+      expect(result.current.teams).toHaveLength(3);
+      expect(result.current.teams[0].players).toHaveLength(1);
+      expect(result.current.teams[0].players[0].name).toBe('Иван');
+      expect(result.current.teams[2].name).toBe('Отбор 3');
+      expect(result.current.teams[2].players).toEqual([]);
+      expect(result.current.formationMode).toBe('manual');
+    });
+
+    it('deleteTeam removes team and frees its assigned players back to unassignedPoolPlayers', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      const p1 = { id: 'p-1', name: 'Иван', source: 'registered' as const, rating: 1200 };
+      const p2 = { id: 'p-2', name: 'Петър', source: 'registered' as const, rating: 1300 };
+
+      act(() => {
+        result.current.toggleRegisteredPlayer(p1);
+        result.current.toggleRegisteredPlayer(p2);
+        result.current.initializeBlankTeams(2, 2);
+      });
+
+      act(() => {
+        result.current.assignPlayerToTeam('team-1', p1);
+        result.current.assignPlayerToTeam('team-2', p2);
+      });
+
+      expect(result.current.unassignedPoolPlayers).toHaveLength(0);
+
+      // Delete team-1
+      act(() => {
+        result.current.deleteTeam('team-1');
+      });
+
+      expect(result.current.teams).toHaveLength(1);
+      expect(result.current.teams[0].id).toBe('team-2');
+      // Player p-1 from deleted team is now freed back to unassignedPoolPlayers!
+      expect(result.current.unassignedPoolPlayers).toHaveLength(1);
+      expect(result.current.unassignedPoolPlayers[0].id).toBe('p-1');
+    });
+
     it('autoFillRemainingSlots fills remaining slots across incomplete teams', () => {
       const { result } = renderHook(() => useTeamGenerator());
 

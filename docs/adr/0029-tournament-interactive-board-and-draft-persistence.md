@@ -48,11 +48,15 @@ We have implemented **Option B**:
 - Updated `TournamentsPage` to immediately navigate to `/tournaments/:id` upon successful tournament creation.
 - Created `TournamentInteractiveBoard` component integrated into `TournamentDetailPage` when 0 matches exist.
 - Implemented debounced auto-save (800ms) with Bulgarian badges (`Запазване на чернова...`, `✓ Всички промени са запазени като чернова`), slot-by-slot picking, hybrid auto-fill, group draw gating, and bulk match saving with `tournament_id`.
+- **User Feedback Enhancements:**
+  - **Flexible Team Count:** Numeric stepper and counter controls allowing 2 to 32 teams with dynamic `➕ Добави отбор` addition without resetting existing assignments.
+  - **Team Deletion:** Trash action on `TeamCard` allowing team removal with automatic player release back to the unassigned pool.
+  - **Pool Visibility & Shortage Gating:** Visible collapsible participants panel displaying player chips, and suppression of the misleading shortage warning in manual mode.
 
 ---
 
 ## Consequences
 
-- **Positive:** Organizers enjoy a streamlined, robust tournament drafting experience with automatic persistence and zero data loss.
+- **Positive:** Organizers enjoy a streamlined, robust tournament drafting experience with automatic persistence, flexible team count adjustments, and zero data loss.
 - **Negative / Trade-offs:** Storing JSONB draft state requires careful state sanitization on load and save.
-- **Verification:** Fully covered by unit and integration tests (571 tests passing across 50 files, 100% pass rate).
+- **Verification:** Fully covered by unit and integration tests (580 tests passing across 50 files, 100% pass rate).

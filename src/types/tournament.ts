@@ -138,6 +138,8 @@ export interface UseTeamGeneratorReturn {
   setTeamFormationMode: (mode: import('./generator').TeamFormationMode) => void;
   unassignedPoolPlayers: GeneratorPlayer[];
   initializeBlankTeams: (numTeams: number, playersPerTeam?: number) => void;
+  addBlankTeam: () => void;
+  deleteTeam: (teamId: string) => void;
   assignPlayerToTeam: (teamId: string, player: GeneratorPlayer) => void;
   removePlayerFromTeam: (teamId: string, playerId: string) => void;
   autoFillRemainingSlots: (balance?: boolean) => void;

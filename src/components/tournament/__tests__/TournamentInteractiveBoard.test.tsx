@@ -142,8 +142,8 @@ describe('TournamentInteractiveBoard Component', () => {
     // Verifies hydrated teams are rendered
     expect(screen.getByText('Отбор 1')).toBeInTheDocument();
     expect(screen.getByText('Отбор 2')).toBeInTheDocument();
-    expect(screen.getByText('Иван Иванов')).toBeInTheDocument();
-    expect(screen.getByText('Петър Петров')).toBeInTheDocument();
+    expect(screen.getAllByText('Иван Иванов').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Петър Петров').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('✓ Всички промени са запазени като чернова')).toBeInTheDocument();
   });
 
@@ -299,5 +299,227 @@ describe('TournamentInteractiveBoard Component', () => {
     );
     expect(saveTournamentDraftMock).toHaveBeenCalledWith('tourn-100', null);
     expect(onMatchesCreatedMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('supports flexible team count input and [-] / [+] counter buttons', () => {
+    render(<TournamentInteractiveBoard tournament={baseTournament} />);
+
+    const countInput = screen.getByLabelText('Целеви брой отбори') as HTMLInputElement;
+    expect(countInput.value).toBe('8');
+
+    const decrementBtn = screen.getByRole('button', { name: 'Намали брой отбори' });
+    const incrementBtn = screen.getByRole('button', { name: 'Увеличи брой отбори' });
+
+    // Decrement from 8 to 7
+    act(() => {
+      fireEvent.click(decrementBtn);
+    });
+    expect(countInput.value).toBe('7');
+
+    // Increment from 7 to 8
+    act(() => {
+      fireEvent.click(incrementBtn);
+    });
+    expect(countInput.value).toBe('8');
+
+    // Direct input change
+    act(() => {
+      fireEvent.change(countInput, { target: { value: '12' } });
+    });
+    expect(countInput.value).toBe('12');
+  });
+
+  it('adds a blank team dynamically via "➕ Добави отбор" without resetting existing teams', () => {
+    const existingDraft: TournamentDraftState = {
+      targetTeams: 2,
+      formationMode: 'manual',
+      teams: [
+        {
+          id: 'team-1',
+          name: 'Отбор 1',
+          players: [{ id: 'p-1', name: 'Иван Иванов', rating: 1200 }],
+          totalRating: 1200,
+        },
+        {
+          id: 'team-2',
+          name: 'Отбор 2',
+          players: [],
+          totalRating: 0,
+        },
+      ],
+      activePool: [{ id: 'p-1', name: 'Иван Иванов', rating: 1200, source: 'registered' }],
+      groups: [],
+      schedule: [],
+    };
+
+    render(
+      <TournamentInteractiveBoard
+        tournament={{ ...baseTournament, draft_state: existingDraft }}
+      />
+    );
+
+    expect(screen.getByText('Отбор 1')).toBeInTheDocument();
+    expect(screen.getByText('Отбор 2')).toBeInTheDocument();
+    expect(screen.queryByText('Отбор 3')).not.toBeInTheDocument();
+
+    const addTeamBtn = screen.getByRole('button', { name: /добави отбор/i });
+    act(() => {
+      fireEvent.click(addTeamBtn);
+    });
+
+    // A 3rd team is added
+    expect(screen.getByText('Отбор 3')).toBeInTheDocument();
+    // Team 1 still has its assigned player intact
+    expect(screen.getAllByText('Иван Иванов').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('deletes a team via trash button and frees assigned players back to pool', () => {
+    const existingDraft: TournamentDraftState = {
+      targetTeams: 2,
+      formationMode: 'manual',
+      teams: [
+        {
+          id: 'team-1',
+          name: 'Отбор 1',
+          players: [{ id: 'p-1', name: 'Иван Иванов', rating: 1200 }],
+          totalRating: 1200,
+        },
+        {
+          id: 'team-2',
+          name: 'Отбор 2',
+          players: [],
+          totalRating: 0,
+        },
+      ],
+      activePool: [{ id: 'p-1', name: 'Иван Иванов', rating: 1200, source: 'registered' }],
+      groups: [],
+      schedule: [],
+    };
+
+    render(
+      <TournamentInteractiveBoard
+        tournament={{ ...baseTournament, draft_state: existingDraft }}
+      />
+    );
+
+    expect(screen.getByText('Отбор 1')).toBeInTheDocument();
+    expect(screen.getByText('Отбор 2')).toBeInTheDocument();
+
+    const deleteTeam1Btn = screen.getByRole('button', { name: 'Изтрий Отбор 1' });
+    act(() => {
+      fireEvent.click(deleteTeam1Btn);
+    });
+
+    // Team 1 is removed
+    expect(screen.queryByText('Отбор 1')).not.toBeInTheDocument();
+    expect(screen.getByText('Отбор 2')).toBeInTheDocument();
+
+    // Player Иван Иванов was freed back to unassigned pool:
+    // Click on empty slot of Team 2 to open picker modal and verify Иван Иванов is available
+    const emptySlot = screen.getAllByTestId('empty-slot')[0];
+    act(() => {
+      fireEvent.click(emptySlot);
+    });
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText('Иван Иванов')).toBeInTheDocument();
+  });
+
+  it('does NOT render pool shortage warning banner in manual mode', () => {
+    // 4 teams in manual mode, but only 2 players in activePool (needs 8 in doubles)
+    const manualDraft: TournamentDraftState = {
+      targetTeams: 4,
+      formationMode: 'manual',
+      teams: [
+        { id: 'team-1', name: 'Отбор 1', players: [{ id: 'p-1', name: 'Иван Иванов', rating: 1200 }] },
+        { id: 'team-2', name: 'Отбор 2', players: [{ id: 'p-2', name: 'Петър Петров', rating: 1150 }] },
+        { id: 'team-3', name: 'Отбор 3', players: [] },
+        { id: 'team-4', name: 'Отбор 4', players: [] },
+      ],
+      activePool: [
+        { id: 'p-1', name: 'Иван Иванов', rating: 1200, source: 'registered' },
+        { id: 'p-2', name: 'Петър Петров', rating: 1150, source: 'registered' },
+      ],
+      groups: [],
+      schedule: [],
+    };
+
+    render(
+      <TournamentInteractiveBoard
+        tournament={{ ...baseTournament, draft_state: manualDraft }}
+      />
+    );
+
+    // In manual mode, the shortage banner should NOT appear
+    expect(screen.queryByText(/недостиг на играчи/i)).not.toBeInTheDocument();
+  });
+
+  it('renders visible confirmed participants summary chips when players are in pool', () => {
+    const draftWithPool: TournamentDraftState = {
+      targetTeams: 2,
+      formationMode: 'manual',
+      teams: [
+        { id: 'team-1', name: 'Отбор 1', players: [] },
+        { id: 'team-2', name: 'Отбор 2', players: [] },
+      ],
+      activePool: [
+        { id: 'p-1', name: 'Иван Иванов', rating: 1200, source: 'registered' },
+        { id: 'p-2', name: 'Петър Петров', rating: 1150, source: 'registered' },
+      ],
+      groups: [],
+      schedule: [],
+    };
+
+    render(
+      <TournamentInteractiveBoard
+        tournament={{ ...baseTournament, draft_state: draftWithPool }}
+      />
+    );
+
+    // With teams present, the pool is collapsed by default and shows the confirmed participants preview
+    const participantsSummary = screen.getByTestId('confirmed-participants-summary');
+    expect(participantsSummary).toBeInTheDocument();
+    expect(within(participantsSummary).getByText('Иван Иванов')).toBeInTheDocument();
+    expect(within(participantsSummary).getByText('Петър Петров')).toBeInTheDocument();
+  });
+
+  it('shows error notification when clicking "Попълни останалите автоматично" with insufficient pool players', () => {
+    // 2 teams in doubles (need 4 players total). Only 2 players in pool, both already assigned to team 1.
+    // team 2 has 2 empty slots, but 0 unassigned players in pool!
+    const manualDraft: TournamentDraftState = {
+      targetTeams: 2,
+      formationMode: 'manual',
+      teams: [
+        {
+          id: 'team-1',
+          name: 'Отбор 1',
+          players: [
+            { id: 'p-1', name: 'Иван Иванов', rating: 1200 },
+            { id: 'p-2', name: 'Петър Петров', rating: 1150 },
+          ],
+        },
+        { id: 'team-2', name: 'Отбор 2', players: [] },
+      ],
+      activePool: [
+        { id: 'p-1', name: 'Иван Иванов', rating: 1200, source: 'registered' },
+        { id: 'p-2', name: 'Петър Петров', rating: 1150, source: 'registered' },
+      ],
+      groups: [],
+      schedule: [],
+    };
+
+    render(
+      <TournamentInteractiveBoard
+        tournament={{ ...baseTournament, draft_state: manualDraft }}
+      />
+    );
+
+    const autoFillBtn = screen.getAllByRole('button', { name: /попълни останалите автоматично/i })[0];
+    act(() => {
+      fireEvent.click(autoFillBtn);
+    });
+
+    // Alert error message should show the insufficient warning
+    expect(screen.getByText(/недостиг на играчи: в свободния пул има само 0 играчи/i)).toBeInTheDocument();
   });
 });

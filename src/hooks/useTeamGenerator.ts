@@ -743,6 +743,34 @@ export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGene
     setSchedule([]);
   }, []);
 
+  const addBlankTeam = useCallback(() => {
+    setFormationMode('manual');
+    setTeams((prevTeams) => {
+      const nextNum = prevTeams.length + 1;
+      let teamId = `team-${nextNum}`;
+      let counter = nextNum;
+      while (prevTeams.some((t) => t.id === teamId)) {
+        counter++;
+        teamId = `team-${counter}`;
+      }
+      const newTeam: Team = {
+        id: teamId,
+        name: `Отбор ${nextNum}`,
+        players: [],
+        totalRating: 0,
+      };
+      return [...prevTeams, newTeam];
+    });
+    setDrawnGroups([]);
+    setSchedule([]);
+  }, []);
+
+  const deleteTeam = useCallback((teamId: string) => {
+    setTeams((prevTeams) => prevTeams.filter((t) => t.id !== teamId));
+    setDrawnGroups([]);
+    setSchedule([]);
+  }, []);
+
   const assignPlayerToTeam = useCallback(
     (teamId: string, player: GeneratorPlayer) => {
       setActivePool((prev) => {
@@ -919,6 +947,8 @@ export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGene
     setTeamFormationMode: setFormationMode,
     unassignedPoolPlayers,
     initializeBlankTeams,
+    addBlankTeam,
+    deleteTeam,
     assignPlayerToTeam,
     removePlayerFromTeam,
     autoFillRemainingSlots,

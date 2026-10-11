@@ -89,7 +89,7 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
   // Current draft snapshot
   const currentDraft = useMemo<TournamentDraftState>(() => {
     return {
-      targetTeams: gen.numberOfTeams ?? (gen.teams.length > 0 ? gen.teams.length : targetTeamCount),
+      targetTeams: gen.teams.length > 0 ? gen.teams.length : (gen.numberOfTeams ?? targetTeamCount),
       formationMode: gen.formationMode,
       teams: gen.teams,
       activePool: gen.activePool,
@@ -161,6 +161,11 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
   const validationWarnings = useMemo(() => {
     const warnings: string[] = [];
 
+    // In manual mode, teams are constructed slot-by-slot directly from the database of players or guests
+    if (gen.formationMode === 'manual') {
+      return warnings;
+    }
+
     if (tournament.format === 'doubles' && gen.activePool.length % 2 !== 0) {
       warnings.push(
         `Внимание: Броят играчи в пула е нечетен (${gen.activePool.length}). За формат по двойки е необходим четен брой играчи.`
@@ -180,7 +185,7 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
     }
 
     return warnings;
-  }, [tournament.format, gen.activePool.length, gen.teams.length, neededPlayers, currentTeamCount]);
+  }, [gen.formationMode, tournament.format, gen.activePool.length, gen.teams.length, neededPlayers, currentTeamCount]);
 
   // Selected player IDs in pool
   const selectedPoolIds = useMemo(
@@ -229,10 +234,54 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
     [gen]
   );
 
+  const handleUpdateTargetTeams = useCallback(
+    (count: number) => {
+      const clamped = Math.min(32, Math.max(2, count));
+      setTargetTeamCount(clamped);
+      gen.setNumberOfTeams(clamped);
+    },
+    [gen]
+  );
+
   const handleCreateBlankTeams = useCallback(() => {
     gen.initializeBlankTeams(targetTeamCount, playersPerTeam);
     gen.setFormationMode('manual');
   }, [gen, targetTeamCount, playersPerTeam]);
+
+  const handleAddBlankTeam = useCallback(() => {
+    gen.addBlankTeam();
+    setTargetTeamCount((prev) => {
+      const nextCount = Math.min(32, Math.max(prev, gen.teams.length + 1));
+      gen.setNumberOfTeams(nextCount);
+      return nextCount;
+    });
+  }, [gen]);
+
+  const handleDeleteTeam = useCallback(
+    (teamId: string) => {
+      gen.deleteTeam(teamId);
+      setTargetTeamCount(() => {
+        const nextCount = Math.max(2, gen.teams.length - 1);
+        gen.setNumberOfTeams(nextCount);
+        return nextCount;
+      });
+    },
+    [gen]
+  );
+
+  const handleAutoFillRemaining = useCallback(() => {
+    const unassignedPoolCount = gen.unassignedPoolPlayers.length;
+    if (unassignedPoolCount < totalEmptySlots) {
+      setErrorMessage(
+        `Недостиг на играчи: в свободния пул има само ${unassignedPoolCount} ${
+          unassignedPoolCount === 1 ? 'играч' : 'играчи'
+        }, а за запълване на останалите празни места са нужни ${totalEmptySlots}. Добавете още играчи в пула или ги попълнете ръчно.`
+      );
+    } else {
+      setErrorMessage(null);
+    }
+    gen.autoFillRemainingSlots();
+  }, [gen, totalEmptySlots]);
 
   // Bulk save matches handler
   const handleSaveAllMatches = useCallback(async () => {
@@ -355,29 +404,67 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           {/* Target Team Count Selector */}
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block">
+            <label
+              htmlFor="targetTeamCountInput"
+              className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block"
+            >
               Целеви брой отбори
             </label>
-            <div className="flex flex-wrap items-center gap-2">
-              {[4, 8, 12, 16].map((count) => (
-                <button
-                  key={count}
-                  type="button"
-                  onClick={() => setTargetTeamCount(count)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    targetTeamCount === count
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {count} отбора
-                </button>
-              ))}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                id="decrementTeamCountBtn"
+                aria-label="Намали брой отбори"
+                onClick={() => handleUpdateTargetTeams(targetTeamCount - 1)}
+                disabled={targetTeamCount <= 2}
+                className="w-8 h-8 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+              >
+                -
+              </button>
+              <input
+                type="number"
+                id="targetTeamCountInput"
+                aria-label="Целеви брой отбори"
+                min={2}
+                max={32}
+                value={targetTeamCount}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  if (!isNaN(val)) {
+                    handleUpdateTargetTeams(val);
+                  }
+                }}
+                className="w-16 text-center py-1.5 px-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl text-sm font-bold dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+              />
+              <button
+                type="button"
+                id="incrementTeamCountBtn"
+                aria-label="Увеличи брой отбори"
+                onClick={() => handleUpdateTargetTeams(targetTeamCount + 1)}
+                disabled={targetTeamCount >= 32}
+                className="w-8 h-8 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 font-bold hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+              >
+                +
+              </button>
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                отбора (мин. 2, макс. 32)
+              </span>
             </div>
           </div>
 
           {/* Action CTAs */}
           <div className="flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              id="addBlankTeamBtn"
+              variant="secondary"
+              size="sm"
+              onClick={handleAddBlankTeam}
+              className="cursor-pointer font-semibold"
+            >
+              ➕ Добави отбор
+            </Button>
+
             <Button
               type="button"
               id="createBlankTeamsBtn"
@@ -406,7 +493,7 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
                 id="autoFillRemainingBtn"
                 variant="primary"
                 size="sm"
-                onClick={() => gen.autoFillRemainingSlots()}
+                onClick={handleAutoFillRemaining}
                 className="cursor-pointer font-semibold"
               >
                 <Sparkles className="w-4 h-4 mr-1.5" />
@@ -431,8 +518,11 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
         </div>
       </Card>
 
-      {/* Collapsible Player Pool Management */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm overflow-hidden">
+      {/* Collapsible Player Pool & Participants Management */}
+      <div
+        className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm overflow-hidden"
+        data-testid="confirmed-participants-section"
+      >
         <button
           type="button"
           onClick={() => setIsPoolExpanded((prev) => !prev)}
@@ -442,19 +532,49 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
             <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
             <div>
               <span className="font-bold text-sm text-gray-900 dark:text-white">
-                Пул от играчи
+                Потвърден състав / Участници
               </span>
               <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                ({gen.activePool.length} играчи в пула)
+                ({gen.activePool.length} {gen.activePool.length === 1 ? 'играч' : 'играчи'} в пула)
               </span>
             </div>
           </div>
-          {isPoolExpanded ? (
-            <ChevronUp className="w-5 h-5 text-gray-400" />
-          ) : (
-            <ChevronDown className="w-5 h-5 text-gray-400" />
-          )}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
+              {isPoolExpanded ? 'Скрий състава' : 'Покажи състава'}
+            </span>
+            {isPoolExpanded ? (
+              <ChevronUp className="w-5 h-5 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            )}
+          </div>
         </button>
+
+        {/* Confirmed Participants list shown clearly if participants exist */}
+        {!isPoolExpanded && gen.activePool.length > 0 && (
+          <div
+            data-testid="confirmed-participants-summary"
+            className="px-6 py-3 bg-gray-50/30 dark:bg-slate-800/20 border-t border-gray-100 dark:border-slate-700 flex flex-wrap items-center gap-2"
+          >
+            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 mr-1">
+              Участници в пула:
+            </span>
+            {gen.activePool.map((p) => (
+              <span
+                key={p.id}
+                className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-slate-600"
+              >
+                {p.name}
+                {p.source === 'guest' && (
+                  <span className="ml-1 text-[10px] text-gray-500 dark:text-gray-400">
+                    (гост)
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+        )}
 
         {isPoolExpanded && (
           <div className="p-6 border-t border-gray-100 dark:border-slate-700 space-y-6">
@@ -558,7 +678,8 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
           hasIncompleteTeams={gen.hasIncompleteTeams}
           onSelectEmptySlot={handleSelectEmptySlot}
           onRemovePlayer={gen.removePlayerFromTeam}
-          onAutoFillRemaining={gen.autoFillRemainingSlots}
+          onDeleteTeam={handleDeleteTeam}
+          onAutoFillRemaining={handleAutoFillRemaining}
           onDrawGroups={gen.drawGroups}
           onShuffleTeam={gen.shuffleSingleTeam}
           onCopy={gen.copyResults}

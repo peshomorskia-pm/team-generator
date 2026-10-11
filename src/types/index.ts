@@ -63,6 +63,7 @@ export interface TeamListProps {
   formationMode?: import('./generator').TeamFormationMode;
   onSelectEmptySlot?: (teamId: string) => void;
   onRemovePlayer?: (teamId: string, playerId: string) => void;
+  onDeleteTeam?: (teamId: string) => void;
   onAutoFillRemaining?: () => void;
 }
 
@@ -70,6 +71,7 @@ export interface TeamCardProps {
   team: Team;
   index?: number;
   onShuffleTeam?: (teamId: string) => void;
+  onDeleteTeam?: (teamId: string) => void;
   format?: 'singles' | 'doubles';
   mode?: GeneratorMode;
   targetSize?: number;
