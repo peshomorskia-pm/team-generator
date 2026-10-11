@@ -41,11 +41,21 @@ const mockTournaments: Tournament[] = [
   },
 ];
 
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
 describe('TournamentsPage', () => {
   const createTournamentMock = vi.fn();
   const updateTournamentMock = vi.fn();
   const deleteTournamentMock = vi.fn();
   const fetchTournamentsMock = vi.fn();
+  const saveTournamentDraftMock = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -57,6 +67,7 @@ describe('TournamentsPage', () => {
       createTournament: createTournamentMock,
       updateTournament: updateTournamentMock,
       deleteTournament: deleteTournamentMock,
+      saveTournamentDraft: saveTournamentDraftMock,
     });
   });
 
@@ -155,6 +166,7 @@ describe('TournamentsPage', () => {
       createTournament: createTournamentMock,
       updateTournament: updateTournamentMock,
       deleteTournament: deleteTournamentMock,
+      saveTournamentDraft: saveTournamentDraftMock,
     });
 
     renderComponent();
@@ -165,7 +177,7 @@ describe('TournamentsPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('opens create modal on button click and submits new tournament', async () => {
+  it('opens create modal on button click and submits new tournament and navigates', async () => {
     createTournamentMock.mockResolvedValueOnce({
       id: 't-4',
       title: 'Нов турнир 2026',
@@ -197,6 +209,7 @@ describe('TournamentsPage', () => {
           title: 'Нов турнир 2026',
         })
       );
+      expect(mockNavigate).toHaveBeenCalledWith('/tournaments/t-4');
     });
   });
 

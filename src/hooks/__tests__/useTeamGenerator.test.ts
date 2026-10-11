@@ -1725,6 +1725,66 @@ describe('useTeamGenerator', () => {
       expect(result.current.teams[1].totalRating).toBe(2600);
     });
   });
+
+  describe('Draft Hydration and Options Support', () => {
+    it('hydrates initial format and draft state correctly on mount', () => {
+      const mockPlayer1 = { id: 'p-1', name: 'Играч 1', rating: 1200, source: 'registered' as const };
+      const mockPlayer2 = { id: 'p-2', name: 'Играч 2', rating: 1100, source: 'registered' as const };
+      const mockTeam = {
+        id: 'team-1',
+        name: 'Отбор 1',
+        players: [mockPlayer1, mockPlayer2],
+        totalRating: 2300,
+      };
+
+      const mockDraft = {
+        targetTeams: 4,
+        formationMode: 'manual' as const,
+        teams: [mockTeam],
+        activePool: [mockPlayer1, mockPlayer2],
+        groups: [{ id: 'group-0', name: 'Група А', teams: [mockTeam] }],
+        schedule: [],
+      };
+
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialFormat: 'doubles',
+          initialDraftState: mockDraft,
+        })
+      );
+
+      expect(result.current.format).toBe('doubles');
+      expect(result.current.formationMode).toBe('manual');
+      expect(result.current.numberOfTeams).toBe(4);
+      expect(result.current.teams).toEqual([mockTeam]);
+      expect(result.current.activePool).toEqual([mockPlayer1, mockPlayer2]);
+      expect(result.current.groups).toEqual([{ id: 'group-0', name: 'Група А', teams: [mockTeam] }]);
+      expect(result.current.schedule).toEqual([]);
+    });
+
+    it('hydrates dynamically via hydrateFromDraft method', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      const mockPlayer = { id: 'p-guest', name: 'Гост 1', source: 'guest' as const };
+      const mockDraft = {
+        targetTeams: 6,
+        formationMode: 'manual' as const,
+        teams: [{ id: 'team-1', name: 'Отбор 1', players: [mockPlayer] }],
+        activePool: [mockPlayer],
+        groups: [],
+        schedule: [],
+      };
+
+      act(() => {
+        result.current.hydrateFromDraft?.(mockDraft);
+      });
+
+      expect(result.current.numberOfTeams).toBe(6);
+      expect(result.current.formationMode).toBe('manual');
+      expect(result.current.teams).toEqual([{ id: 'team-1', name: 'Отбор 1', players: [mockPlayer] }]);
+      expect(result.current.activePool).toEqual([mockPlayer]);
+    });
+  });
 });
 
 

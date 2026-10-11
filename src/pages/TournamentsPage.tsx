@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Trophy,
   Plus,
@@ -24,6 +25,7 @@ import type {
 export type TournamentStatusFilter = 'all' | TournamentStatus;
 
 export const TournamentsPage: React.FC = () => {
+  const navigate = useNavigate();
   const {
     tournaments,
     loading,
@@ -71,7 +73,10 @@ export const TournamentsPage: React.FC = () => {
   }, [tournaments, statusFilter, searchQuery]);
 
   const handleCreateSave = async (data: CreateTournamentInput | UpdateTournamentInput) => {
-    await createTournament(data as CreateTournamentInput);
+    const created = await createTournament(data as CreateTournamentInput);
+    if (created?.id) {
+      navigate(`/tournaments/${created.id}`);
+    }
   };
 
   const handleEditSave = async (data: CreateTournamentInput | UpdateTournamentInput) => {

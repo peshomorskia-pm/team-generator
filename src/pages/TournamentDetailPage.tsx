@@ -8,7 +8,6 @@ import {
   Trash2,
   Loader2,
   Swords,
-  Play,
   FileText,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
@@ -18,6 +17,7 @@ import { MatchModal } from '../components/match/MatchModal';
 import { DeleteMatchModal } from '../components/match/DeleteMatchModal';
 import { TournamentModal } from '../components/tournament/TournamentModal';
 import { DeleteTournamentModal } from '../components/tournament/DeleteTournamentModal';
+import { TournamentInteractiveBoard } from '../components/tournament/TournamentInteractiveBoard';
 import { useTournaments } from '../hooks/useTournaments';
 import { useMatches } from '../hooks/useMatches';
 import { usePlayers } from '../hooks/usePlayers';
@@ -68,6 +68,7 @@ export const TournamentDetailPage: React.FC = () => {
   const {
     matches,
     loading: matchesLoading,
+    fetchMatches,
     updateMatch,
     deleteMatch,
   } = useMatches();
@@ -393,43 +394,33 @@ export const TournamentDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Generator Launch CTA Section (only shown when tournament has no matches) */}
-      {tournamentMatches.length === 0 && (
-        <div className="bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 dark:from-indigo-950/40 dark:via-purple-950/40 dark:to-pink-950/40 border border-indigo-200 dark:border-indigo-800/60 rounded-2xl p-6 mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
-          <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
-              <span>🎲 Стартирай генератор за турнира</span>
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              Изберете играчи, генерирайте отбори и автоматично създайте програма от мачове за този турнир.
-            </p>
-          </div>
-          <Link
-            to={`/generator?tournamentId=${tournament.id}`}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-colors shrink-0"
-          >
-            <Play className="w-4 h-4 fill-white" />
-            <span>Към генератора</span>
-          </Link>
-        </div>
-      )}
+      {/* Central Content: Interactive Board if 0 matches, or Matches List if matches exist */}
+      {tournamentMatches.length === 0 ? (
+        <TournamentInteractiveBoard
+          tournament={tournament}
+          onMatchesSaved={async () => {
+            await fetchMatches();
+          }}
+          onMatchesCreated={async () => {
+            await fetchMatches();
+          }}
+        />
+      ) : (
+        /* Matches List Section */
+        <div className="space-y-4">
+          {/* Section Heading & Filters */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2">
+              <Swords className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                Мачове на турнира
+              </h2>
+              <span className="ml-2 text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                {matchStats.total}
+              </span>
+            </div>
 
-      {/* Matches List Section */}
-      <div className="space-y-4">
-        {/* Section Heading & Filters */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2">
-            <Swords className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              Мачове на турнира
-            </h2>
-            <span className="ml-2 text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-              {matchStats.total}
-            </span>
-          </div>
-
-          {/* Quick Filters (Status & Groups) */}
-          {tournamentMatches.length > 0 && (
+            {/* Quick Filters (Status & Groups) */}
             <div className="flex flex-wrap items-center gap-2">
               {/* Status Tabs */}
               <div className="flex items-center rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700">
@@ -499,55 +490,36 @@ export const TournamentDetailPage: React.FC = () => {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Matches Content */}
+          {matchesLoading && tournamentMatches.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+              <Loader2 className="w-6 h-6 animate-spin mb-2 text-indigo-600 dark:text-indigo-400" />
+              <p className="text-xs">Зареждане на мачовете...</p>
+            </div>
+          ) : filteredMatches.length === 0 ? (
+            /* Filtered Empty State */
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 text-center shadow-xs">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Няма намерени мачове за избраните критерии.
+              </p>
+            </div>
+          ) : (
+            /* Matches List */
+            <div className="space-y-4">
+              {filteredMatches.map((m) => (
+                <MatchCard
+                  key={m.id}
+                  match={m}
+                  onEdit={(match) => setEditingMatch(match)}
+                  onDelete={(match) => setDeletingMatch(match)}
+                />
+              ))}
+            </div>
           )}
         </div>
-
-        {/* Matches Content */}
-        {matchesLoading && tournamentMatches.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-            <Loader2 className="w-6 h-6 animate-spin mb-2 text-indigo-600 dark:text-indigo-400" />
-            <p className="text-xs">Зареждане на мачовете...</p>
-          </div>
-        ) : tournamentMatches.length === 0 ? (
-          /* Empty State */
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-12 text-center shadow-xs">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto mb-4">
-              <Swords className="w-8 h-8" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              Все още няма записани мачове за този турнир
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto mb-6">
-              Използвайте турнирния генератор, за да създадете отбори, групи и автоматична програма от срещи.
-            </p>
-            <Link
-              to={`/generator?tournamentId=${tournament.id}`}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-colors"
-            >
-              <span>🎲 Стартирай генератор за турнира</span>
-            </Link>
-          </div>
-        ) : filteredMatches.length === 0 ? (
-          /* Filtered Empty State */
-          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 text-center shadow-xs">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Няма намерени мачове за избраните критерии.
-            </p>
-          </div>
-        ) : (
-          /* Matches List */
-          <div className="space-y-4">
-            {filteredMatches.map((m) => (
-              <MatchCard
-                key={m.id}
-                match={m}
-                onEdit={(match) => setEditingMatch(match)}
-                onDelete={(match) => setDeletingMatch(match)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Edit Tournament Modal */}
       {isEditTournamentOpen && (

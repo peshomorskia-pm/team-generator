@@ -1,8 +1,17 @@
 import type { Team, GeneratorMode, AlertNotification } from './index';
-import type { GeneratorPlayer, DatabasePlayer } from './generator';
+import type { GeneratorPlayer, DatabasePlayer, TeamFormationMode } from './generator';
 
 export type TournamentStatus = 'draft' | 'in_progress' | 'completed';
 export type TournamentFormat = 'singles' | 'doubles';
+
+export interface TournamentDraftState {
+  targetTeams: number;
+  formationMode: TeamFormationMode; // 'auto' | 'manual'
+  teams: Team[];
+  activePool: GeneratorPlayer[];
+  groups?: TournamentGroup[] | null;
+  schedule?: TournamentMatch[] | null;
+}
 
 export interface Tournament {
   id: string;
@@ -12,6 +21,7 @@ export interface Tournament {
   status: TournamentStatus;
   winner_team_name: string | null;
   notes: string | null;
+  draft_state?: TournamentDraftState | null;
   created_at: string;
   updated_at: string;
 }
@@ -23,6 +33,7 @@ export interface CreateTournamentInput {
   status?: TournamentStatus;
   winner_team_name?: string | null;
   notes?: string | null;
+  draft_state?: TournamentDraftState | null;
 }
 
 export interface UpdateTournamentInput {
@@ -32,6 +43,7 @@ export interface UpdateTournamentInput {
   status?: TournamentStatus;
   winner_team_name?: string | null;
   notes?: string | null;
+  draft_state?: TournamentDraftState | null;
 }
 
 export interface TournamentGroup {
@@ -54,6 +66,12 @@ export interface TournamentRound {
   roundNumber: number;
   matches: TournamentMatch[];
   byeTeam?: Team;
+}
+
+export interface UseTeamGeneratorOptions {
+  initialMode?: GeneratorMode;
+  initialFormat?: 'singles' | 'doubles';
+  initialDraftState?: TournamentDraftState | null;
 }
 
 export interface UseTeamGeneratorReturn {
@@ -123,4 +141,5 @@ export interface UseTeamGeneratorReturn {
   assignPlayerToTeam: (teamId: string, player: GeneratorPlayer) => void;
   removePlayerFromTeam: (teamId: string, playerId: string) => void;
   autoFillRemainingSlots: (balance?: boolean) => void;
+  hydrateFromDraft?: (draftState: TournamentDraftState) => void;
 }

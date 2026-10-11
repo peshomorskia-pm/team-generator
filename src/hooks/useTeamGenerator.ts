@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
-import { Team, AlertNotification, GeneratorMode, TournamentGroup, TournamentMatch, UseTeamGeneratorReturn } from '../types';
+import { Team, AlertNotification, GeneratorMode, TournamentGroup, TournamentMatch, UseTeamGeneratorReturn, TournamentDraftState, UseTeamGeneratorOptions } from '../types';
 import { GeneratorPlayer, DatabasePlayer, TeamFormationMode } from '../types/generator';
 import { fisherYatesShuffle } from '../utils/shuffle';
 import { balanceTeams } from '../utils/balance';
@@ -63,21 +63,37 @@ export const calculateTeamRating = (
   }, 0);
 };
 
-export function useTeamGenerator(): UseTeamGeneratorReturn {
-  const [mode, setMode] = useState<GeneratorMode>('tennis');
-  const [activePool, setActivePool] = useState<GeneratorPlayer[]>([]);
-  const [numberOfTeams, setNumberOfTeams] = useState<number | null>(null);
+export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGeneratorReturn {
+  const [mode, setMode] = useState<GeneratorMode>(options?.initialMode ?? 'tennis');
+  const [activePool, setActivePool] = useState<GeneratorPlayer[]>(
+    () => options?.initialDraftState?.activePool ?? []
+  );
+  const [numberOfTeams, setNumberOfTeams] = useState<number | null>(
+    () => options?.initialDraftState?.targetTeams ?? null
+  );
   const [playersPerTeam, setPlayersPerTeam] = useState<number | null>(null);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [drawnGroups, setDrawnGroups] = useState<TournamentGroup[]>([]);
-  const [schedule, setSchedule] = useState<TournamentMatch[]>([]);
+  const [teams, setTeams] = useState<Team[]>(
+    () => options?.initialDraftState?.teams ?? []
+  );
+  const [drawnGroups, setDrawnGroups] = useState<TournamentGroup[]>(
+    () => options?.initialDraftState?.groups ?? []
+  );
+  const [schedule, setSchedule] = useState<TournamentMatch[]>(
+    () => options?.initialDraftState?.schedule ?? []
+  );
   const [history, setHistory] = useState<string[]>([]);
   const [alert, setAlert] = useState<AlertNotification | null>(null);
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [balanceByRating, setBalanceByRating] = useState<boolean>(false);
-  const [formationMode, setFormationMode] = useState<TeamFormationMode>('auto');
-  const [manualPlayersPerTeam, setManualPlayersPerTeam] = useState<number>(2);
-  const [format, setFormat] = useState<'singles' | 'doubles'>('doubles');
+  const [formationMode, setFormationMode] = useState<TeamFormationMode>(
+    () => options?.initialDraftState?.formationMode ?? 'auto'
+  );
+  const [format, setFormat] = useState<'singles' | 'doubles'>(
+    () => options?.initialFormat ?? 'doubles'
+  );
+  const [manualPlayersPerTeam, setManualPlayersPerTeam] = useState<number>(
+    () => (options?.initialFormat === 'singles' ? 1 : 2)
+  );
   const lastTeamsRef = useRef<Team[] | null>(null);
   const lastFingerprintRef = useRef<string>('');
 
@@ -107,6 +123,9 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
   const groups = useMemo<TournamentGroup[]>(() => {
     if (mode !== 'tennis' || hasIncompleteTeams) {
       return [];
+    }
+    if (drawnGroups.length > 0) {
+      return drawnGroups;
     }
     if (teams.length >= 3 && teams.length <= 5) {
       return [{ id: 'group-0', name: 'Група А', teams }];
@@ -835,6 +854,27 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
     [activePool, balanceByRating, effectiveFormat, targetTeamSize]
   );
 
+  const hydrateFromDraft = useCallback((draft: TournamentDraftState) => {
+    if (draft.targetTeams !== undefined && draft.targetTeams !== null) {
+      setNumberOfTeams(draft.targetTeams);
+    }
+    if (draft.formationMode) {
+      setFormationMode(draft.formationMode);
+    }
+    if (draft.teams) {
+      setTeams(draft.teams);
+    }
+    if (draft.activePool) {
+      setActivePool(draft.activePool);
+    }
+    if (draft.groups !== undefined) {
+      setDrawnGroups(draft.groups ?? []);
+    }
+    if (draft.schedule !== undefined) {
+      setSchedule(draft.schedule ?? []);
+    }
+  }, []);
+
   return {
     mode,
     setMode: handleSetMode,
@@ -882,5 +922,6 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
     assignPlayerToTeam,
     removePlayerFromTeam,
     autoFillRemainingSlots,
+    hydrateFromDraft,
   };
 }

@@ -4,7 +4,9 @@ import type {
   Tournament,
   CreateTournamentInput,
   UpdateTournamentInput,
+  TournamentDraftState,
 } from '../types/tournament';
+import type { Json, TournamentInsert, TournamentUpdate } from '../types/database.types';
 
 export interface UseTournamentsReturn {
   tournaments: Tournament[];
@@ -14,6 +16,7 @@ export interface UseTournamentsReturn {
   createTournament: (input: CreateTournamentInput) => Promise<Tournament>;
   updateTournament: (id: string, input: UpdateTournamentInput) => Promise<Tournament>;
   deleteTournament: (id: string) => Promise<void>;
+  saveTournamentDraft: (id: string, draftState: TournamentDraftState | null) => Promise<boolean>;
 }
 
 const toError = (err: unknown, fallback: string): Error => {
@@ -78,7 +81,7 @@ export function useTournaments(): UseTournamentsReturn {
 
         const { data, error: insertError } = await supabase
           .from('tournaments')
-          .insert(input)
+          .insert(input as unknown as TournamentInsert)
           .select()
           .single();
 
@@ -113,7 +116,7 @@ export function useTournaments(): UseTournamentsReturn {
 
         const { data, error: updateError } = await supabase
           .from('tournaments')
-          .update(input)
+          .update(input as unknown as TournamentUpdate)
           .eq('id', id)
           .select()
           .single();
@@ -163,6 +166,33 @@ export function useTournaments(): UseTournamentsReturn {
         throw errorObj;
       } finally {
         setLoading(false);
+      }
+    },
+    []
+  );
+
+  const saveTournamentDraft = useCallback(
+    async (id: string, draftState: TournamentDraftState | null): Promise<boolean> => {
+      try {
+        if (!isSupabaseConfigured()) {
+          return false;
+        }
+
+        const { error: updateError } = await supabase
+          .from('tournaments')
+          .update({ draft_state: draftState as unknown as Json })
+          .eq('id', id);
+
+        if (updateError) {
+          return false;
+        }
+
+        setTournaments((prev) =>
+          prev.map((t) => (t.id === id ? { ...t, draft_state: draftState } : t))
+        );
+        return true;
+      } catch {
+        return false;
       }
     },
     []
@@ -223,5 +253,6 @@ export function useTournaments(): UseTournamentsReturn {
     createTournament,
     updateTournament,
     deleteTournament,
+    saveTournamentDraft,
   };
 }

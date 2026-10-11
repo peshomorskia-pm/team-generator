@@ -122,6 +122,7 @@ describe('TournamentDetailPage Integration Tests', () => {
       createTournament: vi.fn(),
       updateTournament: mockUpdateTournament,
       deleteTournament: mockDeleteTournament,
+      saveTournamentDraft: vi.fn(),
     });
 
     vi.spyOn(useMatchesModule, 'useMatches').mockReturnValue({
@@ -211,7 +212,7 @@ describe('TournamentDetailPage Integration Tests', () => {
     });
   });
 
-  it('displays empty state and generator prompt when tournament has no matches', () => {
+  it('displays TournamentInteractiveBoard when tournament has no matches', () => {
     vi.spyOn(useMatchesModule, 'useMatches').mockReturnValue({
       matches: [],
       loading: false,
@@ -227,15 +228,8 @@ describe('TournamentDetailPage Integration Tests', () => {
 
     renderComponent();
 
-    expect(
-      screen.getByText('Все още няма записани мачове за този турнир')
-    ).toBeInTheDocument();
-
-    const ctaLinks = screen.getAllByRole('link', {
-      name: /стартирай генератор за турнира/i,
-    });
-    expect(ctaLinks.length).toBeGreaterThanOrEqual(1);
-    expect(ctaLinks[0]).toHaveAttribute('href', '/generator?tournamentId=t-1');
+    expect(screen.getByTestId('tournament-interactive-board')).toBeInTheDocument();
+    expect(screen.getByText('Интерактивна дъска за турнир')).toBeInTheDocument();
   });
 
   it('renders matches list for this tournament and filters out matches from other tournaments', () => {
@@ -359,6 +353,7 @@ describe('TournamentDetailPage Integration Tests', () => {
       createTournament: vi.fn(),
       updateTournament: mockUpdateTournament,
       deleteTournament: mockDeleteTournament,
+      saveTournamentDraft: vi.fn(),
     });
 
     renderComponent();
