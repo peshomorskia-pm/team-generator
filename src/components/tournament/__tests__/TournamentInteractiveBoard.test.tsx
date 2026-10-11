@@ -483,44 +483,179 @@ describe('TournamentInteractiveBoard Component', () => {
     expect(within(participantsSummary).getByText('Петър Петров')).toBeInTheDocument();
   });
 
-  it('shows error notification when clicking "Попълни останалите автоматично" with insufficient pool players', () => {
-    // 2 teams in doubles (need 4 players total). Only 2 players in pool, both already assigned to team 1.
-    // team 2 has 2 empty slots, but 0 unassigned players in pool!
-    const manualDraft: TournamentDraftState = {
-      targetTeams: 2,
-      formationMode: 'manual',
-      teams: [
-        {
-          id: 'team-1',
-          name: 'Отбор 1',
-          players: [
-            { id: 'p-1', name: 'Иван Иванов', rating: 1200 },
-            { id: 'p-2', name: 'Петър Петров', rating: 1150 },
-          ],
-        },
-        { id: 'team-2', name: 'Отбор 2', players: [] },
-      ],
-      activePool: [
-        { id: 'p-1', name: 'Иван Иванов', rating: 1200, source: 'registered' },
-        { id: 'p-2', name: 'Петър Петров', rating: 1150, source: 'registered' },
-      ],
-      groups: [],
-      schedule: [],
-    };
+  describe('Intelligent Auto-Fill Remaining Slots', () => {
+    it('shows friendly notice when clicking "Попълни останалите автоматично" with 0 unassigned pool players, and does NOT render persistent red shortage error banner', () => {
+      vi.useFakeTimers();
 
-    render(
-      <TournamentInteractiveBoard
-        tournament={{ ...baseTournament, draft_state: manualDraft }}
-      />
-    );
+      // 2 teams in doubles (need 4 players total). Only 2 players in pool, both already assigned to team 1.
+      // team 2 has 2 empty slots, but 0 unassigned players in pool.
+      const manualDraft: TournamentDraftState = {
+        targetTeams: 2,
+        formationMode: 'manual',
+        teams: [
+          {
+            id: 'team-1',
+            name: 'Отбор 1',
+            players: [
+              { id: 'p-1', name: 'Иван Иванов', rating: 1200 },
+              { id: 'p-2', name: 'Петър Петров', rating: 1150 },
+            ],
+          },
+          { id: 'team-2', name: 'Отбор 2', players: [] },
+        ],
+        activePool: [
+          { id: 'p-1', name: 'Иван Иванов', rating: 1200, source: 'registered' },
+          { id: 'p-2', name: 'Петър Петров', rating: 1150, source: 'registered' },
+        ],
+        groups: [],
+        schedule: [],
+      };
 
-    const autoFillBtn = screen.getAllByRole('button', { name: /попълни останалите автоматично/i })[0];
-    act(() => {
-      fireEvent.click(autoFillBtn);
+      render(
+        <TournamentInteractiveBoard
+          tournament={{ ...baseTournament, draft_state: manualDraft }}
+        />
+      );
+
+      const autoFillBtn = screen.getAllByRole('button', { name: /попълни останалите автоматично/i })[0];
+      act(() => {
+        fireEvent.click(autoFillBtn);
+      });
+
+      // Persistent red shortage banner should NOT be displayed
+      expect(screen.queryByText(/недостиг на играчи/i)).not.toBeInTheDocument();
+
+      // Friendly notice displayed
+      const noticeText = 'Няма налични свободни играчи в пула за автоматично попълване.';
+      expect(screen.getByText(noticeText)).toBeInTheDocument();
+
+      // Empty slots remain intact and clickable
+      const emptySlots = screen.getAllByTestId('empty-slot');
+      expect(emptySlots).toHaveLength(2);
+
+      // Auto-dismisses after 4000ms
+      act(() => {
+        vi.advanceTimersByTime(4000);
+      });
+      expect(screen.queryByText(noticeText)).not.toBeInTheDocument();
     });
 
-    // Alert error message should show the insufficient warning
-    expect(screen.getByText(/недостиг на играчи: в свободния пул има само 0 играчи/i)).toBeInTheDocument();
+    it('partially fills available unassigned pool players and shows friendly info notice with remaining empty count', async () => {
+      vi.useFakeTimers();
+
+      // 2 teams in doubles (4 total slots). Team 1 has 2 players, Team 2 has 0 players (2 empty slots).
+      // Pool has 3 players: 2 assigned + 1 unassigned ("Димитър Димитров").
+      const manualDraft: TournamentDraftState = {
+        targetTeams: 2,
+        formationMode: 'manual',
+        teams: [
+          {
+            id: 'team-1',
+            name: 'Отбор 1',
+            players: [
+              { id: 'p-1', name: 'Иван Иванов', rating: 1200 },
+              { id: 'p-2', name: 'Петър Петров', rating: 1150 },
+            ],
+          },
+          { id: 'team-2', name: 'Отбор 2', players: [] },
+        ],
+        activePool: [
+          { id: 'p-1', name: 'Иван Иванов', rating: 1200, source: 'registered' },
+          { id: 'p-2', name: 'Петър Петров', rating: 1150, source: 'registered' },
+          { id: 'p-3', name: 'Димитър Димитров', rating: 1100, source: 'guest' },
+        ],
+        groups: [],
+        schedule: [],
+      };
+
+      render(
+        <TournamentInteractiveBoard
+          tournament={{ ...baseTournament, draft_state: manualDraft }}
+        />
+      );
+
+      const autoFillBtn = screen.getAllByRole('button', { name: /попълни останалите автоматично/i })[0];
+      act(() => {
+        fireEvent.click(autoFillBtn);
+      });
+
+      // No red error banner
+      expect(screen.queryByText(/недостиг на играчи/i)).not.toBeInTheDocument();
+
+      // Friendly notice: 1 filled, 1 remaining
+      const noticeText = 'Попълнени са 1 играча. Остават 1 свободни места за ръчен избор.';
+      expect(screen.getByText(noticeText)).toBeInTheDocument();
+
+      // Player "Димитър Димитров" was assigned into Team 2
+      expect(screen.getAllByText('Димитър Димитров').length).toBeGreaterThanOrEqual(2);
+
+      // Exactly 1 empty slot remains and is clickable for manual selection
+      const remainingSlots = screen.getAllByTestId('empty-slot');
+      expect(remainingSlots).toHaveLength(1);
+
+      // Auto-dismisses after 4000ms
+      await act(async () => {
+        vi.advanceTimersByTime(4000);
+      });
+      expect(screen.queryByText(noticeText)).not.toBeInTheDocument();
+    });
+
+    it('fills all empty slots when pool has enough unassigned players and shows success notice', async () => {
+      vi.useFakeTimers();
+
+      // 2 teams in doubles (4 total slots). Team 1 has 2 players, Team 2 has 0 players (2 empty slots).
+      // Pool has 4 players: 2 assigned + 2 unassigned.
+      const manualDraft: TournamentDraftState = {
+        targetTeams: 2,
+        formationMode: 'manual',
+        teams: [
+          {
+            id: 'team-1',
+            name: 'Отбор 1',
+            players: [
+              { id: 'p-1', name: 'Иван Иванов', rating: 1200 },
+              { id: 'p-2', name: 'Петър Петров', rating: 1150 },
+            ],
+          },
+          { id: 'team-2', name: 'Отбор 2', players: [] },
+        ],
+        activePool: [
+          { id: 'p-1', name: 'Иван Иванов', rating: 1200, source: 'registered' },
+          { id: 'p-2', name: 'Петър Петров', rating: 1150, source: 'registered' },
+          { id: 'p-3', name: 'Димитър Димитров', rating: 1100, source: 'guest' },
+          { id: 'p-4', name: 'Георги Георгиев', rating: 1050, source: 'guest' },
+        ],
+        groups: [],
+        schedule: [],
+      };
+
+      render(
+        <TournamentInteractiveBoard
+          tournament={{ ...baseTournament, draft_state: manualDraft }}
+        />
+      );
+
+      const autoFillBtn = screen.getAllByRole('button', { name: /попълни останалите автоматично/i })[0];
+      act(() => {
+        fireEvent.click(autoFillBtn);
+      });
+
+      // No red error banner
+      expect(screen.queryByText(/недостиг на играчи/i)).not.toBeInTheDocument();
+
+      // Friendly success notice
+      const successText = 'Всички свободни места бяха успешно попълнени.';
+      expect(screen.getByText(successText)).toBeInTheDocument();
+
+      // No empty slots remain
+      expect(screen.queryByTestId('empty-slot')).not.toBeInTheDocument();
+
+      // Auto-dismisses after 4000ms
+      await act(async () => {
+        vi.advanceTimersByTime(4000);
+      });
+      expect(screen.queryByText(successText)).not.toBeInTheDocument();
+    });
   });
 
   describe('Universal Mathematical Validation & Auto-Adjustment', () => {

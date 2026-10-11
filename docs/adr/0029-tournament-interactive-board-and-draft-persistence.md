@@ -17,12 +17,8 @@ Specifically, organizers requested:
 3. **Locked Format & Tennis Mode:** The board format must be strictly locked to the tournament's creation-time format (`tournament.format`, e.g., doubles or singles) and tennis mode, with no switcher pills.
 4. **Persistent Auto-Saving (`draft_state`):** Because player availability changes dynamically before group draw, draft states (target teams, formation mode, teams, active pool, groups, schedule) must be automatically persisted to Supabase using a new `draft_state JSONB` column on `public.tournaments`.
 5. **Group Draw Gating & Bulk Match Saving:** Group drawing must be gated until all team slots are filled. Finalizing and saving matches must persist matches with `tournament_id`, clear the draft state (`draft_state = null`), and transition the view to display the active match schedule and scorecards.
-6. **Universal Mathematical Team Sizing & Dynamic Pool Auto-Adjustment ($P, T$):** Prevent defects when pool size $P$ and target team count $T$ mismatch. Enforce strict capacity caps (players per team $\text{ppt} = 2$ for doubles, $1$ for singles) and universal mathematical adjustment logic for any pool size $P$ and target teams $T$:
-   - **Case 1 ($P \ge N + 2$, where $N = T \times \text{ppt}$):** Automatically expands target teams $M = \lfloor P / \text{ppt} \rfloor$ and displays an informational banner indicating reserves.
-   - **Case 2 ($P = N + 1$):** Retains target teams $T$, fills all teams, and marks the single leftover player as a reserve with an informational banner.
-   - **Case 3 ($P = N$):** Exactly fills $T$ teams with no excess and no banner.
-   - **Case 4 ($P = N - 1$):** Generates $T$ teams with 1 open slot; clicking `🎲 Тегли жребий за групи` auto-prunes the incomplete team to $M = T - 1$, re-indexes the target count, and displays an adjustment banner.
-   - **Case 5 ($P \le N - 2$):** Automatically adjusts target teams down to $M = \lfloor P / \text{ppt} \rfloor$ with a clear adjustment banner.
+6. **Universal Mathematical Team Sizing & Dynamic Pool Auto-Adjustment ($P, T$):** Prevent defects when pool size $P$ and target team count $T$ mismatch. Enforce strict capacity caps (players per team $\text{ppt} = 2$ for doubles, $1$ for singles) and universal mathematical adjustment logic for any pool size $P$ and target teams $T$.
+7. **Elimination of Persistent Red Shortage Banner & Intelligent Partial Auto-Fill:** Organizers found the persistent red error banner triggered on player shortage distracting and annoying ("Това седи постоянно. Как да го измислим."). The architecture required replacing the persistent red error banner with non-intrusive, auto-dismissing toast-style notifications (4000ms) for auto-fill actions, supporting partial auto-fill when pool size is smaller than remaining empty slots without throwing errors.
 
 ---
 
@@ -33,6 +29,7 @@ Specifically, organizers requested:
 3. **Format Integrity:** Prevent format tampering after tournament creation by strictly locking the board to `tournament.format`.
 4. **Bulgarian Localization Compliance:** Ensure 100% adherence to Bulgarian UI copy for all feedback badges, auto-save statuses, validation alerts, and mathematical adjustment banners.
 5. **Universal Mathematical Team Sizing & Dynamic Pool Auto-Adjustment:** Enforce rigorous mathematical rules for mapping any active pool size $P$ to target teams $T$ with clear feedback and robust case handling.
+6. **Non-Intrusive UX & Clean Feedback:** Remove persistent red shortage error banners in favor of friendly, auto-dismissing toast notices and intelligent partial auto-fill.
 
 ---
 
@@ -42,7 +39,7 @@ Specifically, organizers requested:
    - *Pros:* Reuses existing generator code as-is.
    - *Cons:* Requires jumping between `/tournaments` and `/generator`, losing tournament context and causing organizer confusion. (Rejected)
 2. **Option B: Dedicated In-Place `TournamentInteractiveBoard` with Supabase `draft_state` JSONB**
-   - *Pros:* Fully integrates the interactive board into `/tournaments/:id`, locks format at tournament creation, provides debounced auto-saving (800ms) with visual status badges, and saves all matches cleanly with `tournament_id`.
+   - *Pros:* Fully integrates the interactive board into `/tournaments/:id`, locks format at tournament creation, provides debounced auto-saving (800ms) with visual status badges, saves all matches cleanly with `tournament_id`, and delivers clean auto-dismissing notices without persistent red error banners.
    - *Cons:* Requires database migration (`draft_state JSONB`) and state hydration logic. (Selected)
 
 ---
@@ -55,6 +52,10 @@ We have implemented **Option B**:
 - Updated `TournamentsPage` to immediately navigate to `/tournaments/:id` upon successful tournament creation.
 - Created `TournamentInteractiveBoard` component integrated into `TournamentDetailPage` when 0 matches exist.
 - Implemented debounced auto-save (800ms) with Bulgarian badges (`Запазване на чернова...`, `✓ Всички промени са запазени като чернова`), slot-by-slot picking, hybrid auto-fill, group draw gating, and bulk match saving with `tournament_id`.
+- **Elimination of Persistent Red Shortage Banner & Intelligent Partial Auto-Fill:**
+  - Removed `setErrorMessage` from `handleAutoFillRemaining` and eliminated persistent red shortage error alerts.
+  - Implemented intelligent partial auto-fill (`Math.min(unassigned, emptySlots)`), allowing organizers to auto-fill available players when pool < empty slots without errors.
+  - Added auto-dismissing (4000ms) friendly notice toasts in Bulgarian (`"Попълнени са X играча. Остават Y свободни места за ръчен избор."`, `"Няма налични свободни играчи в пула за автоматично попълване."`, `"Всички свободни места бяха успешно попълнени."`) with manual dismissal support and proper timeout cleanup on unmount.
 - **Universal Mathematical Team Sizing & Dynamic Pool Auto-Adjustment Enhancements:**
   - **Strict Capacity Caps:** `useTeamGenerator` and `assignPlayerToTeam` enforce max 2 players per team in doubles and max 1 in singles, completely eliminating 3-player team defects.
   - **Universal Cases 1–5 Implementation:**
@@ -70,7 +71,8 @@ We have implemented **Option B**:
 
 ## Consequences
 
-- **Positive:** Organizers enjoy a streamlined, robust tournament drafting experience with automatic persistence, universal mathematical team sizing, dynamic pool auto-adjustment, and zero data loss.
+- **Positive:** Organizers enjoy a streamlined, robust tournament drafting experience with automatic persistence, universal mathematical team sizing, dynamic pool auto-adjustment, clean toast feedback (no persistent red error banners), and zero data loss.
 - **Negative / Trade-offs:** Storing JSONB draft state requires careful state sanitization on load and save.
-- **Verification:** Fully covered by comprehensive unit and integration tests (597 tests passing across 50 files, 100% pass rate).
+- **Verification:** Fully covered by comprehensive unit and integration tests (599 tests passing across 50 files, 100% pass rate).
+
 

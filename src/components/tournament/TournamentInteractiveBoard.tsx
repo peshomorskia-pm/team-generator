@@ -77,6 +77,29 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
   const [isSavingMatches, setIsSavingMatches] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [adjustmentBanner, setAdjustmentBanner] = useState<string | null>(null);
+  const [autoFillNotice, setAutoFillNotice] = useState<{
+    message: string;
+    type: 'info' | 'success';
+  } | null>(null);
+  const autoFillNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (autoFillNoticeTimeoutRef.current) {
+        clearTimeout(autoFillNoticeTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const showAutoFillNotice = useCallback((message: string, type: 'info' | 'success' = 'info') => {
+    if (autoFillNoticeTimeoutRef.current) {
+      clearTimeout(autoFillNoticeTimeoutRef.current);
+    }
+    setAutoFillNotice({ message, type });
+    autoFillNoticeTimeoutRef.current = setTimeout(() => {
+      setAutoFillNotice(null);
+    }, 4000);
+  }, []);
 
   // Auto-save state
   const [draftStatus, setDraftStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>(() =>
@@ -411,17 +434,32 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
 
   const handleAutoFillRemaining = useCallback(() => {
     const unassignedPoolCount = gen.unassignedPoolPlayers.length;
-    if (unassignedPoolCount < totalEmptySlots) {
-      setErrorMessage(
-        `Недостиг на играчи: в свободния пул има само ${unassignedPoolCount} ${
-          unassignedPoolCount === 1 ? 'играч' : 'играчи'
-        }, а за запълване на останалите празни места са нужни ${totalEmptySlots}. Добавете още играчи в пула или ги попълнете ръчно.`
+
+    if (unassignedPoolCount === 0) {
+      showAutoFillNotice(
+        'Няма налични свободни играчи в пула за автоматично попълване.',
+        'info'
+      );
+      return;
+    }
+
+    const filledCount = Math.min(unassignedPoolCount, totalEmptySlots);
+    const remainingEmpty = totalEmptySlots - filledCount;
+
+    gen.autoFillRemainingSlots();
+
+    if (remainingEmpty > 0) {
+      showAutoFillNotice(
+        `Попълнени са ${filledCount} играча. Остават ${remainingEmpty} свободни места за ръчен избор.`,
+        'info'
       );
     } else {
-      setErrorMessage(null);
+      showAutoFillNotice(
+        'Всички свободни места бяха успешно попълнени.',
+        'success'
+      );
     }
-    gen.autoFillRemainingSlots();
-  }, [gen, totalEmptySlots]);
+  }, [gen, totalEmptySlots, showAutoFillNotice]);
 
   // Bulk save matches handler
   const handleSaveAllMatches = useCallback(async () => {
@@ -530,6 +568,21 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
           message={adjustmentBanner}
           onDismiss={() => setAdjustmentBanner(null)}
         />
+      )}
+
+      {autoFillNotice && (
+        <div data-testid="auto-fill-notice">
+          <Alert
+            type={autoFillNotice.type}
+            message={autoFillNotice.message}
+            onDismiss={() => {
+              if (autoFillNoticeTimeoutRef.current) {
+                clearTimeout(autoFillNoticeTimeoutRef.current);
+              }
+              setAutoFillNotice(null);
+            }}
+          />
+        </div>
       )}
 
       {/* Validation Warnings */}
