@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { Team, AlertNotification, GeneratorMode, TournamentGroup, TournamentMatch, UseTeamGeneratorReturn } from '../types';
-import { GeneratorPlayer, DatabasePlayer } from '../types/generator';
+import { GeneratorPlayer, DatabasePlayer, TeamFormationMode } from '../types/generator';
 import { fisherYatesShuffle } from '../utils/shuffle';
 import { balanceTeams } from '../utils/balance';
 import { saveMatchup, generateTeamsFingerprint, areTeamConfigsEqual } from '../utils/history';
@@ -75,6 +75,8 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
   const [alert, setAlert] = useState<AlertNotification | null>(null);
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [balanceByRating, setBalanceByRating] = useState<boolean>(false);
+  const [formationMode, setFormationMode] = useState<TeamFormationMode>('auto');
+  const [manualPlayersPerTeam, setManualPlayersPerTeam] = useState<number>(2);
   const [format, setFormat] = useState<'singles' | 'doubles'>('doubles');
   const lastTeamsRef = useRef<Team[] | null>(null);
   const lastFingerprintRef = useRef<string>('');
@@ -82,8 +84,16 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
   const effectiveFormat = mode === 'tennis' ? format : undefined;
 
   const targetTeamSize = useMemo(() => {
+    if (formationMode === 'manual') {
+      return manualPlayersPerTeam;
+    }
     return getTargetTeamSize(mode, format, playersPerTeam, numberOfTeams, activePool.length);
-  }, [mode, format, playersPerTeam, numberOfTeams, activePool.length]);
+  }, [formationMode, manualPlayersPerTeam, mode, format, playersPerTeam, numberOfTeams, activePool.length]);
+
+  const unassignedPoolPlayers = useMemo(() => {
+    const assignedIds = new Set(teams.flatMap((t) => t.players.map((p) => p.id)));
+    return activePool.filter((p) => !assignedIds.has(p.id));
+  }, [activePool, teams]);
 
   const hasIncompleteTeams = useMemo(() => {
     if (teams.length === 0) return false;
@@ -211,7 +221,7 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
                 totalRating: calculateTeamRating(remaining, effectiveFormat),
               };
             })
-            .filter((t) => t.players.length > 0);
+            .filter((t) => (formationMode === 'manual' ? true : t.players.length > 0));
         });
       } else {
         const newPlayer: GeneratorPlayer = {
@@ -251,7 +261,7 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
       setDrawnGroups([]);
       setSchedule([]);
     },
-    [activePool, mode, effectiveFormat, playersPerTeam, numberOfTeams]
+    [activePool, mode, effectiveFormat, playersPerTeam, numberOfTeams, formationMode]
   );
 
   const addRegisteredPlayer = useCallback(
@@ -326,12 +336,12 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
               totalRating: calculateTeamRating(remaining, effectiveFormat),
             };
           })
-          .filter((t) => t.players.length > 0);
+          .filter((t) => (formationMode === 'manual' ? true : t.players.length > 0));
       });
       setDrawnGroups([]);
       setSchedule([]);
     },
-    [effectiveFormat]
+    [formationMode, effectiveFormat]
   );
 
   const clearPool = useCallback(() => {
@@ -630,6 +640,7 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
       lastFingerprintRef.current = fingerprint;
       saveMatchup(generatedTeams);
       setHistory((prev) => [fingerprint, ...prev]);
+      setFormationMode('auto');
       setTeams(generatedTeams);
       setDrawnGroups([]);
       setSchedule([]);
@@ -695,6 +706,135 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
     return false;
   }, [teams, mode, format, schedule, showAlert]);
 
+  const initializeBlankTeams = useCallback((numTeams: number, ppt = 2) => {
+    if (numTeams < 1) return;
+    setFormationMode('manual');
+    setManualPlayersPerTeam(ppt);
+    const blankTeams: Team[] = [];
+    for (let i = 0; i < numTeams; i++) {
+      blankTeams.push({
+        id: `team-${i + 1}`,
+        name: `Отбор ${i + 1}`,
+        players: [],
+        totalRating: 0,
+      });
+    }
+    setTeams(blankTeams);
+    setDrawnGroups([]);
+    setSchedule([]);
+  }, []);
+
+  const assignPlayerToTeam = useCallback(
+    (teamId: string, player: GeneratorPlayer) => {
+      setActivePool((prev) => {
+        if (prev.some((p) => p.id === player.id)) return prev;
+        return [...prev, player];
+      });
+
+      setTeams((prevTeams) => {
+        return prevTeams.map((team) => {
+          if (team.id === teamId) {
+            if (team.players.some((p) => p.id === player.id)) return team;
+            if (team.players.length >= targetTeamSize) return team;
+            const updated = [...team.players, player];
+            return {
+              ...team,
+              players: updated,
+              totalRating: calculateTeamRating(updated, effectiveFormat),
+            };
+          } else {
+            if (team.players.some((p) => p.id === player.id)) {
+              const remaining = team.players.filter((p) => p.id !== player.id);
+              return {
+                ...team,
+                players: remaining,
+                totalRating: calculateTeamRating(remaining, effectiveFormat),
+              };
+            }
+            return team;
+          }
+        });
+      });
+
+      setDrawnGroups([]);
+      setSchedule([]);
+    },
+    [targetTeamSize, effectiveFormat]
+  );
+
+  const removePlayerFromTeam = useCallback(
+    (teamId: string, playerId: string) => {
+      setTeams((prevTeams) => {
+        return prevTeams
+          .map((team) => {
+            if (team.id !== teamId) return team;
+            const remaining = team.players.filter((p) => p.id !== playerId);
+            return {
+              ...team,
+              players: remaining,
+              totalRating: calculateTeamRating(remaining, effectiveFormat),
+            };
+          })
+          .filter((t) => (formationMode === 'manual' ? true : t.players.length > 0));
+      });
+
+      setDrawnGroups([]);
+      setSchedule([]);
+    },
+    [formationMode, effectiveFormat]
+  );
+
+  const autoFillRemainingSlots = useCallback(
+    (balance?: boolean) => {
+      setTeams((prevTeams) => {
+        if (prevTeams.length === 0) return prevTeams;
+        const assignedIds = new Set(prevTeams.flatMap((t) => t.players.map((p) => p.id)));
+        let available = activePool.filter((p) => !assignedIds.has(p.id));
+        if (available.length === 0) return prevTeams;
+
+        const shouldBalance = balance ?? balanceByRating;
+        if (shouldBalance) {
+          available = [...available].sort((a, b) => {
+            const rA = resolvePlayerRating(a, effectiveFormat) ?? 0;
+            const rB = resolvePlayerRating(b, effectiveFormat) ?? 0;
+            return rB - rA;
+          });
+        } else {
+          available = fisherYatesShuffle(available);
+        }
+
+        const updatedTeams = prevTeams.map((team) => ({
+          ...team,
+          players: [...team.players],
+        }));
+
+        let playerIdx = 0;
+        while (playerIdx < available.length) {
+          const incompleteTeams = updatedTeams.filter((t) => t.players.length < targetTeamSize);
+          if (incompleteTeams.length === 0) break;
+
+          let targetTeam: (typeof updatedTeams)[0];
+          if (shouldBalance) {
+            incompleteTeams.sort((a, b) => (a.totalRating ?? 0) - (b.totalRating ?? 0));
+            targetTeam = incompleteTeams[0];
+          } else {
+            targetTeam = incompleteTeams[0];
+          }
+
+          const nextPlayer = available[playerIdx++];
+          targetTeam.players.push(nextPlayer);
+          targetTeam.totalRating = calculateTeamRating(targetTeam.players, effectiveFormat);
+        }
+
+        return updatedTeams;
+      });
+
+      setDrawnGroups([]);
+      setSchedule([]);
+    },
+    [activePool, balanceByRating, effectiveFormat, targetTeamSize]
+  );
+
   return {
     mode,
     setMode: handleSetMode,
@@ -733,5 +873,14 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
     generateTeams,
     shuffleSingleTeam,
     copyResults,
+    formationMode,
+    setFormationMode,
+    teamFormationMode: formationMode,
+    setTeamFormationMode: setFormationMode,
+    unassignedPoolPlayers,
+    initializeBlankTeams,
+    assignPlayerToTeam,
+    removePlayerFromTeam,
+    autoFillRemainingSlots,
   };
 }

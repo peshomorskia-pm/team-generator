@@ -122,4 +122,49 @@ describe('TeamCard', () => {
     expect(screen.queryByText('Свободно място')).not.toBeInTheDocument();
     expect(screen.queryByTestId('empty-slot')).not.toBeInTheDocument();
   });
+
+  it('renders interactive button for empty slot and triggers onSelectEmptySlot on click', async () => {
+    const user = userEvent.setup();
+    const handleSelectSlot = vi.fn();
+    const incompleteTeam: Team = {
+      id: 'team-1',
+      name: 'Отбор 1',
+      players: [],
+    };
+
+    render(
+      <TeamCard
+        team={incompleteTeam}
+        index={0}
+        targetSize={1}
+        onSelectEmptySlot={handleSelectSlot}
+      />
+    );
+
+    const slotBtn = screen.getByRole('button', { name: 'Избери играч за Отбор 1' });
+    expect(slotBtn).toBeInTheDocument();
+    expect(slotBtn).toHaveTextContent('+ Избери играч');
+
+    await user.click(slotBtn);
+    expect(handleSelectSlot).toHaveBeenCalledWith('team-1');
+  });
+
+  it('renders remove button for assigned players and calls onRemovePlayer on click', async () => {
+    const user = userEvent.setup();
+    const handleRemovePlayer = vi.fn();
+
+    render(
+      <TeamCard
+        team={mockTeam}
+        index={0}
+        onRemovePlayer={handleRemovePlayer}
+      />
+    );
+
+    const removeBtn = screen.getByRole('button', { name: 'Премахни Иван от отбора' });
+    expect(removeBtn).toBeInTheDocument();
+
+    await user.click(removeBtn);
+    expect(handleRemovePlayer).toHaveBeenCalledWith('team-1', 'p-1');
+  });
 });

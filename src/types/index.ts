@@ -40,6 +40,13 @@ export interface TeamSettingsProps {
   onFormatChange?: (format: 'singles' | 'doubles') => void;
   canGenerate?: boolean;
   validationError?: string | null;
+  formationMode?: import('./generator').TeamFormationMode;
+  onFormationModeChange?: (mode: import('./generator').TeamFormationMode) => void;
+  manualTeamCount?: number;
+  onManualTeamCountChange?: (count: number) => void;
+  onCreateBlankTeams?: () => void;
+  activePoolLength?: number;
+  activePool?: unknown[];
 }
 
 export interface TeamListProps {
@@ -53,6 +60,10 @@ export interface TeamListProps {
   onDrawGroups?: () => void;
   hasIncompleteTeams?: boolean;
   targetTeamSize?: number;
+  formationMode?: import('./generator').TeamFormationMode;
+  onSelectEmptySlot?: (teamId: string) => void;
+  onRemovePlayer?: (teamId: string, playerId: string) => void;
+  onAutoFillRemaining?: () => void;
 }
 
 export interface TeamCardProps {
@@ -62,6 +73,8 @@ export interface TeamCardProps {
   format?: 'singles' | 'doubles';
   mode?: GeneratorMode;
   targetSize?: number;
+  onSelectEmptySlot?: (teamId: string) => void;
+  onRemovePlayer?: (teamId: string, playerId: string) => void;
 }
 
 export interface AlertNotification {

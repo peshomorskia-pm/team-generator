@@ -114,4 +114,13 @@ export interface UseTeamGeneratorReturn {
   generateTeams: (teamCount?: number, balanceByRatingParam?: boolean) => void;
   shuffleSingleTeam: (teamId: string) => void;
   copyResults: () => Promise<boolean>;
+  formationMode: import('./generator').TeamFormationMode;
+  setFormationMode: (mode: import('./generator').TeamFormationMode) => void;
+  teamFormationMode: import('./generator').TeamFormationMode;
+  setTeamFormationMode: (mode: import('./generator').TeamFormationMode) => void;
+  unassignedPoolPlayers: GeneratorPlayer[];
+  initializeBlankTeams: (numTeams: number, playersPerTeam?: number) => void;
+  assignPlayerToTeam: (teamId: string, player: GeneratorPlayer) => void;
+  removePlayerFromTeam: (teamId: string, playerId: string) => void;
+  autoFillRemainingSlots: (balance?: boolean) => void;
 }

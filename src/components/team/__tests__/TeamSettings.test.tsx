@@ -265,4 +265,114 @@ describe('TeamSettings', () => {
       expect(handleGenerate).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('Interactive Team Board (Manual mode validation)', () => {
+    it('disables button and displays error when pool is smaller than required slots (e.g. 6 players for 4 teams)', () => {
+      render(
+        <TeamSettings
+          mode="tennis"
+          formationMode="manual"
+          manualTeamCount={4}
+          activePoolLength={6}
+          onGenerate={vi.fn()}
+          onCreateBlankTeams={vi.fn()}
+        />
+      );
+
+      // Prominent red error banner
+      expect(
+        screen.getByText('Недостатъчно играчи: За 4 отбора по двойки са нужни 8 играчи (в списъка: 6).')
+      ).toBeInTheDocument();
+      expect(screen.getByTestId('manual-insufficient-players-error')).toBeInTheDocument();
+
+      // Create blank teams button is disabled
+      const createBlankBtn = screen.getByRole('button', { name: /създай празни отбори/i });
+      expect(createBlankBtn).toBeDisabled();
+    });
+
+    it('displays warning and quick-adjust button when pool is larger than required slots (e.g. 20 players for 8 teams)', () => {
+      render(
+        <TeamSettings
+          mode="tennis"
+          formationMode="manual"
+          manualTeamCount={8}
+          activePoolLength={20}
+          onGenerate={vi.fn()}
+          onCreateBlankTeams={vi.fn()}
+          onManualTeamCountChange={vi.fn()}
+        />
+      );
+
+      // Amber warning banner
+      expect(
+        screen.getByText('Внимание: Избрани са 20 играчи за 8 отбора (16 места). 4 играчи остават резерви.')
+      ).toBeInTheDocument();
+      expect(screen.getByTestId('manual-excess-players-warning')).toBeInTheDocument();
+
+      // Quick-action button
+      expect(screen.getByRole('button', { name: '👉 Задай 10 отбора' })).toBeInTheDocument();
+
+      // Button is not disabled because we have enough players
+      const createBlankBtn = screen.getByRole('button', { name: /създай празни отбори/i });
+      expect(createBlankBtn).not.toBeDisabled();
+    });
+
+    it('clicking quick-adjust button calls onManualTeamCountChange with 10 teams', async () => {
+      const user = userEvent.setup();
+      const handleManualTeamCountChange = vi.fn();
+
+      render(
+        <TeamSettings
+          mode="tennis"
+          formationMode="manual"
+          manualTeamCount={8}
+          activePoolLength={20}
+          onGenerate={vi.fn()}
+          onCreateBlankTeams={vi.fn()}
+          onManualTeamCountChange={handleManualTeamCountChange}
+        />
+      );
+
+      const quickAdjustBtn = screen.getByRole('button', { name: '👉 Задай 10 отбора' });
+      await user.click(quickAdjustBtn);
+
+      expect(handleManualTeamCountChange).toHaveBeenCalledWith(10);
+    });
+
+    it('displays odd player count warning when active pool length is odd', () => {
+      render(
+        <TeamSettings
+          mode="tennis"
+          formationMode="manual"
+          manualTeamCount={4}
+          activePoolLength={7}
+          onGenerate={vi.fn()}
+          onCreateBlankTeams={vi.fn()}
+        />
+      );
+
+      expect(screen.getByTestId('manual-odd-players-warning')).toBeInTheDocument();
+      expect(
+        screen.getByText('Списъкът съдържа нечетен брой играчи (7). За пълни двойки е нужен още 1 играч.')
+      ).toBeInTheDocument();
+    });
+
+    it('formats singular reserve player label when exactly 1 player is excess', () => {
+      render(
+        <TeamSettings
+          mode="tennis"
+          formationMode="manual"
+          manualTeamCount={4}
+          activePoolLength={9}
+          onGenerate={vi.fn()}
+          onCreateBlankTeams={vi.fn()}
+          onManualTeamCountChange={vi.fn()}
+        />
+      );
+
+      expect(
+        screen.getByText('Внимание: Избрани са 9 играчи за 4 отбора (8 места). 1 играч остава резерва.')
+      ).toBeInTheDocument();
+    });
+  });
 });

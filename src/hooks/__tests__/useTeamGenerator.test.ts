@@ -1576,6 +1576,155 @@ describe('useTeamGenerator', () => {
       expect(result.current.schedule).toEqual([]);
     });
   });
+
+  describe('Interactive Team Board - Manual & Hybrid Slot Builder', () => {
+    it('initializes blank teams with empty player arrays and manual mode', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.initializeBlankTeams(4, 2);
+      });
+
+      expect(result.current.formationMode).toBe('manual');
+      expect(result.current.teamFormationMode).toBe('manual');
+      expect(result.current.teams).toHaveLength(4);
+      expect(result.current.teams[0]).toEqual({
+        id: 'team-1',
+        name: 'Отбор 1',
+        players: [],
+        totalRating: 0,
+      });
+      expect(result.current.teams[3]).toEqual({
+        id: 'team-4',
+        name: 'Отбор 4',
+        players: [],
+        totalRating: 0,
+      });
+      expect(result.current.targetTeamSize).toBe(2);
+      expect(result.current.hasIncompleteTeams).toBe(true);
+    });
+
+    it('assignPlayerToTeam assigns player and updates team totalRating and unassignedPoolPlayers', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      const mockPlayer1 = { id: 'p-1', name: 'Иван', source: 'registered' as const, rating: 1200 };
+      const mockPlayer2 = { id: 'p-2', name: 'Петър', source: 'registered' as const, rating: 1400 };
+
+      act(() => {
+        result.current.toggleRegisteredPlayer(mockPlayer1);
+        result.current.toggleRegisteredPlayer(mockPlayer2);
+        result.current.initializeBlankTeams(2, 2);
+      });
+
+      expect(result.current.unassignedPoolPlayers).toHaveLength(2);
+
+      act(() => {
+        result.current.assignPlayerToTeam('team-1', mockPlayer1);
+      });
+
+      expect(result.current.teams[0].players).toHaveLength(1);
+      expect(result.current.teams[0].players[0].name).toBe('Иван');
+      expect(result.current.teams[0].totalRating).toBe(1200);
+      expect(result.current.unassignedPoolPlayers).toHaveLength(1);
+      expect(result.current.unassignedPoolPlayers[0].id).toBe('p-2');
+
+      act(() => {
+        result.current.assignPlayerToTeam('team-1', mockPlayer2);
+      });
+
+      expect(result.current.teams[0].players).toHaveLength(2);
+      expect(result.current.teams[0].totalRating).toBe(2600);
+      expect(result.current.unassignedPoolPlayers).toHaveLength(0);
+    });
+
+    it('removePlayerFromTeam preserves empty team container without pruning in manual mode', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      const mockPlayer = { id: 'p-1', name: 'Иван', source: 'registered' as const, rating: 1200 };
+
+      act(() => {
+        result.current.toggleRegisteredPlayer(mockPlayer);
+        result.current.initializeBlankTeams(2, 2);
+      });
+
+      act(() => {
+        result.current.assignPlayerToTeam('team-1', mockPlayer);
+      });
+
+      expect(result.current.teams[0].players).toHaveLength(1);
+
+      act(() => {
+        result.current.removePlayerFromTeam('team-1', 'p-1');
+      });
+
+      // Team container is preserved with 0 players!
+      expect(result.current.teams).toHaveLength(2);
+      expect(result.current.teams[0].id).toBe('team-1');
+      expect(result.current.teams[0].players).toEqual([]);
+      expect(result.current.teams[0].totalRating).toBe(0);
+      expect(result.current.unassignedPoolPlayers).toHaveLength(1);
+      expect(result.current.unassignedPoolPlayers[0].id).toBe('p-1');
+    });
+
+    it('autoFillRemainingSlots fills remaining slots across incomplete teams', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.addGuest('A, B, C, D');
+        result.current.initializeBlankTeams(2, 2);
+      });
+
+      expect(result.current.unassignedPoolPlayers).toHaveLength(4);
+      expect(result.current.hasIncompleteTeams).toBe(true);
+
+      // Manually assign 1 player to team-1
+      const playerA = result.current.activePool[0];
+      act(() => {
+        result.current.assignPlayerToTeam('team-1', playerA);
+      });
+
+      expect(result.current.teams[0].players).toHaveLength(1);
+      expect(result.current.teams[1].players).toHaveLength(0);
+      expect(result.current.unassignedPoolPlayers).toHaveLength(3);
+
+      // Auto-fill remaining 3 slots
+      act(() => {
+        result.current.autoFillRemainingSlots();
+      });
+
+      expect(result.current.teams[0].players).toHaveLength(2);
+      expect(result.current.teams[1].players).toHaveLength(2);
+      expect(result.current.unassignedPoolPlayers).toHaveLength(0);
+      expect(result.current.hasIncompleteTeams).toBe(false);
+    });
+
+    it('autoFillRemainingSlots with balance sorts players and distributes to weakest team', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      const p1 = { id: 'p-1', name: 'Strong 1', rating: 1600, source: 'registered' as const };
+      const p2 = { id: 'p-2', name: 'Strong 2', rating: 1500, source: 'registered' as const };
+      const p3 = { id: 'p-3', name: 'Weak 1', rating: 1100, source: 'registered' as const };
+      const p4 = { id: 'p-4', name: 'Weak 2', rating: 1000, source: 'registered' as const };
+
+      act(() => {
+        result.current.toggleRegisteredPlayer(p1);
+        result.current.toggleRegisteredPlayer(p2);
+        result.current.toggleRegisteredPlayer(p3);
+        result.current.toggleRegisteredPlayer(p4);
+        result.current.initializeBlankTeams(2, 2);
+      });
+
+      act(() => {
+        result.current.autoFillRemainingSlots(true);
+      });
+
+      expect(result.current.teams[0].players).toHaveLength(2);
+      expect(result.current.teams[1].players).toHaveLength(2);
+      // Total ratings should be balanced (1600+1000=2600 vs 1500+1100=2600)
+      expect(result.current.teams[0].totalRating).toBe(2600);
+      expect(result.current.teams[1].totalRating).toBe(2600);
+    });
+  });
 });
 
 

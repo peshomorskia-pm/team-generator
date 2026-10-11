@@ -1,4 +1,5 @@
 export type PlayerSource = 'registered' | 'guest';
+export type TeamFormationMode = 'auto' | 'manual';
 
 export interface GeneratorPlayer {
   id: string; // UUID from DB for registered, or crypto.randomUUID() for guests

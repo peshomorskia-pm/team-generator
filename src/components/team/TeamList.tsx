@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Copy, Check, Swords } from 'lucide-react';
+import { Copy, Check, Swords, Sparkles } from 'lucide-react';
 import { TeamListProps } from '../../types';
 import { TeamCard } from './TeamCard';
 import { getTargetTeamSize } from '../../hooks/useTeamGenerator';
@@ -15,6 +15,10 @@ export const TeamList = memo(function TeamList({
   onDrawGroups,
   hasIncompleteTeams: propHasIncompleteTeams,
   targetTeamSize: propTargetTeamSize,
+  formationMode = 'auto',
+  onSelectEmptySlot,
+  onRemovePlayer,
+  onAutoFillRemaining,
 }: TeamListProps) {
   if (teams.length === 0) {
     return null;
@@ -37,11 +41,30 @@ export const TeamList = memo(function TeamList({
       ? propHasIncompleteTeams
       : teams.some((t) => t.players.length < computedTargetSize);
 
+  const totalEmptySlots = teams.reduce(
+    (sum, t) => sum + Math.max(0, computedTargetSize - t.players.length),
+    0
+  );
+
   return (
     <div id="resultsContainer" className="w-full max-w-5xl mt-10 transition-all duration-300">
-      <div className="flex items-center justify-between mb-6 px-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6 px-2">
         <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Резултати</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {formationMode === 'manual' && totalEmptySlots > 0 && onAutoFillRemaining && (
+            <button
+              type="button"
+              id="autoFillRemainingBtn"
+              onClick={onAutoFillRemaining}
+              className="text-sm font-semibold flex items-center px-3 py-1.5 rounded-lg shadow-sm border bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900 border-amber-300 dark:border-amber-700 transition-colors cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 mr-1 text-amber-600 dark:text-amber-400" />
+              <span>✨ Попълни останалите автоматично</span>
+              <span className="ml-1 text-xs text-amber-700 dark:text-amber-300 opacity-90">
+                (остават {totalEmptySlots} {totalEmptySlots === 1 ? 'свободно място' : 'свободни места'})
+              </span>
+            </button>
+          )}
           {isTennisMode && teams.length >= 6 && onDrawGroups && (
             <button
               type="button"
@@ -114,6 +137,8 @@ export const TeamList = memo(function TeamList({
             format={format}
             mode={mode}
             targetSize={computedTargetSize}
+            onSelectEmptySlot={onSelectEmptySlot}
+            onRemovePlayer={onRemovePlayer}
           />
         ))}
       </div>
