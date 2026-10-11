@@ -17,6 +17,7 @@ Specifically, organizers requested:
 3. **Locked Format & Tennis Mode:** The board format must be strictly locked to the tournament's creation-time format (`tournament.format`, e.g., doubles or singles) and tennis mode, with no switcher pills.
 4. **Persistent Auto-Saving (`draft_state`):** Because player availability changes dynamically before group draw, draft states (target teams, formation mode, teams, active pool, groups, schedule) must be automatically persisted to Supabase using a new `draft_state JSONB` column on `public.tournaments`.
 5. **Group Draw Gating & Bulk Match Saving:** Group drawing must be gated until all team slots are filled. Finalizing and saving matches must persist matches with `tournament_id`, clear the draft state (`draft_state = null`), and transition the view to display the active match schedule and scorecards.
+6. **Variant A Tennis Team Size Constraints & Excess Handling:** Prevent defects where generating teams in tennis mode created teams with 3 players. Enforce strict capacity caps (max 2 players per team in doubles, max 1 in singles). When pool exceeds needed slots (e.g., 8 players for 3 doubles teams), assign exactly 2 players per team (total 6) and leave excess players (2) in the unassigned pool as reserves, fully compatible with `➕ Добави отбор`.
 
 ---
 
@@ -25,7 +26,8 @@ Specifically, organizers requested:
 1. **Seamless Organizer Experience:** Eliminate friction between tournament setup, team drafting, and match generation.
 2. **Data Durability & Crash Resilience:** Ensure amateur tournament organizers never lose team drafts or slot assignments when closing browsers or refreshing pages.
 3. **Format Integrity:** Prevent format tampering after tournament creation by strictly locking the board to `tournament.format`.
-4. **Bulgarian Localization Compliance:** Ensure 100% adherence to Bulgarian UI copy for all feedback badges, auto-save statuses, and validation alerts.
+4. **Bulgarian Localization Compliance:** Ensure 100% adherence to Bulgarian UI copy for all feedback badges, auto-save statuses, and validation alerts (including the excess player warning banner).
+5. **Strict Tennis Team Capacity & Reserve Handling:** Enforce strict 2-player limit in doubles and 1-player limit in singles, ensuring excess pool players are retained as unassigned reserves rather than overflowing teams.
 
 ---
 
@@ -48,15 +50,17 @@ We have implemented **Option B**:
 - Updated `TournamentsPage` to immediately navigate to `/tournaments/:id` upon successful tournament creation.
 - Created `TournamentInteractiveBoard` component integrated into `TournamentDetailPage` when 0 matches exist.
 - Implemented debounced auto-save (800ms) with Bulgarian badges (`Запазване на чернова...`, `✓ Всички промени са запазени като чернова`), slot-by-slot picking, hybrid auto-fill, group draw gating, and bulk match saving with `tournament_id`.
-- **User Feedback Enhancements:**
-  - **Flexible Team Count:** Numeric stepper and counter controls allowing 2 to 32 teams with dynamic `➕ Добави отбор` addition without resetting existing assignments.
-  - **Team Deletion:** Trash action on `TeamCard` allowing team removal with automatic player release back to the unassigned pool.
-  - **Pool Visibility & Shortage Gating:** Visible collapsible participants panel displaying player chips, and suppression of the misleading shortage warning in manual mode.
+- **Variant A Tennis Capacity & Excess Handling Enhancements:**
+  - **Strict Capacity Caps:** `useTeamGenerator` and `assignPlayerToTeam` enforce max 2 players per team in doubles and max 1 in singles, completely eliminating 3-player team defects.
+  - **Excess Pool Retention:** When pool size exceeds required slots (e.g., 8 players for 3 doubles teams), exactly 6 players are distributed across 3 teams and 2 excess players remain in `unassignedPoolPlayers` as reserves.
+  - **Excess Warning Notification:** Displays accurate Bulgarian warning: `"Излишък на играчи: в пула има 8 играчи, а за 3 отбора са нужни 6."` in an amber alert box.
+  - **Dynamic Team Expansion:** Clicking `➕ Добави отбор` adds Team 4 to accommodate the excess players, seamlessly resolving the excess warning.
+  - **Flexible Team Count & Deletion:** Numeric stepper (2 to 32 teams), team deletion with automatic player release back to pool, and visible collapsible participants panel.
 
 ---
 
 ## Consequences
 
-- **Positive:** Organizers enjoy a streamlined, robust tournament drafting experience with automatic persistence, flexible team count adjustments, and zero data loss.
+- **Positive:** Organizers enjoy a streamlined, robust tournament drafting experience with automatic persistence, strict tennis team capacity caps, clean excess pool handling, and zero data loss.
 - **Negative / Trade-offs:** Storing JSONB draft state requires careful state sanitization on load and save.
-- **Verification:** Fully covered by unit and integration tests (580 tests passing across 50 files, 100% pass rate).
+- **Verification:** Fully covered by comprehensive unit and integration tests (587 tests passing across 50 files, 100% pass rate).

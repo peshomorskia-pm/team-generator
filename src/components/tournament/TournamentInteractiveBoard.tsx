@@ -243,6 +243,10 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
     [gen]
   );
 
+  const handleGenerateFromPool = useCallback(() => {
+    gen.generateTeams(targetTeamCount);
+  }, [gen, targetTeamCount]);
+
   const handleCreateBlankTeams = useCallback(() => {
     gen.initializeBlankTeams(targetTeamCount, playersPerTeam);
     gen.setFormationMode('manual');
@@ -481,7 +485,7 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
               id="generateTeamsBtn"
               variant="secondary"
               size="sm"
-              onClick={() => gen.generateTeams(targetTeamCount)}
+              onClick={handleGenerateFromPool}
               className="cursor-pointer font-semibold"
             >
               🎲 Генерирай отбори от пула

@@ -1846,6 +1846,180 @@ describe('useTeamGenerator', () => {
       expect(result.current.activePool).toEqual([mockPlayer]);
     });
   });
+
+  describe('Variant A: strict tennis team size constraints and pool excess handling', () => {
+    it('generates 3 teams with EXACTLY 2 players each from pool of 8 players in tennis doubles, leaving 2 players unassigned in pool', () => {
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialMode: 'tennis',
+          initialFormat: 'doubles',
+        })
+      );
+
+      act(() => {
+        result.current.addGuest('Играч 1, Играч 2, Играч 3, Играч 4, Играч 5, Играч 6, Играч 7, Играч 8');
+      });
+
+      expect(result.current.activePool).toHaveLength(8);
+
+      act(() => {
+        result.current.generateTeams(3);
+      });
+
+      expect(result.current.teams).toHaveLength(3);
+      result.current.teams.forEach((team) => {
+        expect(team.players).toHaveLength(2);
+      });
+      expect(result.current.unassignedPoolPlayers).toHaveLength(2);
+      expect(result.current.hasIncompleteTeams).toBe(false);
+    });
+
+    it('works identically when numberOfTeams is set via state and generateTeams() is invoked without arguments', () => {
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialMode: 'tennis',
+          initialFormat: 'doubles',
+        })
+      );
+
+      act(() => {
+        result.current.addGuest('П1, П2, П3, П4, П5, П6, П7, П8');
+        result.current.setNumberOfTeams(3);
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(3);
+      result.current.teams.forEach((team) => {
+        expect(team.players).toHaveLength(2);
+      });
+      expect(result.current.unassignedPoolPlayers).toHaveLength(2);
+    });
+
+    it('guarantees no tennis doubles team ever exceeds 2 players even with large pool', () => {
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialMode: 'tennis',
+          initialFormat: 'doubles',
+        })
+      );
+
+      act(() => {
+        result.current.addGuest('P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12');
+      });
+
+      act(() => {
+        result.current.generateTeams(4);
+      });
+
+      expect(result.current.teams).toHaveLength(4);
+      result.current.teams.forEach((team) => {
+        expect(team.players.length).toBeLessThanOrEqual(2);
+      });
+      expect(result.current.unassignedPoolPlayers).toHaveLength(4);
+    });
+
+    it('strictly prevents assigning a 3rd player to a tennis doubles team via assignPlayerToTeam', () => {
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialMode: 'tennis',
+          initialFormat: 'doubles',
+        })
+      );
+
+      act(() => {
+        result.current.initializeBlankTeams(2, 2);
+      });
+
+      const p1 = { id: 'p1', name: 'Иван', source: 'guest' as const };
+      const p2 = { id: 'p2', name: 'Георги', source: 'guest' as const };
+      const p3 = { id: 'p3', name: 'Димитър', source: 'guest' as const };
+
+      act(() => {
+        result.current.assignPlayerToTeam('team-1', p1);
+        result.current.assignPlayerToTeam('team-1', p2);
+      });
+
+      expect(result.current.teams[0].players).toHaveLength(2);
+
+      // Attempt assigning a 3rd player to team-1
+      act(() => {
+        result.current.assignPlayerToTeam('team-1', p3);
+      });
+
+      // team-1 must still have strictly 2 players!
+      expect(result.current.teams[0].players).toHaveLength(2);
+      expect(result.current.teams[0].players.map((p) => p.id)).toEqual(['p1', 'p2']);
+    });
+
+    it('strictly prevents assigning a 2nd player to a tennis singles team via assignPlayerToTeam', () => {
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialMode: 'tennis',
+          initialFormat: 'singles',
+        })
+      );
+
+      act(() => {
+        result.current.initializeBlankTeams(2, 1);
+      });
+
+      const p1 = { id: 'p1', name: 'Иван', source: 'guest' as const };
+      const p2 = { id: 'p2', name: 'Георги', source: 'guest' as const };
+
+      act(() => {
+        result.current.assignPlayerToTeam('team-1', p1);
+      });
+
+      expect(result.current.teams[0].players).toHaveLength(1);
+
+      // Attempt assigning a 2nd player to singles team-1
+      act(() => {
+        result.current.assignPlayerToTeam('team-1', p2);
+      });
+
+      // team-1 must still have strictly 1 player!
+      expect(result.current.teams[0].players).toHaveLength(1);
+      expect(result.current.teams[0].players[0].id).toBe('p1');
+    });
+
+    it('balances top players by rating when balanceByRating is true and leaves excess unassigned', () => {
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialMode: 'tennis',
+          initialFormat: 'doubles',
+        })
+      );
+
+      act(() => {
+        result.current.toggleRegisteredPlayer({ id: 'r1', name: 'R1', doubles_rating: 1600 });
+        result.current.toggleRegisteredPlayer({ id: 'r2', name: 'R2', doubles_rating: 1500 });
+        result.current.toggleRegisteredPlayer({ id: 'r3', name: 'R3', doubles_rating: 1400 });
+        result.current.toggleRegisteredPlayer({ id: 'r4', name: 'R4', doubles_rating: 1300 });
+        result.current.toggleRegisteredPlayer({ id: 'r5', name: 'R5', doubles_rating: 1200 });
+        result.current.toggleRegisteredPlayer({ id: 'r6', name: 'R6', doubles_rating: 1100 });
+        result.current.toggleRegisteredPlayer({ id: 'r7', name: 'R7', doubles_rating: 1000 });
+        result.current.toggleRegisteredPlayer({ id: 'r8', name: 'R8', doubles_rating: 900 });
+        result.current.setBalanceByRating(true);
+      });
+
+      act(() => {
+        result.current.generateTeams(3);
+      });
+
+      expect(result.current.teams).toHaveLength(3);
+      result.current.teams.forEach((t) => {
+        expect(t.players).toHaveLength(2);
+      });
+      expect(result.current.unassignedPoolPlayers).toHaveLength(2);
+      // Top 6 players (ratings 1600 down to 1100) are assigned to teams
+      const assignedIds = new Set(result.current.teams.flatMap((t) => t.players.map((p) => p.id)));
+      expect(assignedIds.has('r7')).toBe(false);
+      expect(assignedIds.has('r8')).toBe(false);
+    });
+  });
 });
 
 

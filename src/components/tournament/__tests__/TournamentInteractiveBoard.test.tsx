@@ -522,4 +522,64 @@ describe('TournamentInteractiveBoard Component', () => {
     // Alert error message should show the insufficient warning
     expect(screen.getByText(/недостиг на играчи: в свободния пул има само 0 играчи/i)).toBeInTheDocument();
   });
+
+  it('Variant A: generates exactly 2 players per team for tennis doubles with 8 pool players and targetTeams = 3, shows excess warning, and allows adding Team 4 to accommodate excess', () => {
+    const eightPlayers = Array.from({ length: 8 }, (_, i) => ({
+      id: `p-${i + 1}`,
+      name: `Играч ${i + 1}`,
+      rating: 1000 + i * 50,
+      source: 'guest' as const,
+    }));
+
+    const draftWith8Players: TournamentDraftState = {
+      targetTeams: 3,
+      formationMode: 'auto',
+      teams: [],
+      activePool: eightPlayers,
+      groups: [],
+      schedule: [],
+    };
+
+    render(
+      <TournamentInteractiveBoard
+        tournament={{ ...baseTournament, draft_state: draftWith8Players }}
+      />
+    );
+
+    // Verify target team count input is 3
+    const targetInput = screen.getByLabelText('Целеви брой отбори') as HTMLInputElement;
+    expect(targetInput.value).toBe('3');
+
+    // Click "🎲 Генерирай отбори от пула"
+    const generateBtn = screen.getByRole('button', { name: /генерирай отбори от пула/i });
+    act(() => {
+      fireEvent.click(generateBtn);
+    });
+
+    // Variant A assertions:
+    // 1. Exactly 3 teams rendered
+    expect(screen.getByText('Отбор 1')).toBeInTheDocument();
+    expect(screen.getByText('Отбор 2')).toBeInTheDocument();
+    expect(screen.getByText('Отбор 3')).toBeInTheDocument();
+    expect(screen.queryByText('Отбор 4')).not.toBeInTheDocument();
+
+    // 2. Warning banner for excess players is displayed:
+    // "Излишък на играчи: в пула има 8 играчи, а за 3 отбора са нужни 6."
+    expect(
+      screen.getByText(/излишък на играчи: в пула има 8 играчи, а за 3 отбора са нужни 6/i)
+    ).toBeInTheDocument();
+
+    // 3. User clicks "➕ Добави отбор", adding Team 4
+    const addTeamBtn = screen.getByRole('button', { name: /добави отбор/i });
+    act(() => {
+      fireEvent.click(addTeamBtn);
+    });
+
+    expect(screen.getByText('Отбор 4')).toBeInTheDocument();
+
+    // Now 4 teams require 8 players, so the excess banner is eliminated
+    expect(
+      screen.queryByText(/излишък на играчи/i)
+    ).not.toBeInTheDocument();
+  });
 });
