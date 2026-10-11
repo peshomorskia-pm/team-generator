@@ -109,7 +109,7 @@ describe('TournamentModal', () => {
       target: { value: 'Пролетен турнир' },
     });
     fireEvent.change(screen.getByLabelText(/дата на провеждане/i), {
-      target: { value: '2026-05-10' },
+      target: { value: '2099-05-10' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'В ход' }));
     fireEvent.change(screen.getByLabelText(/бележки/i), {
@@ -121,7 +121,7 @@ describe('TournamentModal', () => {
     await waitFor(() => {
       expect(onSave).toHaveBeenCalledWith({
         title: 'Пролетен турнир',
-        date: '2026-05-10',
+        date: '2099-05-10',
         format: 'doubles',
         status: 'in_progress',
         notes: 'Корт с твърда настилка',
@@ -159,5 +159,100 @@ describe('TournamentModal', () => {
 
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('enforces min attribute on date input in create mode and omits it in edit mode', () => {
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    const { unmount } = render(
+      <TournamentModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />
+    );
+
+    const createDateInput = screen.getByLabelText(/дата на провеждане/i);
+    expect(createDateInput).toHaveAttribute('min', todayStr);
+
+    unmount();
+
+    render(
+      <TournamentModal
+        isOpen={true}
+        initialData={mockTournament}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />
+    );
+
+    const editDateInput = screen.getByLabelText(/дата на провеждане/i);
+    expect(editDateInput).not.toHaveAttribute('min');
+  });
+
+  it('shows validation error when past date is submitted in create mode and clears on date change', async () => {
+    const onSave = vi.fn();
+    render(
+      <TournamentModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText(/име на турнира/i), {
+      target: { value: 'Турнир в миналото' },
+    });
+    const dateInput = screen.getByLabelText(/дата на провеждане/i);
+    fireEvent.change(dateInput, {
+      target: { value: '2020-01-01' },
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Създай' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Датата на провеждане не може да бъде в миналото.'
+    );
+    expect(onSave).not.toHaveBeenCalled();
+
+    // Verify changing date clears validation error
+    fireEvent.change(dateInput, {
+      target: { value: '2099-01-01' },
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('allows edit mode to save an existing tournament with a past date', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onClose = vi.fn();
+
+    const pastTournament: Tournament = {
+      ...mockTournament,
+      date: '2020-01-01',
+    };
+
+    render(
+      <TournamentModal
+        isOpen={true}
+        initialData={pastTournament}
+        onClose={onClose}
+        onSave={onSave}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Запази' }));
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith({
+        title: pastTournament.title,
+        date: '2020-01-01',
+        format: pastTournament.format,
+        status: pastTournament.status,
+        notes: pastTournament.notes,
+      });
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });
