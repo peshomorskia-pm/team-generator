@@ -45,6 +45,8 @@ export interface TeamSettingsProps {
   manualTeamCount?: number;
   onManualTeamCountChange?: (count: number) => void;
   onCreateBlankTeams?: () => void;
+  activePoolLength?: number;
+  activePool?: unknown[];
 }
 
 export interface TeamListProps {

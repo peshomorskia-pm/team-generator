@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Trophy, ArrowLeft } from 'lucide-react';
 import { GeneratorHeader } from '../components/team/GeneratorHeader';
@@ -166,10 +166,42 @@ export const GeneratorPage: React.FC = () => {
     [teams]
   );
 
+  const prevPoolLengthRef = useRef(activePool.length);
+
+  const handleFormationModeChange = useCallback(
+    (newMode: typeof formationMode) => {
+      setFormationMode(newMode);
+      if (newMode === 'manual' && mode === 'tennis') {
+        const ppt = format === 'singles' ? 1 : 2;
+        if (activePool.length >= 2 * ppt && manualTeamCount * ppt > activePool.length) {
+          const smartCount = Math.max(2, Math.min(16, Math.floor(activePool.length / ppt)));
+          setManualTeamCount(smartCount);
+        }
+      }
+    },
+    [activePool.length, format, manualTeamCount, mode, setFormationMode]
+  );
+
+  useEffect(() => {
+    if (formationMode === 'manual' && mode === 'tennis') {
+      const ppt = format === 'singles' ? 1 : 2;
+      const poolChanged = prevPoolLengthRef.current !== activePool.length;
+      if (poolChanged && activePool.length >= 2 * ppt && manualTeamCount * ppt > activePool.length) {
+        const smartCount = Math.max(2, Math.min(16, Math.floor(activePool.length / ppt)));
+        setManualTeamCount(smartCount);
+      }
+    }
+    prevPoolLengthRef.current = activePool.length;
+  }, [formationMode, activePool.length, format, manualTeamCount, mode]);
+
   const handleCreateBlankTeams = useCallback(() => {
     const ppt = format === 'singles' ? 1 : 2;
+    const neededPlayers = manualTeamCount * ppt;
+    if (activePool.length < neededPlayers) {
+      return;
+    }
     initializeBlankTeams(manualTeamCount, ppt);
-  }, [format, initializeBlankTeams, manualTeamCount]);
+  }, [activePool.length, format, initializeBlankTeams, manualTeamCount]);
 
   const effectiveFormat = mode === 'tennis' ? format : undefined;
 
@@ -339,10 +371,12 @@ export const GeneratorPage: React.FC = () => {
                       canGenerate={canGenerate}
                       validationError={validationError}
                       formationMode={formationMode}
-                      onFormationModeChange={setFormationMode}
+                      onFormationModeChange={handleFormationModeChange}
                       manualTeamCount={manualTeamCount}
                       onManualTeamCountChange={setManualTeamCount}
                       onCreateBlankTeams={handleCreateBlankTeams}
+                      activePoolLength={activePool.length}
+                      activePool={activePool}
                     />
                   </div>
                 </div>

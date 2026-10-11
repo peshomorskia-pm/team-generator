@@ -24,3 +24,12 @@ We extended the team generation workflow with the following architectural and co
 - **Positive**: 100% Bulgarian localization compliance across all new UI components and modals.
 - **Positive**: Robust test coverage with 553 tests passing across 49 files with 100% green pass rate.
 - **Negative / Trade-offs**: Added state complexity around manual vs automatic formation modes, requiring careful handling of unassigned pools and capacity constraints.
+
+## Pool Validation & Quick-Adjustment Enhancements
+To resolve organizer friction where pool size mismatch (e.g. 20 players for 8 doubles teams) prevented board creation, we added real-time pool validation and quick-adjustment controls:
+1. **Contextal Banner Alerts**:
+   - Insufficient players error (red banner) disabling team creation.
+   - Excess players warning (amber banner) showing reserve count and a 1-click `"👉 Задай {N} отбора"` quick-adjust button.
+   - Odd player count warning for doubles formats.
+2. **Grammatical Precision**: Bulgarian conditional phrasing for singular vs plural reserve counts (`1 играч остава резерва` vs `N играчи остават резерви`).
+

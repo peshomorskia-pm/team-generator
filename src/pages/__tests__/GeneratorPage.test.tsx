@@ -941,6 +941,66 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
       // Tournament groups are drawn
       expect(screen.getByRole('heading', { level: 2, name: 'Турнирни групи' })).toBeInTheDocument();
     });
+
+    it('validates pool size vs needed slots with warnings, quick-adjust button, and error guards', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      // Add 20 guests (user scenario)
+      const guestNames = Array.from({ length: 20 }, (_, i) => `Играч ${i + 1}`).join(', ');
+      const guestInput = screen.getByPlaceholderText('напр. Иван, Петър, Георги');
+      await user.type(guestInput, guestNames);
+      await user.click(screen.getByRole('button', { name: /добави/i }));
+
+      // Switch to manual mode
+      const manualModeBtn = screen.getByRole('button', { name: /интерактивна дъска \(ръчно\)/i });
+      await user.click(manualModeBtn);
+
+      // Select 8 teams (20 players vs 16 needed slots)
+      const teamCountSelect = screen.getByLabelText(/брой отбори/i);
+      await user.selectOptions(teamCountSelect, '8');
+
+      // Excess warning must appear with quick-adjust action
+      expect(
+        screen.getByText('Внимание: Избрани са 20 играчи за 8 отбора (16 места). 4 играчи остават резерви.')
+      ).toBeInTheDocument();
+      const quickAdjustBtn = screen.getByRole('button', { name: '👉 Задай 10 отбора' });
+      expect(quickAdjustBtn).toBeInTheDocument();
+
+      // Click quick-adjust button -> sets to 10 teams (20 slots)
+      await user.click(quickAdjustBtn);
+      expect(teamCountSelect).toHaveValue('10');
+      expect(screen.queryByTestId('manual-excess-players-warning')).not.toBeInTheDocument();
+
+      // Select 12 teams (24 slots needed, only 20 players available)
+      await user.selectOptions(teamCountSelect, '12');
+
+      // Red error banner must appear and disable create blank teams button
+      expect(
+        screen.getByText('Недостатъчно играчи: За 12 отбора по двойки са нужни 24 играчи (в списъка: 20).')
+      ).toBeInTheDocument();
+      const createBlankBtn = screen.getByRole('button', { name: /създай празни отбори/i });
+      expect(createBlankBtn).toBeDisabled();
+
+      // Add 1 more guest to make it 21 (odd player count)
+      await user.type(guestInput, 'Резерва 21');
+      await user.click(screen.getByRole('button', { name: /добави/i }));
+
+      // Odd player count warning must be visible
+      expect(screen.getByTestId('manual-odd-players-warning')).toBeInTheDocument();
+      expect(
+        screen.getByText('Списъкът съдържа нечетен брой играчи (21). За пълни двойки е нужен още 1 играч.')
+      ).toBeInTheDocument();
+
+      // Select 10 teams -> 21 players >= 20 slots -> create blank teams is enabled
+      await user.selectOptions(teamCountSelect, '10');
+      expect(createBlankBtn).not.toBeDisabled();
+      await user.click(createBlankBtn);
+
+      // Verify 10 teams were initialized
+      expect(screen.getByText('Отбор 1')).toBeInTheDocument();
+      expect(screen.getByText('Отбор 10')).toBeInTheDocument();
+    });
   });
 });
 
