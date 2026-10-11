@@ -2019,6 +2019,41 @@ describe('useTeamGenerator', () => {
       expect(assignedIds.has('r7')).toBe(false);
       expect(assignedIds.has('r8')).toBe(false);
     });
+
+    it('strictly rejects adding a 3rd player in doubles via assignPlayerToTeam', () => {
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialMode: 'tennis',
+          initialFormat: 'doubles',
+        })
+      );
+
+      act(() => {
+        result.current.initializeBlankTeams(2, 2);
+      });
+
+      const p1 = { id: 'p1', name: 'Иван', source: 'guest' as const };
+      const p2 = { id: 'p2', name: 'Петър', source: 'guest' as const };
+      const p3 = { id: 'p3', name: 'Георги', source: 'guest' as const };
+
+      act(() => {
+        result.current.assignPlayerToTeam('team-1', p1);
+        result.current.assignPlayerToTeam('team-1', p2);
+      });
+
+      expect(result.current.teams[0].players).toHaveLength(2);
+
+      // Attempt assigning a 3rd player to doubles team-1
+      act(() => {
+        result.current.assignPlayerToTeam('team-1', p3);
+      });
+
+      // team-1 must strictly remain at 2 players!
+      expect(result.current.teams[0].players).toHaveLength(2);
+      expect(result.current.teams[0].players.map((p) => p.id)).toEqual(['p1', 'p2']);
+      // p3 was not assigned
+      expect(result.current.teams[0].players.some((p) => p.id === 'p3')).toBe(false);
+    });
   });
 });
 

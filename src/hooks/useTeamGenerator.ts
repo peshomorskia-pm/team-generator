@@ -720,13 +720,18 @@ export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGene
     [activePool, mode, numberOfTeams, playersPerTeam, balanceByRating, showAlert, format, canGenerate, validationError]
   );
 
-  const drawGroups = useCallback(() => {
-    if (teams.length >= 6 && mode === 'tennis' && !hasIncompleteTeams) {
-      const drawn = drawTournamentGroups(teams);
-      setDrawnGroups(drawn);
-      setSchedule([]);
-    }
-  }, [teams, mode, hasIncompleteTeams]);
+  const drawGroups = useCallback(
+    (teamsOverride?: Team[]) => {
+      const teamsToUse = Array.isArray(teamsOverride) ? teamsOverride : teams;
+      const isComplete = teamsToUse.every((t) => t.players.length >= targetTeamSize);
+      if (teamsToUse.length >= 6 && mode === 'tennis' && isComplete) {
+        const drawn = drawTournamentGroups(teamsToUse);
+        setDrawnGroups(drawn);
+        setSchedule([]);
+      }
+    },
+    [teams, mode, targetTeamSize]
+  );
 
   const generateSchedule = useCallback(() => {
     if (groups.length > 0) {
@@ -826,15 +831,20 @@ export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGene
 
   const assignPlayerToTeam = useCallback(
     (teamId: string, player: GeneratorPlayer) => {
-      setActivePool((prev) => {
-        if (prev.some((p) => p.id === player.id)) return prev;
-        return [...prev, player];
-      });
-
       const maxTeamSize =
         mode === 'tennis'
           ? (format === 'doubles' ? 2 : 1)
           : targetTeamSize;
+
+      const currentTeam = teams.find((t) => t.id === teamId);
+      if (!currentTeam || currentTeam.players.length >= maxTeamSize) {
+        return;
+      }
+
+      setActivePool((prev) => {
+        if (prev.some((p) => p.id === player.id)) return prev;
+        return [...prev, player];
+      });
 
       setTeams((prevTeams) => {
         const targetTeam = prevTeams.find((t) => t.id === teamId);
@@ -868,7 +878,7 @@ export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGene
       setDrawnGroups([]);
       setSchedule([]);
     },
-    [mode, format, targetTeamSize, effectiveFormat]
+    [mode, format, targetTeamSize, effectiveFormat, teams]
   );
 
   const removePlayerFromTeam = useCallback(
@@ -978,12 +988,15 @@ export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGene
     playersPerTeam,
     setPlayersPerTeam: handlePlayersPerTeamChange,
     teams,
+    setTeams,
     targetTeamSize,
     hasIncompleteTeams,
     groups,
     drawGroups,
     resetGroups,
     clearGroups: resetGroups,
+    drawnGroups,
+    setDrawnGroups,
     schedule,
     generateSchedule,
     resetSchedule,

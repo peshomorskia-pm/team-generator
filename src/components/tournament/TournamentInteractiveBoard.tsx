@@ -25,7 +25,9 @@ import { ActivePool } from '../generator/ActivePool';
 import { useTournaments } from '../../hooks/useTournaments';
 import { useMatches } from '../../hooks/useMatches';
 import { usePlayers } from '../../hooks/usePlayers';
-import { useTeamGenerator } from '../../hooks/useTeamGenerator';
+import { useTeamGenerator, calculateTeamRating } from '../../hooks/useTeamGenerator';
+import { drawTournamentGroups } from '../../utils/groupPartition';
+import type { Team } from '../../types';
 import type {
   Tournament,
   TournamentDraftState,
@@ -74,6 +76,7 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
   const [isPickerModalOpen, setIsPickerModalOpen] = useState<boolean>(false);
   const [isSavingMatches, setIsSavingMatches] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [adjustmentBanner, setAdjustmentBanner] = useState<string | null>(null);
 
   // Auto-save state
   const [draftStatus, setDraftStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>(() =>
@@ -166,6 +169,11 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
       return warnings;
     }
 
+    // When an auto-adjustment banner is displayed, it replaces static pool warnings
+    if (adjustmentBanner) {
+      return warnings;
+    }
+
     if (tournament.format === 'doubles' && gen.activePool.length % 2 !== 0) {
       warnings.push(
         `Внимание: Броят играчи в пула е нечетен (${gen.activePool.length}). За формат по двойки е необходим четен брой играчи.`
@@ -185,7 +193,7 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
     }
 
     return warnings;
-  }, [gen.formationMode, tournament.format, gen.activePool.length, gen.teams.length, neededPlayers, currentTeamCount]);
+  }, [gen.formationMode, adjustmentBanner, tournament.format, gen.activePool.length, gen.teams.length, neededPlayers, currentTeamCount]);
 
   // Selected player IDs in pool
   const selectedPoolIds = useMemo(
@@ -239,21 +247,121 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
       const clamped = Math.min(32, Math.max(2, count));
       setTargetTeamCount(clamped);
       gen.setNumberOfTeams(clamped);
+      setAdjustmentBanner(null);
     },
     [gen]
   );
 
   const handleGenerateFromPool = useCallback(() => {
-    gen.generateTeams(targetTeamCount);
-  }, [gen, targetTeamCount]);
+    const P = gen.activePool.length;
+    const playersPerTeam = tournament.format === 'doubles' ? 2 : 1;
+    const T = targetTeamCount;
+    const M = Math.floor(P / playersPerTeam);
+    const R = P % playersPerTeam;
+    const N = T * playersPerTeam;
+
+    if (playersPerTeam === 2 && P < 4) {
+      setErrorMessage('Нужни са поне 4 играчи за игра по двойки.');
+      return;
+    }
+    if (playersPerTeam === 1 && P < 2) {
+      setErrorMessage('Нужни са поне 2-ма играчи за сформиране на сингъл срещи.');
+      return;
+    }
+
+    setErrorMessage(null);
+
+    let finalTeamCount = T;
+    let banner: string | null = null;
+    let teamsWithSlots = 0;
+
+    if (P >= N + 2) {
+      // Case 1: P >= N + 2 (P >= 2T + 2, i.e. M > T)
+      finalTeamCount = M;
+      banner = `Поради наличие на ${P} играчи, турнирът се формира с ${M} отбора.${
+        R > 0 ? ` ${R} играч остава като резерва.` : ''
+      }`;
+    } else if (P === N + 1) {
+      // Case 2: P === N + 1 (P === 2T + 1, i.e. M === T and R === 1)
+      finalTeamCount = T;
+      banner = `Сформирани са ${T} отбора. 1 играч остава като резерва.`;
+    } else if (P === N) {
+      // Case 3: P === N (P === 2T, i.e. M === T and R === 0)
+      finalTeamCount = T;
+      banner = null;
+    } else if (P === N - 1) {
+      // Case 4: P === N - 1 (P === 2T - 1, i.e. missing exactly 1 player)
+      finalTeamCount = T;
+      teamsWithSlots = 1;
+      banner = `Необходим е още 1 играч за попълване на ${T} отбора.`;
+    } else {
+      // Case 5: P <= N - 2 (P <= 2T - 2, missing 2 or more players)
+      finalTeamCount = M;
+      banner = `Поради ${P} налични играчи турнирът е коригиран на ${M} отбора (първоначално зададени ${T}).${
+        R > 0 ? ` ${R} играч остава като резерва.` : ''
+      }`;
+    }
+
+    setTargetTeamCount(finalTeamCount);
+    gen.setNumberOfTeams(finalTeamCount);
+    setAdjustmentBanner(banner);
+
+    const poolCopy = [...gen.activePool];
+    const neededCount = teamsWithSlots === 1 ? N - 1 : finalTeamCount * playersPerTeam;
+    const poolToDistribute = poolCopy.slice(0, neededCount);
+
+    const newTeams: Team[] = Array.from({ length: finalTeamCount }, (_, i) => ({
+      id: `team-${i + 1}`,
+      name: `Отбор ${i + 1}`,
+      players: [],
+      totalRating: 0,
+    }));
+
+    if (teamsWithSlots === 1) {
+      let playerIdx = 0;
+      for (let i = 0; i < finalTeamCount - 1; i++) {
+        for (let p = 0; p < playersPerTeam; p++) {
+          if (playerIdx < poolToDistribute.length) {
+            newTeams[i].players.push(poolToDistribute[playerIdx++]);
+          }
+        }
+        newTeams[i].totalRating = calculateTeamRating(newTeams[i].players, tournament.format);
+      }
+      for (let p = 0; p < playersPerTeam - 1; p++) {
+        if (playerIdx < poolToDistribute.length) {
+          newTeams[finalTeamCount - 1].players.push(poolToDistribute[playerIdx++]);
+        }
+      }
+      newTeams[finalTeamCount - 1].totalRating = calculateTeamRating(
+        newTeams[finalTeamCount - 1].players,
+        tournament.format
+      );
+    } else {
+      let playerIdx = 0;
+      for (let i = 0; i < finalTeamCount; i++) {
+        for (let p = 0; p < playersPerTeam; p++) {
+          if (playerIdx < poolToDistribute.length) {
+            newTeams[i].players.push(poolToDistribute[playerIdx++]);
+          }
+        }
+        newTeams[i].totalRating = calculateTeamRating(newTeams[i].players, tournament.format);
+      }
+    }
+
+    gen.setFormationMode('auto');
+    gen.setTeams(newTeams);
+    gen.resetGroups();
+  }, [gen, targetTeamCount, tournament.format]);
 
   const handleCreateBlankTeams = useCallback(() => {
     gen.initializeBlankTeams(targetTeamCount, playersPerTeam);
     gen.setFormationMode('manual');
+    setAdjustmentBanner(null);
   }, [gen, targetTeamCount, playersPerTeam]);
 
   const handleAddBlankTeam = useCallback(() => {
     gen.addBlankTeam();
+    setAdjustmentBanner(null);
     setTargetTeamCount((prev) => {
       const nextCount = Math.min(32, Math.max(prev, gen.teams.length + 1));
       gen.setNumberOfTeams(nextCount);
@@ -264,6 +372,7 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
   const handleDeleteTeam = useCallback(
     (teamId: string) => {
       gen.deleteTeam(teamId);
+      setAdjustmentBanner(null);
       setTargetTeamCount(() => {
         const nextCount = Math.max(2, gen.teams.length - 1);
         gen.setNumberOfTeams(nextCount);
@@ -272,6 +381,33 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
     },
     [gen]
   );
+
+  const handleDrawGroups = useCallback(() => {
+    const incompleteTeams = gen.teams.filter((t) => t.players.length < playersPerTeam);
+
+    if (incompleteTeams.length === 1 && totalEmptySlots === 1) {
+      const completeTeams = gen.teams.filter((t) => t.players.length === playersPerTeam);
+      const M = completeTeams.length;
+
+      setTargetTeamCount(M);
+      gen.setNumberOfTeams(M);
+      gen.setTeams(completeTeams);
+
+      setAdjustmentBanner(
+        `Турнирът е коригиран на ${M} отбора поради липсващ играч за последния отбор.`
+      );
+
+      if (M >= 6) {
+        const drawn = drawTournamentGroups(completeTeams);
+        gen.setDrawnGroups(drawn);
+      }
+      return;
+    }
+
+    if (gen.teams.length >= 6) {
+      gen.drawGroups();
+    }
+  }, [gen, playersPerTeam, totalEmptySlots]);
 
   const handleAutoFillRemaining = useCallback(() => {
     const unassignedPoolCount = gen.unassignedPoolPlayers.length;
@@ -385,6 +521,14 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
           type="error"
           message={errorMessage}
           onDismiss={() => setErrorMessage(null)}
+        />
+      )}
+
+      {adjustmentBanner && (
+        <Alert
+          type="info"
+          message={adjustmentBanner}
+          onDismiss={() => setAdjustmentBanner(null)}
         />
       )}
 
@@ -505,19 +649,20 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
               </Button>
             )}
 
-            {gen.teams.length >= 6 && gen.groups.length === 0 && (
-              <Button
-                type="button"
-                id="drawGroupsBtn"
-                variant="primary"
-                size="sm"
-                onClick={gen.drawGroups}
-                disabled={gen.hasIncompleteTeams || totalEmptySlots > 0}
-                className="cursor-pointer font-semibold"
-              >
-                <span>🎲 Тегли жребий за групи</span>
-              </Button>
-            )}
+            {(gen.teams.length >= 6 || (gen.teams.length >= 3 && totalEmptySlots <= 1)) &&
+              gen.groups.length === 0 && (
+                <Button
+                  type="button"
+                  id="drawGroupsBtn"
+                  variant="primary"
+                  size="sm"
+                  onClick={handleDrawGroups}
+                  disabled={totalEmptySlots > 1}
+                  className="cursor-pointer font-semibold"
+                >
+                  <span>🎲 Тегли жребий за групи</span>
+                </Button>
+              )}
           </div>
         </div>
       </Card>
@@ -622,7 +767,7 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
         <div className="space-y-6">
           <GroupList
             groups={gen.groups}
-            onRedraw={gen.teams.length >= 6 ? gen.drawGroups : undefined}
+            onRedraw={gen.teams.length >= 6 ? handleDrawGroups : undefined}
             onReset={gen.teams.length >= 6 ? gen.resetGroups : undefined}
             onGenerateSchedule={gen.generateSchedule}
             hasSchedule={gen.schedule.length > 0}
@@ -679,12 +824,12 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
           format={tournament.format}
           targetTeamSize={playersPerTeam}
           formationMode={gen.formationMode}
-          hasIncompleteTeams={gen.hasIncompleteTeams}
+          hasIncompleteTeams={totalEmptySlots > 1}
           onSelectEmptySlot={handleSelectEmptySlot}
           onRemovePlayer={gen.removePlayerFromTeam}
           onDeleteTeam={handleDeleteTeam}
           onAutoFillRemaining={handleAutoFillRemaining}
-          onDrawGroups={gen.drawGroups}
+          onDrawGroups={handleDrawGroups}
           onShuffleTeam={gen.shuffleSingleTeam}
           onCopy={gen.copyResults}
           isCopied={gen.isCopied}

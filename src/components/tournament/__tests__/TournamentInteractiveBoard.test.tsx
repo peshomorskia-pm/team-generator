@@ -523,63 +523,358 @@ describe('TournamentInteractiveBoard Component', () => {
     expect(screen.getByText(/недостиг на играчи: в свободния пул има само 0 играчи/i)).toBeInTheDocument();
   });
 
-  it('Variant A: generates exactly 2 players per team for tennis doubles with 8 pool players and targetTeams = 3, shows excess warning, and allows adding Team 4 to accommodate excess', () => {
-    const eightPlayers = Array.from({ length: 8 }, (_, i) => ({
-      id: `p-${i + 1}`,
-      name: `Играч ${i + 1}`,
-      rating: 1000 + i * 50,
-      source: 'guest' as const,
-    }));
+  describe('Universal Mathematical Validation & Auto-Adjustment', () => {
+    const createPlayers = (count: number) =>
+      Array.from({ length: count }, (_, i) => ({
+        id: `p-${i + 1}`,
+        name: `Играч ${i + 1}`,
+        rating: 1000 + i * 20,
+        source: 'guest' as const,
+      }));
 
-    const draftWith8Players: TournamentDraftState = {
-      targetTeams: 3,
-      formationMode: 'auto',
-      teams: [],
-      activePool: eightPlayers,
-      groups: [],
-      schedule: [],
-    };
+    it('P = 15, T = 7 (Case 2): generates 7 full teams, shows 1 reserve banner, and groups can be drawn for 7 teams', () => {
+      const draft: TournamentDraftState = {
+        targetTeams: 7,
+        formationMode: 'auto',
+        teams: [],
+        activePool: createPlayers(15),
+        groups: [],
+        schedule: [],
+      };
 
-    render(
-      <TournamentInteractiveBoard
-        tournament={{ ...baseTournament, draft_state: draftWith8Players }}
-      />
-    );
+      render(<TournamentInteractiveBoard tournament={{ ...baseTournament, draft_state: draft }} />);
 
-    // Verify target team count input is 3
-    const targetInput = screen.getByLabelText('Целеви брой отбори') as HTMLInputElement;
-    expect(targetInput.value).toBe('3');
+      const generateBtn = screen.getByRole('button', { name: /генерирай отбори от пула/i });
+      act(() => {
+        fireEvent.click(generateBtn);
+      });
 
-    // Click "🎲 Генерирай отбори от пула"
-    const generateBtn = screen.getByRole('button', { name: /генерирай отбори от пула/i });
-    act(() => {
-      fireEvent.click(generateBtn);
+      // 7 teams generated
+      expect(screen.getByText('Отбор 1')).toBeInTheDocument();
+      expect(screen.getByText('Отбор 7')).toBeInTheDocument();
+      expect(screen.queryByText('Отбор 8')).not.toBeInTheDocument();
+
+      // Banner message: "Сформирани са 7 отбора. 1 играч остава като резерва."
+      expect(
+        screen.getByText('Сформирани са 7 отбора. 1 играч остава като резерва.')
+      ).toBeInTheDocument();
+
+      // Groups can be drawn for 7 teams
+      const drawGroupsBtn = screen.getAllByRole('button', { name: /тегли жребий за групи/i })[0];
+      expect(drawGroupsBtn).not.toBeDisabled();
+
+      act(() => {
+        fireEvent.click(drawGroupsBtn);
+      });
+
+      // Groups are rendered (Група А and Група Б)
+      expect(screen.getByText('Група А')).toBeInTheDocument();
+      expect(screen.getByText('Група Б')).toBeInTheDocument();
     });
 
-    // Variant A assertions:
-    // 1. Exactly 3 teams rendered
-    expect(screen.getByText('Отбор 1')).toBeInTheDocument();
-    expect(screen.getByText('Отбор 2')).toBeInTheDocument();
-    expect(screen.getByText('Отбор 3')).toBeInTheDocument();
-    expect(screen.queryByText('Отбор 4')).not.toBeInTheDocument();
+    it('P = 16, T = 7 (Case 1): adapts target teams to 8 teams, generates 8 full teams, and shows banner', () => {
+      const draft: TournamentDraftState = {
+        targetTeams: 7,
+        formationMode: 'auto',
+        teams: [],
+        activePool: createPlayers(16),
+        groups: [],
+        schedule: [],
+      };
 
-    // 2. Warning banner for excess players is displayed:
-    // "Излишък на играчи: в пула има 8 играчи, а за 3 отбора са нужни 6."
-    expect(
-      screen.getByText(/излишък на играчи: в пула има 8 играчи, а за 3 отбора са нужни 6/i)
-    ).toBeInTheDocument();
+      render(<TournamentInteractiveBoard tournament={{ ...baseTournament, draft_state: draft }} />);
 
-    // 3. User clicks "➕ Добави отбор", adding Team 4
-    const addTeamBtn = screen.getByRole('button', { name: /добави отбор/i });
-    act(() => {
-      fireEvent.click(addTeamBtn);
+      const generateBtn = screen.getByRole('button', { name: /генерирай отбори от пула/i });
+      act(() => {
+        fireEvent.click(generateBtn);
+      });
+
+      // 8 teams generated
+      expect(screen.getByText('Отбор 1')).toBeInTheDocument();
+      expect(screen.getByText('Отбор 8')).toBeInTheDocument();
+
+      // Target team input updated to 8
+      const targetInput = screen.getByLabelText('Целеви брой отбори') as HTMLInputElement;
+      expect(targetInput.value).toBe('8');
+
+      // Banner message: "Поради наличие на 16 играчи, турнирът се формира с 8 отбора."
+      expect(
+        screen.getByText('Поради наличие на 16 играчи, турнирът се формира с 8 отбора.')
+      ).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Отбор 4')).toBeInTheDocument();
+    it('P = 17, T = 7 (Case 1 with reserve): adapts target teams to 8 teams, generates 8 full teams with 1 reserve banner', () => {
+      const draft: TournamentDraftState = {
+        targetTeams: 7,
+        formationMode: 'auto',
+        teams: [],
+        activePool: createPlayers(17),
+        groups: [],
+        schedule: [],
+      };
 
-    // Now 4 teams require 8 players, so the excess banner is eliminated
-    expect(
-      screen.queryByText(/излишък на играчи/i)
-    ).not.toBeInTheDocument();
+      render(<TournamentInteractiveBoard tournament={{ ...baseTournament, draft_state: draft }} />);
+
+      const generateBtn = screen.getByRole('button', { name: /генерирай отбори от пула/i });
+      act(() => {
+        fireEvent.click(generateBtn);
+      });
+
+      // 8 teams generated
+      expect(screen.getByText('Отбор 8')).toBeInTheDocument();
+
+      // Target team input updated to 8
+      const targetInput = screen.getByLabelText('Целеви брой отбори') as HTMLInputElement;
+      expect(targetInput.value).toBe('8');
+
+      // Banner message: "Поради наличие на 17 играчи, турнирът се формира с 8 отбора. 1 играч остава като резерва."
+      expect(
+        screen.getByText('Поради наличие на 17 играчи, турнирът се формира с 8 отбора. 1 играч остава като резерва.')
+      ).toBeInTheDocument();
+    });
+
+    it('P = 13, T = 7 (Case 4): generates 7 teams with 1 team having 1 slot, shortage banner, clicking draw groups prunes to 6 teams, draws groups for 6 teams with adjustment banner', () => {
+      const draft: TournamentDraftState = {
+        targetTeams: 7,
+        formationMode: 'auto',
+        teams: [],
+        activePool: createPlayers(13),
+        groups: [],
+        schedule: [],
+      };
+
+      render(<TournamentInteractiveBoard tournament={{ ...baseTournament, draft_state: draft }} />);
+
+      const generateBtn = screen.getByRole('button', { name: /генерирай отбори от пула/i });
+      act(() => {
+        fireEvent.click(generateBtn);
+      });
+
+      // 7 teams generated
+      expect(screen.getByText('Отбор 7')).toBeInTheDocument();
+
+      // Exactly 1 empty slot "[ + Избери играч ]" rendered
+      const emptySlotButtons = screen.getAllByRole('button', { name: /избери играч/i });
+      expect(emptySlotButtons).toHaveLength(1);
+
+      // Shortage banner
+      expect(
+        screen.getByText('Необходим е още 1 играч за попълване на 7 отбора.')
+      ).toBeInTheDocument();
+
+      // Draw groups button is available and enabled
+      const drawGroupsBtn = screen.getAllByRole('button', { name: /тегли жребий за групи/i })[0];
+      expect(drawGroupsBtn).not.toBeDisabled();
+
+      // Clicking draw groups prunes the incomplete team to 6 teams and draws groups!
+      act(() => {
+        fireEvent.click(drawGroupsBtn);
+      });
+
+      // Target team count input updated to 6
+      const targetInput = screen.getByLabelText('Целеви брой отбори') as HTMLInputElement;
+      expect(targetInput.value).toBe('6');
+
+      // Adjustment banner: "Турнирът е коригиран на 6 отбора поради липсващ играч за последния отбор."
+      expect(
+        screen.getByText('Турнирът е коригиран на 6 отбора поради липсващ играч за последния отбор.')
+      ).toBeInTheDocument();
+
+      // Groups are drawn (Група А and Група Б for 6 teams)
+      expect(screen.getByText('Група А')).toBeInTheDocument();
+      expect(screen.getByText('Група Б')).toBeInTheDocument();
+    });
+
+    it('P = 12, T = 7 (Case 5): adapts target teams to 6 teams, generates 6 full teams, and shows banner', () => {
+      const draft: TournamentDraftState = {
+        targetTeams: 7,
+        formationMode: 'auto',
+        teams: [],
+        activePool: createPlayers(12),
+        groups: [],
+        schedule: [],
+      };
+
+      render(<TournamentInteractiveBoard tournament={{ ...baseTournament, draft_state: draft }} />);
+
+      const generateBtn = screen.getByRole('button', { name: /генерирай отбори от пула/i });
+      act(() => {
+        fireEvent.click(generateBtn);
+      });
+
+      expect(screen.getByText('Отбор 6')).toBeInTheDocument();
+      expect(screen.queryByText('Отбор 7')).not.toBeInTheDocument();
+
+      const targetInput = screen.getByLabelText('Целеви брой отбори') as HTMLInputElement;
+      expect(targetInput.value).toBe('6');
+
+      expect(
+        screen.getByText('Поради 12 налични играчи турнирът е коригиран на 6 отбора (първоначално зададени 7).')
+      ).toBeInTheDocument();
+    });
+
+    it('P = 9, T = 5 (Case 4): generates 5 teams with 1 team having 1 slot, draw groups prunes to 4 teams and auto-assigns group with adjustment banner', () => {
+      const draft: TournamentDraftState = {
+        targetTeams: 5,
+        formationMode: 'auto',
+        teams: [],
+        activePool: createPlayers(9),
+        groups: [],
+        schedule: [],
+      };
+
+      render(<TournamentInteractiveBoard tournament={{ ...baseTournament, draft_state: draft }} />);
+
+      const generateBtn = screen.getByRole('button', { name: /генерирай отбори от пула/i });
+      act(() => {
+        fireEvent.click(generateBtn);
+      });
+
+      expect(screen.getByText('Отбор 5')).toBeInTheDocument();
+      expect(
+        screen.getByText('Необходим е още 1 играч за попълване на 5 отбора.')
+      ).toBeInTheDocument();
+
+      const drawGroupsBtn = screen.getAllByRole('button', { name: /тегли жребий за групи/i })[0];
+      expect(drawGroupsBtn).not.toBeDisabled();
+
+      act(() => {
+        fireEvent.click(drawGroupsBtn);
+      });
+
+      const targetInput = screen.getByLabelText('Целеви брой отбори') as HTMLInputElement;
+      expect(targetInput.value).toBe('4');
+
+      expect(
+        screen.getByText('Турнирът е коригиран на 4 отбора поради липсващ играч за последния отбор.')
+      ).toBeInTheDocument();
+
+      // 4 teams auto-assigned to Група А
+      expect(screen.getByText('Група А')).toBeInTheDocument();
+    });
+
+    it('P = 5, T = 3 (Case 4): generates 3 teams with 1 team having 1 slot, draw groups prunes to 2 teams with adjustment banner', () => {
+      const draft: TournamentDraftState = {
+        targetTeams: 3,
+        formationMode: 'auto',
+        teams: [],
+        activePool: createPlayers(5),
+        groups: [],
+        schedule: [],
+      };
+
+      render(<TournamentInteractiveBoard tournament={{ ...baseTournament, draft_state: draft }} />);
+
+      const generateBtn = screen.getByRole('button', { name: /генерирай отбори от пула/i });
+      act(() => {
+        fireEvent.click(generateBtn);
+      });
+
+      expect(screen.getByText('Отбор 3')).toBeInTheDocument();
+      expect(
+        screen.getByText('Необходим е още 1 играч за попълване на 3 отбора.')
+      ).toBeInTheDocument();
+
+      const drawGroupsBtn = screen.getAllByRole('button', { name: /тегли жребий за групи/i })[0];
+      expect(drawGroupsBtn).not.toBeDisabled();
+
+      act(() => {
+        fireEvent.click(drawGroupsBtn);
+      });
+
+      const targetInput = screen.getByLabelText('Целеви брой отбори') as HTMLInputElement;
+      expect(targetInput.value).toBe('2');
+
+      expect(
+        screen.getByText('Турнирът е коригиран на 2 отбора поради липсващ играч за последния отбор.')
+      ).toBeInTheDocument();
+    });
+
+    it('P = 11, T = 7 (Case 5 with reserve): adapts target teams to 5 teams + 1 reserve banner', () => {
+      const draft: TournamentDraftState = {
+        targetTeams: 7,
+        formationMode: 'auto',
+        teams: [],
+        activePool: createPlayers(11),
+        groups: [],
+        schedule: [],
+      };
+
+      render(<TournamentInteractiveBoard tournament={{ ...baseTournament, draft_state: draft }} />);
+
+      const generateBtn = screen.getByRole('button', { name: /генерирай отбори от пула/i });
+      act(() => {
+        fireEvent.click(generateBtn);
+      });
+
+      expect(screen.getByText('Отбор 5')).toBeInTheDocument();
+      expect(screen.queryByText('Отбор 6')).not.toBeInTheDocument();
+
+      const targetInput = screen.getByLabelText('Целеви брой отбори') as HTMLInputElement;
+      expect(targetInput.value).toBe('5');
+
+      expect(
+        screen.getByText(
+          'Поради 11 налични играчи турнирът е коригиран на 5 отбора (първоначално зададени 7). 1 играч остава като резерва.'
+        )
+      ).toBeInTheDocument();
+    });
+
+    it('P = 14, T = 7 (Case 3): generates exactly 7 full teams with no reserves and no banner', () => {
+      const draft: TournamentDraftState = {
+        targetTeams: 7,
+        formationMode: 'auto',
+        teams: [],
+        activePool: createPlayers(14),
+        groups: [],
+        schedule: [],
+      };
+
+      render(<TournamentInteractiveBoard tournament={{ ...baseTournament, draft_state: draft }} />);
+
+      const generateBtn = screen.getByRole('button', { name: /генерирай отбори от пула/i });
+      act(() => {
+        fireEvent.click(generateBtn);
+      });
+
+      expect(screen.getByText('Отбор 7')).toBeInTheDocument();
+      expect(screen.queryByText('Отбор 8')).not.toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('Singles mode: P = 7, T = 6 (Case 2): generates 6 full teams of 1 player with 1 reserve banner', () => {
+      const singlesTournament: Tournament = {
+        ...baseTournament,
+        format: 'singles',
+      };
+
+      const draft: TournamentDraftState = {
+        targetTeams: 6,
+        formationMode: 'auto',
+        teams: [],
+        activePool: createPlayers(7),
+        groups: [],
+        schedule: [],
+      };
+
+      render(
+        <TournamentInteractiveBoard
+          tournament={{ ...singlesTournament, draft_state: draft }}
+        />
+      );
+
+      const generateBtn = screen.getByRole('button', { name: /генерирай отбори от пула/i });
+      act(() => {
+        fireEvent.click(generateBtn);
+      });
+
+      expect(screen.getByText('Отбор 6')).toBeInTheDocument();
+      expect(screen.queryByText('Отбор 7')).not.toBeInTheDocument();
+
+      // In singles, 1 player per team:
+      expect(
+        screen.getByText('Сформирани са 6 отбора. 1 играч остава като резерва.')
+      ).toBeInTheDocument();
+    });
   });
 });

@@ -87,12 +87,15 @@ export interface UseTeamGeneratorReturn {
   playersPerTeam: number | null;
   setPlayersPerTeam: (val: number | null) => void;
   teams: Team[];
+  setTeams: (teams: Team[] | ((prev: Team[]) => Team[])) => void;
   targetTeamSize: number;
   hasIncompleteTeams: boolean;
   groups: TournamentGroup[];
-  drawGroups: () => void;
+  drawGroups: (teamsOverride?: Team[]) => void;
   resetGroups: () => void;
   clearGroups: () => void;
+  drawnGroups: TournamentGroup[];
+  setDrawnGroups: (groups: TournamentGroup[] | ((prev: TournamentGroup[]) => TournamentGroup[])) => void;
   schedule: TournamentMatch[];
   generateSchedule: () => void;
   resetSchedule: () => void;
