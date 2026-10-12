@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Shuffle, Star, X, UserPlus } from 'lucide-react';
+import { User, Shuffle, Star, X, UserPlus, Trash2 } from 'lucide-react';
 import { TeamCardProps } from '../../types';
 import { Badge } from '../ui/Badge';
 
@@ -7,6 +7,7 @@ export const TeamCard: React.FC<TeamCardProps> = ({
   team,
   index = 0,
   onShuffleTeam,
+  onDeleteTeam,
   format,
   mode = 'tennis',
   targetSize,
@@ -61,6 +62,18 @@ export const TeamCard: React.FC<TeamCardProps> = ({
               aria-label="Разбъркай отбора"
             >
               <Shuffle className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {onDeleteTeam && (
+            <button
+              type="button"
+              data-testid={`delete-team-${team.id}`}
+              onClick={() => onDeleteTeam(team.id)}
+              className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 p-1 transition-colors cursor-pointer"
+              title="Изтрий отбора"
+              aria-label={`Изтрий ${team.name}`}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
         </div>

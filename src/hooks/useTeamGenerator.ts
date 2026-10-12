@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
-import { Team, AlertNotification, GeneratorMode, TournamentGroup, TournamentMatch, UseTeamGeneratorReturn } from '../types';
+import { Team, AlertNotification, GeneratorMode, TournamentGroup, TournamentMatch, UseTeamGeneratorReturn, TournamentDraftState, UseTeamGeneratorOptions } from '../types';
 import { GeneratorPlayer, DatabasePlayer, TeamFormationMode } from '../types/generator';
 import { fisherYatesShuffle } from '../utils/shuffle';
 import { balanceTeams } from '../utils/balance';
@@ -63,32 +63,51 @@ export const calculateTeamRating = (
   }, 0);
 };
 
-export function useTeamGenerator(): UseTeamGeneratorReturn {
-  const [mode, setMode] = useState<GeneratorMode>('tennis');
-  const [activePool, setActivePool] = useState<GeneratorPlayer[]>([]);
-  const [numberOfTeams, setNumberOfTeams] = useState<number | null>(null);
+export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGeneratorReturn {
+  const [mode, setMode] = useState<GeneratorMode>(options?.initialMode ?? 'tennis');
+  const [activePool, setActivePool] = useState<GeneratorPlayer[]>(
+    () => options?.initialDraftState?.activePool ?? []
+  );
+  const [numberOfTeams, setNumberOfTeams] = useState<number | null>(
+    () => options?.initialDraftState?.targetTeams ?? null
+  );
   const [playersPerTeam, setPlayersPerTeam] = useState<number | null>(null);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [drawnGroups, setDrawnGroups] = useState<TournamentGroup[]>([]);
-  const [schedule, setSchedule] = useState<TournamentMatch[]>([]);
+  const [teams, setTeams] = useState<Team[]>(
+    () => options?.initialDraftState?.teams ?? []
+  );
+  const [drawnGroups, setDrawnGroups] = useState<TournamentGroup[]>(
+    () => options?.initialDraftState?.groups ?? []
+  );
+  const [schedule, setSchedule] = useState<TournamentMatch[]>(
+    () => options?.initialDraftState?.schedule ?? []
+  );
   const [history, setHistory] = useState<string[]>([]);
   const [alert, setAlert] = useState<AlertNotification | null>(null);
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [balanceByRating, setBalanceByRating] = useState<boolean>(false);
-  const [formationMode, setFormationMode] = useState<TeamFormationMode>('auto');
-  const [manualPlayersPerTeam, setManualPlayersPerTeam] = useState<number>(2);
-  const [format, setFormat] = useState<'singles' | 'doubles'>('doubles');
+  const [formationMode, setFormationMode] = useState<TeamFormationMode>(
+    () => options?.initialDraftState?.formationMode ?? 'auto'
+  );
+  const [format, setFormat] = useState<'singles' | 'doubles'>(
+    () => options?.initialFormat ?? 'doubles'
+  );
+  const [manualPlayersPerTeam, setManualPlayersPerTeam] = useState<number>(
+    () => (options?.initialFormat === 'singles' ? 1 : 2)
+  );
   const lastTeamsRef = useRef<Team[] | null>(null);
   const lastFingerprintRef = useRef<string>('');
 
   const effectiveFormat = mode === 'tennis' ? format : undefined;
 
   const targetTeamSize = useMemo(() => {
+    if (mode === 'tennis') {
+      return format === 'doubles' ? 2 : 1;
+    }
     if (formationMode === 'manual') {
       return manualPlayersPerTeam;
     }
     return getTargetTeamSize(mode, format, playersPerTeam, numberOfTeams, activePool.length);
-  }, [formationMode, manualPlayersPerTeam, mode, format, playersPerTeam, numberOfTeams, activePool.length]);
+  }, [mode, format, formationMode, manualPlayersPerTeam, playersPerTeam, numberOfTeams, activePool.length]);
 
   const unassignedPoolPlayers = useMemo(() => {
     const assignedIds = new Set(teams.flatMap((t) => t.players.map((p) => p.id)));
@@ -107,6 +126,9 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
   const groups = useMemo<TournamentGroup[]>(() => {
     if (mode !== 'tennis' || hasIncompleteTeams) {
       return [];
+    }
+    if (drawnGroups.length > 0) {
+      return drawnGroups;
     }
     if (teams.length >= 3 && teams.length <= 5) {
       return [{ id: 'group-0', name: 'Група А', teams }];
@@ -513,7 +535,9 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
         mode === 'tennis'
           ? typeof teamCount === 'number' && teamCount > 0
             ? teamCount
-            : tennisTargetTeams
+            : numberOfTeams !== null && !Number.isNaN(numberOfTeams) && numberOfTeams > 0
+              ? numberOfTeams
+              : tennisTargetTeams
           : typeof teamCount === 'number' && teamCount > 0
             ? teamCount
             : numberOfTeams !== null && !Number.isNaN(numberOfTeams) && numberOfTeams > 0
@@ -580,14 +604,32 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
       do {
         generatedTeams = [];
 
-        if (effectiveBalance && hasRatings && targetNumTeams) {
-          const shuffled = fisherYatesShuffle(activePool);
-          generatedTeams = balanceTeams(shuffled, targetNumTeams, effectiveFormat);
-        } else {
-          const shuffled = fisherYatesShuffle(activePool);
+        if (mode === 'tennis') {
+          const tennisPpt = format === 'doubles' ? 2 : 1;
+          const neededCount = (effectiveNumTeams ?? 0) * tennisPpt;
 
-          if (hasNumTeams) {
-            for (let i = 0; i < effectiveNumTeams; i++) {
+          if (effectiveBalance && hasRatings) {
+            const shuffled = fisherYatesShuffle(activePool);
+            let poolToDistribute: GeneratorPlayer[];
+            if (activePool.length > neededCount) {
+              const sorted = [...shuffled].sort((a, b) => {
+                const rA = resolvePlayerRating(a, effectiveFormat) ?? 0;
+                const rB = resolvePlayerRating(b, effectiveFormat) ?? 0;
+                return rB - rA;
+              });
+              poolToDistribute = sorted.slice(0, neededCount);
+            } else {
+              poolToDistribute = shuffled;
+            }
+            generatedTeams = balanceTeams(poolToDistribute, effectiveNumTeams ?? 1, effectiveFormat);
+          } else {
+            const shuffled = fisherYatesShuffle(activePool);
+            const poolToDistribute =
+              activePool.length > neededCount
+                ? shuffled.slice(0, neededCount)
+                : shuffled;
+
+            for (let i = 0; i < (effectiveNumTeams ?? 0); i++) {
               generatedTeams.push({
                 id: `team-${i + 1}`,
                 name: `Отбор ${i + 1}`,
@@ -595,35 +637,65 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
                 totalRating: 0,
               });
             }
-            shuffled.forEach((player, index) => {
-              const teamIdx = index % effectiveNumTeams;
-              generatedTeams[teamIdx].players.push(player);
-              const pRating = resolvePlayerRating(player, effectiveFormat);
-              if (pRating !== undefined) {
-                generatedTeams[teamIdx].totalRating =
-                  (generatedTeams[teamIdx].totalRating ?? 0) + pRating;
+
+            poolToDistribute.forEach((player, index) => {
+              const teamIdx = index % (effectiveNumTeams ?? 1);
+              if (generatedTeams[teamIdx].players.length < tennisPpt) {
+                generatedTeams[teamIdx].players.push(player);
+                const pRating = resolvePlayerRating(player, effectiveFormat);
+                if (pRating !== undefined) {
+                  generatedTeams[teamIdx].totalRating =
+                    (generatedTeams[teamIdx].totalRating ?? 0) + pRating;
+                }
               }
             });
-          } else if (hasPpt) {
-            const numTeams = Math.ceil(shuffled.length / pptInt);
-            const baseSize = Math.floor(shuffled.length / numTeams);
-            const remainder = shuffled.length % numTeams;
+          }
+        } else {
+          if (effectiveBalance && hasRatings && targetNumTeams) {
+            const shuffled = fisherYatesShuffle(activePool);
+            generatedTeams = balanceTeams(shuffled, targetNumTeams, effectiveFormat);
+          } else {
+            const shuffled = fisherYatesShuffle(activePool);
 
-            let cursor = 0;
-            for (let i = 0; i < numTeams; i++) {
-              const targetSize = i < remainder ? baseSize + 1 : baseSize;
-              const chunk = shuffled.slice(cursor, cursor + targetSize);
-              cursor += targetSize;
-              const total = chunk.reduce(
-                (sum, p) => sum + (resolvePlayerRating(p, effectiveFormat) ?? 0),
-                0
-              );
-              generatedTeams.push({
-                id: `team-${i + 1}`,
-                name: `Отбор ${i + 1}`,
-                players: chunk,
-                totalRating: total,
+            if (hasNumTeams) {
+              for (let i = 0; i < effectiveNumTeams; i++) {
+                generatedTeams.push({
+                  id: `team-${i + 1}`,
+                  name: `Отбор ${i + 1}`,
+                  players: [],
+                  totalRating: 0,
+                });
+              }
+              shuffled.forEach((player, index) => {
+                const teamIdx = index % effectiveNumTeams;
+                generatedTeams[teamIdx].players.push(player);
+                const pRating = resolvePlayerRating(player, effectiveFormat);
+                if (pRating !== undefined) {
+                  generatedTeams[teamIdx].totalRating =
+                    (generatedTeams[teamIdx].totalRating ?? 0) + pRating;
+                }
               });
+            } else if (hasPpt) {
+              const numTeams = Math.ceil(shuffled.length / pptInt);
+              const baseSize = Math.floor(shuffled.length / numTeams);
+              const remainder = shuffled.length % numTeams;
+
+              let cursor = 0;
+              for (let i = 0; i < numTeams; i++) {
+                const targetSize = i < remainder ? baseSize + 1 : baseSize;
+                const chunk = shuffled.slice(cursor, cursor + targetSize);
+                cursor += targetSize;
+                const total = chunk.reduce(
+                  (sum, p) => sum + (resolvePlayerRating(p, effectiveFormat) ?? 0),
+                  0
+                );
+                generatedTeams.push({
+                  id: `team-${i + 1}`,
+                  name: `Отбор ${i + 1}`,
+                  players: chunk,
+                  totalRating: total,
+                });
+              }
             }
           }
         }
@@ -648,13 +720,18 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
     [activePool, mode, numberOfTeams, playersPerTeam, balanceByRating, showAlert, format, canGenerate, validationError]
   );
 
-  const drawGroups = useCallback(() => {
-    if (teams.length >= 6 && mode === 'tennis' && !hasIncompleteTeams) {
-      const drawn = drawTournamentGroups(teams);
-      setDrawnGroups(drawn);
-      setSchedule([]);
-    }
-  }, [teams, mode, hasIncompleteTeams]);
+  const drawGroups = useCallback(
+    (teamsOverride?: Team[]) => {
+      const teamsToUse = Array.isArray(teamsOverride) ? teamsOverride : teams;
+      const isComplete = teamsToUse.every((t) => t.players.length >= targetTeamSize);
+      if (teamsToUse.length >= 6 && mode === 'tennis' && isComplete) {
+        const drawn = drawTournamentGroups(teamsToUse);
+        setDrawnGroups(drawn);
+        setSchedule([]);
+      }
+    },
+    [teams, mode, targetTeamSize]
+  );
 
   const generateSchedule = useCallback(() => {
     if (groups.length > 0) {
@@ -724,18 +801,60 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
     setSchedule([]);
   }, []);
 
+  const addBlankTeam = useCallback(() => {
+    setFormationMode('manual');
+    setTeams((prevTeams) => {
+      const nextNum = prevTeams.length + 1;
+      let teamId = `team-${nextNum}`;
+      let counter = nextNum;
+      while (prevTeams.some((t) => t.id === teamId)) {
+        counter++;
+        teamId = `team-${counter}`;
+      }
+      const newTeam: Team = {
+        id: teamId,
+        name: `Отбор ${nextNum}`,
+        players: [],
+        totalRating: 0,
+      };
+      return [...prevTeams, newTeam];
+    });
+    setDrawnGroups([]);
+    setSchedule([]);
+  }, []);
+
+  const deleteTeam = useCallback((teamId: string) => {
+    setTeams((prevTeams) => prevTeams.filter((t) => t.id !== teamId));
+    setDrawnGroups([]);
+    setSchedule([]);
+  }, []);
+
   const assignPlayerToTeam = useCallback(
     (teamId: string, player: GeneratorPlayer) => {
+      const maxTeamSize =
+        mode === 'tennis'
+          ? (format === 'doubles' ? 2 : 1)
+          : targetTeamSize;
+
+      const currentTeam = teams.find((t) => t.id === teamId);
+      if (!currentTeam || currentTeam.players.length >= maxTeamSize) {
+        return;
+      }
+
       setActivePool((prev) => {
         if (prev.some((p) => p.id === player.id)) return prev;
         return [...prev, player];
       });
 
       setTeams((prevTeams) => {
+        const targetTeam = prevTeams.find((t) => t.id === teamId);
+        if (!targetTeam || targetTeam.players.length >= maxTeamSize) {
+          return prevTeams;
+        }
+
         return prevTeams.map((team) => {
           if (team.id === teamId) {
             if (team.players.some((p) => p.id === player.id)) return team;
-            if (team.players.length >= targetTeamSize) return team;
             const updated = [...team.players, player];
             return {
               ...team,
@@ -759,7 +878,7 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
       setDrawnGroups([]);
       setSchedule([]);
     },
-    [targetTeamSize, effectiveFormat]
+    [mode, format, targetTeamSize, effectiveFormat, teams]
   );
 
   const removePlayerFromTeam = useCallback(
@@ -835,6 +954,27 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
     [activePool, balanceByRating, effectiveFormat, targetTeamSize]
   );
 
+  const hydrateFromDraft = useCallback((draft: TournamentDraftState) => {
+    if (draft.targetTeams !== undefined && draft.targetTeams !== null) {
+      setNumberOfTeams(draft.targetTeams);
+    }
+    if (draft.formationMode) {
+      setFormationMode(draft.formationMode);
+    }
+    if (draft.teams) {
+      setTeams(draft.teams);
+    }
+    if (draft.activePool) {
+      setActivePool(draft.activePool);
+    }
+    if (draft.groups !== undefined) {
+      setDrawnGroups(draft.groups ?? []);
+    }
+    if (draft.schedule !== undefined) {
+      setSchedule(draft.schedule ?? []);
+    }
+  }, []);
+
   return {
     mode,
     setMode: handleSetMode,
@@ -848,12 +988,15 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
     playersPerTeam,
     setPlayersPerTeam: handlePlayersPerTeamChange,
     teams,
+    setTeams,
     targetTeamSize,
     hasIncompleteTeams,
     groups,
     drawGroups,
     resetGroups,
     clearGroups: resetGroups,
+    drawnGroups,
+    setDrawnGroups,
     schedule,
     generateSchedule,
     resetSchedule,
@@ -879,8 +1022,11 @@ export function useTeamGenerator(): UseTeamGeneratorReturn {
     setTeamFormationMode: setFormationMode,
     unassignedPoolPlayers,
     initializeBlankTeams,
+    addBlankTeam,
+    deleteTeam,
     assignPlayerToTeam,
     removePlayerFromTeam,
     autoFillRemainingSlots,
+    hydrateFromDraft,
   };
 }

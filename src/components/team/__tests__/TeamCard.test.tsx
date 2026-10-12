@@ -167,4 +167,23 @@ describe('TeamCard', () => {
     await user.click(removeBtn);
     expect(handleRemovePlayer).toHaveBeenCalledWith('team-1', 'p-1');
   });
+
+  it('renders delete team button when onDeleteTeam is provided and calls callback', async () => {
+    const user = userEvent.setup();
+    const handleDeleteTeam = vi.fn();
+
+    render(
+      <TeamCard
+        team={mockTeam}
+        index={0}
+        onDeleteTeam={handleDeleteTeam}
+      />
+    );
+
+    const deleteBtn = screen.getByRole('button', { name: 'Изтрий Отбор 1' });
+    expect(deleteBtn).toBeInTheDocument();
+
+    await user.click(deleteBtn);
+    expect(handleDeleteTeam).toHaveBeenCalledWith('team-1');
+  });
 });

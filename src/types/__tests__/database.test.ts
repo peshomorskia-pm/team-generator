@@ -269,6 +269,7 @@ describe('Database Types Contract Tests', () => {
         status: 'draft',
         winner_team_name: null,
         notes: 'Първо издание',
+        draft_state: null,
         created_at: '2026-10-10T10:00:00.000Z',
         updated_at: '2026-10-10T10:00:00.000Z',
       };
@@ -280,6 +281,7 @@ describe('Database Types Contract Tests', () => {
       expect(mockTournamentRow.status).toBe('draft');
       expect(mockTournamentRow.winner_team_name).toBeNull();
       expect(mockTournamentRow.notes).toBe('Първо издание');
+      expect(mockTournamentRow.draft_state).toBeNull();
       expect(mockTournamentRow.created_at).toBe('2026-10-10T10:00:00.000Z');
       expect(mockTournamentRow.updated_at).toBe('2026-10-10T10:00:00.000Z');
     });
@@ -293,6 +295,7 @@ describe('Database Types Contract Tests', () => {
         status: 'completed',
         winner_team_name: 'Шампиони',
         notes: null,
+        draft_state: null,
         created_at: '2026-04-15T09:00:00.000Z',
         updated_at: '2026-04-15T18:00:00.000Z',
       };
@@ -305,6 +308,7 @@ describe('Database Types Contract Tests', () => {
         status: dbRow.status,
         winner_team_name: dbRow.winner_team_name,
         notes: dbRow.notes,
+        draft_state: dbRow.draft_state as Tournament['draft_state'],
         created_at: dbRow.created_at,
         updated_at: dbRow.updated_at,
       };
@@ -317,6 +321,7 @@ describe('Database Types Contract Tests', () => {
         status: 'completed',
         winner_team_name: 'Шампиони',
         notes: null,
+        draft_state: null,
         created_at: '2026-04-15T09:00:00.000Z',
         updated_at: '2026-04-15T18:00:00.000Z',
       });

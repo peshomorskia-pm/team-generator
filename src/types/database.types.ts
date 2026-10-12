@@ -1,3 +1,11 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
 export interface Database {
   public: {
     Tables: {
@@ -103,6 +111,7 @@ export interface Database {
           status: 'draft' | 'in_progress' | 'completed'; // text
           winner_team_name: string | null; // text
           notes: string | null; // text
+          draft_state: Json | null;
           created_at: string; // timestamptz
           updated_at: string; // timestamptz
         };
@@ -114,6 +123,7 @@ export interface Database {
           status?: 'draft' | 'in_progress' | 'completed';
           winner_team_name?: string | null;
           notes?: string | null;
+          draft_state?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -125,6 +135,7 @@ export interface Database {
           status?: 'draft' | 'in_progress' | 'completed';
           winner_team_name?: string | null;
           notes?: string | null;
+          draft_state?: Json | null;
           created_at?: string;
           updated_at?: string;
         };

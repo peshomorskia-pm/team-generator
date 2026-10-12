@@ -18,6 +18,7 @@ export const TeamList = memo(function TeamList({
   formationMode = 'auto',
   onSelectEmptySlot,
   onRemovePlayer,
+  onDeleteTeam,
   onAutoFillRemaining,
 }: TeamListProps) {
   if (teams.length === 0) {
@@ -134,6 +135,7 @@ export const TeamList = memo(function TeamList({
             team={team}
             index={index}
             onShuffleTeam={onShuffleTeam}
+            onDeleteTeam={onDeleteTeam}
             format={format}
             mode={mode}
             targetSize={computedTargetSize}
