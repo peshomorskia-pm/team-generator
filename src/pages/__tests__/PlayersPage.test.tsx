@@ -183,6 +183,23 @@ describe('PlayersPage', () => {
 
       expect(clearAlertMock).toHaveBeenCalledTimes(1);
     });
+
+    it('renders players in alphabetical order by name in desktop table', () => {
+      render(<PlayersPage />);
+
+      const tableRows = screen.getAllByRole('row');
+      // Row 0 is the table header, rows 1-4 are players
+      const playerNamesInTable = tableRows.slice(1).map((row) => {
+        return row.querySelector('td span.font-medium')?.textContent;
+      });
+
+      expect(playerNamesInTable).toEqual([
+        'Димитър Бербатов',
+        'Красимир Балъков',
+        'Трифон Иванов',
+        'Христо Стоичков',
+      ]);
+    });
   });
 
   describe('Search filtering', () => {

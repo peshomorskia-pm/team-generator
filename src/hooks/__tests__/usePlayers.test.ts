@@ -46,7 +46,7 @@ describe('usePlayers hook', () => {
   });
 
   describe('fetchPlayers', () => {
-    it('fetches players on mount and updates state sorted by rating', async () => {
+    it('fetches players on mount and updates state sorted alphabetically by name', async () => {
       const orderMock = vi.fn().mockResolvedValue({
         data: samplePlayers,
         error: null,
@@ -64,8 +64,12 @@ describe('usePlayers hook', () => {
 
       expect(mockFrom).toHaveBeenCalledWith('players');
       expect(selectMock).toHaveBeenCalledWith('*');
-      expect(orderMock).toHaveBeenCalledWith('rating', { ascending: false });
-      expect(result.current.players).toEqual(samplePlayers);
+      expect(orderMock).toHaveBeenCalledWith('name', { ascending: true });
+      expect(result.current.players).toEqual([
+        samplePlayers[0], // Димитър Бербатов
+        samplePlayers[2], // Красимир Балъков
+        samplePlayers[1], // Христо Стоичков
+      ]);
       expect(result.current.error).toBeNull();
       expect(result.current.alert).toBeNull();
     });
@@ -142,7 +146,11 @@ describe('usePlayers hook', () => {
         await result.current.fetchPlayers();
       });
 
-      expect(result.current.players).toEqual(samplePlayers);
+      expect(result.current.players).toEqual([
+        samplePlayers[0],
+        samplePlayers[2],
+        samplePlayers[1],
+      ]);
     });
 
     it('manually calling fetchPlayers handles error and unconfigured cases gracefully', async () => {
@@ -398,7 +406,9 @@ describe('usePlayers hook', () => {
         doubles_rating: 2000,
       });
       expect(eqMock).toHaveBeenCalledWith('id', '3');
-      expect(result.current.players[0].name).toBe('Красимир Балъков'); // 2000 is now highest
+      expect(result.current.players[0].name).toBe('Димитър Бербатов');
+      expect(result.current.players[1].name).toBe('Красимир Балъков');
+      expect(result.current.players[2].name).toBe('Христо Стоичков');
       expect(result.current.alert).toEqual({
         type: 'success',
         message: 'Играчът "Красимир Балъков" е обновен успешно.',

@@ -2054,6 +2054,25 @@ describe('useTeamGenerator', () => {
       // p3 was not assigned
       expect(result.current.teams[0].players.some((p) => p.id === 'p3')).toBe(false);
     });
+
+    it('sorts unassignedPoolPlayers alphabetically by name', () => {
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialMode: 'tennis',
+          initialFormat: 'doubles',
+        })
+      );
+
+      act(() => {
+        result.current.addGuest('Явор, Ангел, Борис');
+      });
+
+      expect(result.current.unassignedPoolPlayers.map((p) => p.name)).toEqual([
+        'Ангел',
+        'Борис',
+        'Явор',
+      ]);
+    });
   });
 });
 

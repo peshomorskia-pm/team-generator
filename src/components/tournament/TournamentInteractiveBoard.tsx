@@ -27,6 +27,7 @@ import { useMatches } from '../../hooks/useMatches';
 import { usePlayers } from '../../hooks/usePlayers';
 import { useTeamGenerator, calculateTeamRating } from '../../hooks/useTeamGenerator';
 import { drawTournamentGroups } from '../../utils/groupPartition';
+import { sortPlayersByName } from '../../utils/playerSort';
 import type { Team } from '../../types';
 import type {
   Tournament,
@@ -243,8 +244,13 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
       }
     });
 
-    return list;
+    return sortPlayersByName(list);
   }, [gen.teams, gen.unassignedPoolPlayers, dbPlayers]);
+
+  const sortedActivePool = useMemo(
+    () => sortPlayersByName(gen.activePool),
+    [gen.activePool]
+  );
 
   const activeSlotTeam = useMemo(
     () => gen.teams.find((t) => t.id === activeSlotTeamId),
@@ -762,7 +768,7 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
             <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 mr-1">
               Участници в пула:
             </span>
-            {gen.activePool.map((p) => (
+            {sortedActivePool.map((p) => (
               <span
                 key={p.id}
                 className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-slate-600"

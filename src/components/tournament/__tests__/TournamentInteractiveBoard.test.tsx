@@ -1011,5 +1011,34 @@ describe('TournamentInteractiveBoard Component', () => {
         screen.getByText('Сформирани са 6 отбора. 1 играч остава като резерва.')
       ).toBeInTheDocument();
     });
+
+    it('displays confirmed participants summary in alphabetical order', () => {
+      const draft: TournamentDraftState = {
+        targetTeams: 2,
+        formationMode: 'auto',
+        teams: [
+          { id: 't1', name: 'Отбор 1', players: [], totalRating: 0 },
+        ],
+        activePool: [
+          { id: '1', name: 'Явор', source: 'registered', rating: 1200 },
+          { id: '2', name: 'Ангел', source: 'registered', rating: 1300 },
+          { id: '3', name: 'Борис', source: 'guest' },
+        ],
+        groups: [],
+        schedule: [],
+      };
+
+      render(
+        <TournamentInteractiveBoard
+          tournament={{ ...baseTournament, draft_state: draft }}
+        />
+      );
+
+      const summarySection = screen.getByTestId('confirmed-participants-summary');
+      const spans = within(summarySection).getAllByText(/^(Ангел|Борис|Явор)/);
+      expect(spans[0]).toHaveTextContent('Ангел');
+      expect(spans[1]).toHaveTextContent('Борис');
+      expect(spans[2]).toHaveTextContent('Явор');
+    });
   });
 });

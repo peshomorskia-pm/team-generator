@@ -3,6 +3,7 @@ import { X, Search, User, Star, UserPlus } from 'lucide-react';
 import { GeneratorPlayer } from '../../types/generator';
 import { generateGuestId } from '../../hooks/useTeamGenerator';
 import { Button } from '../ui/Button';
+import { sortPlayersByName } from '../../utils/playerSort';
 
 export interface TeamSlotPickerModalProps {
   isOpen: boolean;
@@ -55,9 +56,10 @@ export const TeamSlotPickerModal: React.FC<TeamSlotPickerModalProps> = ({
   }, [isOpen, handleClose]);
 
   const filteredPlayers = useMemo(() => {
-    if (!searchQuery.trim()) return unassignedPlayers;
+    if (!searchQuery.trim()) return sortPlayersByName(unassignedPlayers);
     const q = searchQuery.toLowerCase().trim();
-    return unassignedPlayers.filter((p) => p.name.toLowerCase().includes(q));
+    const matches = unassignedPlayers.filter((p) => p.name.toLowerCase().includes(q));
+    return sortPlayersByName(matches);
   }, [unassignedPlayers, searchQuery]);
 
   if (!isOpen || !teamId) {

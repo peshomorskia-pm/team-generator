@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { PlayerRow } from '../types/database.types';
+import { sortPlayersByName } from '../utils/playerSort';
 
 export interface AlertNotification {
   type: 'success' | 'error' | 'info';
@@ -70,13 +71,13 @@ export function usePlayers(): UsePlayersReturn {
       const { data, error: queryError } = await supabase
         .from('players')
         .select('*')
-        .order('rating', { ascending: false });
+        .order('name', { ascending: true });
 
       if (queryError) {
         throw queryError;
       }
 
-      setPlayers(data ?? []);
+      setPlayers(sortPlayersByName(data ?? []));
     } catch (err: unknown) {
       const msg = getErrorMessage(err, 'Грешка при зареждане на играчите.');
       setError(msg);
@@ -133,7 +134,7 @@ export function usePlayers(): UsePlayersReturn {
         if (data) {
           setPlayers((prev) => {
             const next = [data, ...prev.filter((p) => p.id !== data.id)];
-            return next.sort((a, b) => b.rating - a.rating);
+            return sortPlayersByName(next);
           });
           setAlert({
             type: 'success',
@@ -199,7 +200,7 @@ export function usePlayers(): UsePlayersReturn {
         if (data) {
           setPlayers((prev) => {
             const next = prev.map((p) => (p.id === id ? data : p));
-            return next.sort((a, b) => b.rating - a.rating);
+            return sortPlayersByName(next);
           });
           setAlert({
             type: 'success',
@@ -273,14 +274,14 @@ export function usePlayers(): UsePlayersReturn {
         const { data, error: queryError } = await supabase
           .from('players')
           .select('*')
-          .order('rating', { ascending: false });
+          .order('name', { ascending: true });
 
         if (queryError) {
           throw queryError;
         }
 
         if (isMounted) {
-          setPlayers(data ?? []);
+          setPlayers(sortPlayersByName(data ?? []));
         }
       } catch (err: unknown) {
         if (isMounted) {

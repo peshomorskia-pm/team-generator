@@ -144,4 +144,32 @@ describe('PlayerCombobox Component', () => {
     fireEvent.keyDown(input, { key: 'Escape' });
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
+
+  it('renders dropdown options in alphabetical order by Bulgarian Cyrillic collation', async () => {
+    const user = userEvent.setup();
+    const unsorted = [
+      { id: '1', name: 'Явор', rating: 1200 },
+      { id: '2', name: 'Борис', rating: 1300 },
+      { id: '3', name: 'Ангел', rating: 1400 },
+    ];
+
+    render(
+      <PlayerCombobox
+        players={unsorted}
+        selectedIds={[]}
+        excludedIds={[]}
+        onSelect={vi.fn()}
+      />
+    );
+
+    const input = screen.getByRole('combobox');
+    await user.click(input);
+
+    const options = screen.getAllByRole('option');
+    const optionNames = options.map((opt) => opt.textContent?.trim());
+
+    expect(optionNames[0]).toContain('Ангел');
+    expect(optionNames[1]).toContain('Борис');
+    expect(optionNames[2]).toContain('Явор');
+  });
 });

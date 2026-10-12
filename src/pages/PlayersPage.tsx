@@ -9,6 +9,7 @@ import { Badge } from '../components/ui/Badge';
 import { Alert } from '../components/ui/Alert';
 import { Card } from '../components/ui/Card';
 import type { PlayerRow } from '../types/database.types';
+import { sortPlayersByName } from '../utils/playerSort';
 
 export const getRatingBadgeVariant = (
   rating: number
@@ -37,10 +38,11 @@ export const PlayersPage: React.FC = () => {
 
   const filteredPlayers = useMemo(() => {
     if (!searchQuery.trim()) {
-      return players;
+      return sortPlayersByName(players);
     }
     const query = searchQuery.trim().toLowerCase();
-    return players.filter((player) => player.name.toLowerCase().includes(query));
+    const matches = players.filter((player) => player.name.toLowerCase().includes(query));
+    return sortPlayersByName(matches);
   }, [players, searchQuery]);
 
   const handleSavePlayer = async (

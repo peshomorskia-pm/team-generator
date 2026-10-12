@@ -7,6 +7,7 @@ import { saveMatchup, generateTeamsFingerprint, areTeamConfigsEqual } from '../u
 import { copyTextToClipboard, formatTeamsForClipboard } from '../utils/clipboard';
 import { drawTournamentGroups } from '../utils/groupPartition';
 import { generateTournamentSchedule } from '../utils/roundRobin';
+import { sortPlayersByName } from '../utils/playerSort';
 
 export function generateGuestId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -111,7 +112,8 @@ export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGene
 
   const unassignedPoolPlayers = useMemo(() => {
     const assignedIds = new Set(teams.flatMap((t) => t.players.map((p) => p.id)));
-    return activePool.filter((p) => !assignedIds.has(p.id));
+    const unassigned = activePool.filter((p) => !assignedIds.has(p.id));
+    return sortPlayersByName(unassigned);
   }, [activePool, teams]);
 
   const hasIncompleteTeams = useMemo(() => {
