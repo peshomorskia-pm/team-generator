@@ -138,4 +138,24 @@ describe('ActivePool Component', () => {
     expect(badge).toHaveTextContent('Христо');
     expect(badge).not.toHaveTextContent('1520');
   });
+
+  it('renders badges in alphabetical order by Bulgarian Cyrillic collation', () => {
+    const unsortedPool: GeneratorPlayer[] = [
+      { id: '1', name: 'Христо', source: 'registered', rating: 1500 },
+      { id: '2', name: 'Александър', source: 'registered', rating: 1400 },
+      { id: '3', name: 'Борис', source: 'guest' },
+    ];
+
+    render(
+      <ActivePool
+        activePool={unsortedPool}
+        onRemovePlayer={vi.fn()}
+      />
+    );
+
+    const badges = screen.getAllByTestId(/^player-badge-/);
+    expect(badges[0]).toHaveTextContent('Александър');
+    expect(badges[1]).toHaveTextContent('Борис');
+    expect(badges[2]).toHaveTextContent('Христо');
+  });
 });

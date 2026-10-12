@@ -3,6 +3,7 @@ import { Search, Star, Users, CheckSquare, Square, X } from 'lucide-react';
 import { PlayerRow } from '../../types/database.types';
 import { GeneratorMode } from '../../types';
 import { Badge, Input, Button } from '../ui';
+import { sortPlayersByName } from '../../utils/playerSort';
 
 export interface PlayerSelectorProps {
   players: PlayerRow[];
@@ -47,8 +48,9 @@ export const PlayerSelector: React.FC<PlayerSelectorProps> = ({
 
   const filteredPlayers = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return players;
-    return players.filter((p) => p.name.toLowerCase().includes(term));
+    if (!term) return sortPlayersByName(players);
+    const matches = players.filter((p) => p.name.toLowerCase().includes(term));
+    return sortPlayersByName(matches);
   }, [players, search]);
 
   const allFilteredSelected = useMemo(() => {

@@ -155,4 +155,28 @@ describe('TeamSlotPickerModal', () => {
     await user.click(backdrop);
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
+
+  it('renders unassigned players in alphabetical order by name', () => {
+    const unsorted: GeneratorPlayer[] = [
+      { id: '1', name: 'Явор', source: 'registered' },
+      { id: '2', name: 'Борис', source: 'registered' },
+      { id: '3', name: 'Ангел', source: 'registered' },
+    ];
+
+    render(
+      <TeamSlotPickerModal
+        isOpen={true}
+        onClose={vi.fn()}
+        teamId="team-1"
+        unassignedPlayers={unsorted}
+      />
+    );
+
+    const playerBtns = screen.getAllByRole('button', { name: /(Явор|Борис|Ангел)/ });
+    const texts = playerBtns.map((b) => b.textContent?.trim());
+
+    expect(texts[0]).toContain('Ангел');
+    expect(texts[1]).toContain('Борис');
+    expect(texts[2]).toContain('Явор');
+  });
 });

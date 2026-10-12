@@ -234,5 +234,26 @@ describe('PlayerSelector Component', () => {
     expect(screen.queryByText('1550')).not.toBeInTheDocument();
     expect(screen.queryByText('1400')).not.toBeInTheDocument();
   });
+
+  it('renders player items in alphabetical order from А to Я', () => {
+    const unsorted: PlayerRow[] = [
+      { id: '1', name: 'Явор', rating: 1200, created_at: '', updated_at: '' },
+      { id: '2', name: 'Борис', rating: 1300, created_at: '', updated_at: '' },
+      { id: '3', name: 'Ангел', rating: 1400, created_at: '', updated_at: '' },
+    ];
+
+    render(
+      <PlayerSelector
+        players={unsorted}
+        selectedIds={new Set()}
+        onTogglePlayer={vi.fn()}
+      />
+    );
+
+    const checkboxes = screen.getAllByRole('checkbox');
+    const labels = checkboxes.map((cb) => cb.getAttribute('aria-label'));
+
+    expect(labels).toEqual(['Ангел', 'Борис', 'Явор']);
+  });
 });
 
