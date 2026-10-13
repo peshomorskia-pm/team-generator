@@ -5,7 +5,7 @@ import { fisherYatesShuffle } from '../utils/shuffle';
 import { balanceTeams } from '../utils/balance';
 import { saveMatchup, generateTeamsFingerprint, areTeamConfigsEqual } from '../utils/history';
 import { copyTextToClipboard, formatTeamsForClipboard } from '../utils/clipboard';
-import { drawTournamentGroups } from '../utils/groupPartition';
+import { drawTournamentGroups, calculateGroupSizes, getBulgarianGroupLabel } from '../utils/groupPartition';
 import { generateTournamentSchedule } from '../utils/roundRobin';
 import { sortPlayersByName } from '../utils/playerSort';
 
@@ -126,20 +126,50 @@ export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGene
   // - Tennis mode with >= 6 teams: formed via drawTournamentGroups()
   // - Incomplete teams or generic mode: empty array
   const groups = useMemo<TournamentGroup[]>(() => {
-    if (mode !== 'tennis' || hasIncompleteTeams) {
+    if (mode !== 'tennis') {
       return [];
     }
     if (drawnGroups.length > 0) {
       return drawnGroups;
     }
-    if (teams.length >= 3 && teams.length <= 5) {
-      return [{ id: 'group-0', name: 'Група А', teams }];
-    }
-    if (teams.length >= 6) {
-      return drawnGroups;
+    if (!hasIncompleteTeams) {
+      if (teams.length >= 3 && teams.length <= 5) {
+        return [{ id: 'group-0', name: 'Група А', teams }];
+      }
+      if (teams.length >= 6) {
+        return drawnGroups;
+      }
     }
     return [];
   }, [mode, hasIncompleteTeams, teams, drawnGroups]);
+
+  const activeGroups = useMemo<TournamentGroup[]>(() => {
+    return drawnGroups.length > 0 ? drawnGroups : groups;
+  }, [drawnGroups, groups]);
+
+  const unassignedTeams = useMemo<Team[]>(() => {
+    const assignedTeamIds = new Set(activeGroups.flatMap((g) => g.teams.map((t) => t.id)));
+    return teams.filter((t) => !assignedTeamIds.has(t.id));
+  }, [teams, activeGroups]);
+
+  const hasValidGroupsForSchedule = useMemo<boolean>(() => {
+    if (activeGroups.length === 0) return false;
+    if (unassignedTeams.length > 0) return false;
+    return activeGroups.every((g) => g.teams.length >= 3);
+  }, [activeGroups, unassignedTeams]);
+
+  const groupValidationMessage = useMemo<string | null>(() => {
+    if (activeGroups.length === 0) return null;
+    if (unassignedTeams.length > 0) {
+      return unassignedTeams.length === 1
+        ? 'Остава 1 неразпределен отбор.'
+        : `Остават ${unassignedTeams.length} неразпределени отбора.`;
+    }
+    if (activeGroups.some((g) => g.teams.length < 3)) {
+      return 'Всяка група трябва да има поне 3 отбора.';
+    }
+    return null;
+  }, [activeGroups, unassignedTeams]);
 
   const resetGroups = useCallback(() => {
     setDrawnGroups([]);
@@ -735,6 +765,156 @@ export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGene
     [teams, mode, targetTeamSize]
   );
 
+  const initializeBlankGroups = useCallback(
+    (totalTeams?: number): TournamentGroup[] => {
+      const N = totalTeams ?? teams.length;
+      if (N < 3) {
+        setDrawnGroups([]);
+        setSchedule([]);
+        return [];
+      }
+      const sizes = calculateGroupSizes(N);
+      const blankGroups: TournamentGroup[] = sizes.map((_, i) => ({
+        id: `group-${i}`,
+        name: getBulgarianGroupLabel(i),
+        teams: [],
+      }));
+      setDrawnGroups(blankGroups);
+      setSchedule([]);
+      return blankGroups;
+    },
+    [teams.length]
+  );
+
+  const assignTeamToGroup = useCallback(
+    (groupId: string, team: Team) => {
+      setDrawnGroups((prev) => {
+        const base = prev.length > 0 ? prev : groups;
+        return base.map((g) => {
+          const filtered = g.teams.filter((t) => t.id !== team.id);
+          if (g.id === groupId) {
+            const teamWithRating: Team = {
+              ...team,
+              totalRating: calculateTeamRating(team.players, effectiveFormat),
+            };
+            return {
+              ...g,
+              teams: [...filtered, teamWithRating],
+            };
+          }
+          return {
+            ...g,
+            teams: filtered,
+          };
+        });
+      });
+      setSchedule([]);
+    },
+    [groups, effectiveFormat]
+  );
+
+  const removeTeamFromGroup = useCallback(
+    (groupId: string, teamId: string) => {
+      setDrawnGroups((prev) => {
+        const base = prev.length > 0 ? prev : groups;
+        return base.map((g) => {
+          if (g.id === groupId) {
+            return {
+              ...g,
+              teams: g.teams.filter((t) => t.id !== teamId),
+            };
+          }
+          return g;
+        });
+      });
+      setSchedule([]);
+    },
+    [groups]
+  );
+
+  const moveTeamBetweenGroups = useCallback(
+    (teamId: string, targetGroupId: string) => {
+      setDrawnGroups((prev) => {
+        const base = prev.length > 0 ? prev : groups;
+        const teamToMove = base.flatMap((g) => g.teams).find((t) => t.id === teamId);
+        if (!teamToMove) return prev;
+        return base.map((g) => {
+          const filtered = g.teams.filter((t) => t.id !== teamId);
+          if (g.id === targetGroupId) {
+            return {
+              ...g,
+              teams: [...filtered, teamToMove],
+            };
+          }
+          return {
+            ...g,
+            teams: filtered,
+          };
+        });
+      });
+      setSchedule([]);
+    },
+    [groups]
+  );
+
+  const autoFillRemainingGroupTeams = useCallback(() => {
+    setDrawnGroups((prev) => {
+      let base = prev;
+      if (base.length === 0) {
+        const sizes = calculateGroupSizes(teams.length);
+        base = sizes.map((_, i) => ({
+          id: `group-${i}`,
+          name: getBulgarianGroupLabel(i),
+          teams: [],
+        }));
+      }
+      if (base.length === 0) return prev;
+
+      const assignedIds = new Set(base.flatMap((g) => g.teams.map((t) => t.id)));
+      const unassigned = teams.filter((t) => !assignedIds.has(t.id));
+      if (unassigned.length === 0) return base;
+
+      const sizes = calculateGroupSizes(teams.length);
+      const updated = base.map((g) => ({
+        ...g,
+        teams: [...g.teams],
+      }));
+
+      let unassignedIdx = 0;
+      for (let i = 0; i < updated.length && unassignedIdx < unassigned.length; i++) {
+        const targetCapacity =
+          sizes.length === updated.length && sizes[i] !== undefined
+            ? sizes[i]
+            : Math.ceil(teams.length / updated.length);
+
+        while (updated[i].teams.length < targetCapacity && unassignedIdx < unassigned.length) {
+          const team = unassigned[unassignedIdx++];
+          updated[i].teams.push({
+            ...team,
+            totalRating: calculateTeamRating(team.players, effectiveFormat),
+          });
+        }
+      }
+
+      while (unassignedIdx < unassigned.length) {
+        let minGroupIdx = 0;
+        for (let i = 1; i < updated.length; i++) {
+          if (updated[i].teams.length < updated[minGroupIdx].teams.length) {
+            minGroupIdx = i;
+          }
+        }
+        const team = unassigned[unassignedIdx++];
+        updated[minGroupIdx].teams.push({
+          ...team,
+          totalRating: calculateTeamRating(team.players, effectiveFormat),
+        });
+      }
+
+      return updated;
+    });
+    setSchedule([]);
+  }, [teams, effectiveFormat]);
+
   const generateSchedule = useCallback(() => {
     if (groups.length > 0) {
       const drawnSchedule = generateTournamentSchedule(groups);
@@ -999,6 +1179,14 @@ export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGene
     clearGroups: resetGroups,
     drawnGroups,
     setDrawnGroups,
+    unassignedTeams,
+    hasValidGroupsForSchedule,
+    groupValidationMessage,
+    initializeBlankGroups,
+    assignTeamToGroup,
+    removeTeamFromGroup,
+    moveTeamBetweenGroups,
+    autoFillRemainingGroupTeams,
     schedule,
     generateSchedule,
     resetSchedule,

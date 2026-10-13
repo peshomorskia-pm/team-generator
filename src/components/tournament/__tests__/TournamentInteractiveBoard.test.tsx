@@ -1041,4 +1041,124 @@ describe('TournamentInteractiveBoard Component', () => {
       expect(spans[2]).toHaveTextContent('Явор');
     });
   });
+
+  describe('Manual and Hybrid Group Assignment Integration', () => {
+    it('T-INT-1: end-to-end manual workflow: blank groups -> pick team -> auto-fill -> transfer -> gating -> generate schedule -> auto-save', async () => {
+      vi.useFakeTimers();
+
+      const mockTeams = Array.from({ length: 6 }, (_, i) => ({
+        id: `team-${i + 1}`,
+        name: `Отбор ${i + 1}`,
+        totalRating: 2400,
+        players: [
+          { id: `p-${i * 2 + 1}`, name: `Играч ${i * 2 + 1}`, doubles_rating: 1200 },
+          { id: `p-${i * 2 + 2}`, name: `Играч ${i * 2 + 2}`, doubles_rating: 1200 },
+        ],
+      }));
+
+      const tournamentWithTeams: Tournament = {
+        ...baseTournament,
+        draft_state: {
+          targetTeams: 6,
+          formationMode: 'auto',
+          teams: mockTeams,
+          activePool: [],
+          groups: [],
+          schedule: [],
+        },
+      };
+
+      render(<TournamentInteractiveBoard tournament={tournamentWithTeams} />);
+
+      // Step 2: Click "📋 Ръчно разпределение"
+      const manualGroupBtn = screen.getByRole('button', { name: /ръчно разпределение/i });
+      act(() => {
+        fireEvent.click(manualGroupBtn);
+      });
+
+      // 2 blank groups rendered with empty slots
+      expect(screen.getByText('Група А')).toBeInTheDocument();
+      expect(screen.getByText('Група Б')).toBeInTheDocument();
+      expect(screen.getByText('Остават 6 неразпределени отбора')).toBeInTheDocument();
+
+      // Step 3: "📅 Генерирай програма с мачове" is disabled
+      const genScheduleBtn = screen.getByRole('button', { name: /генерирай програма с мачове/i });
+      expect(genScheduleBtn).toBeDisabled();
+
+      // Step 4: Click empty slot in Group A -> GroupTeamPickerModal opens
+      const emptySlots = screen.getAllByTestId('empty-group-slot');
+      expect(emptySlots.length).toBeGreaterThanOrEqual(1);
+
+      act(() => {
+        fireEvent.click(emptySlots[0]);
+      });
+
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toBeInTheDocument();
+      expect(within(dialog).getByText(/избери отбор за група а/i)).toBeInTheDocument();
+      expect(within(dialog).getByText('Отбор 1')).toBeInTheDocument();
+
+      // Step 5: Select Отбор 1
+      const selectTeam1Btn = screen.getByTestId('select-team-team-1');
+      act(() => {
+        fireEvent.click(selectTeam1Btn);
+      });
+
+      // Dialog closed and Отбор 1 placed in Group A, unassigned drops to 5
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.getByText('Остават 5 неразпределени отбора')).toBeInTheDocument();
+
+      // Step 6: Click "✨ Попълни останалите отбори"
+      const autoFillBtn = screen.getByRole('button', { name: /попълни останалите отбори автоматично/i });
+      act(() => {
+        fireEvent.click(autoFillBtn);
+      });
+
+      // All 6 teams distributed (3 in Group A, 3 in Group B)
+      expect(screen.getByText('Няма неразпределени отбори')).toBeInTheDocument();
+      expect(genScheduleBtn).not.toBeDisabled();
+
+      // Step 7: Move Team 1 to Group B
+      const moveSelects = screen.getAllByRole('combobox', { name: 'Премести в друга група' });
+      act(() => {
+        fireEvent.change(moveSelects[0], { target: { value: 'group-1' } });
+      });
+
+      // Moving 1 team to Group B made Group A have 2 teams and Group B have 4 teams
+      expect(screen.getByText('Всяка група трябва да има поне 3 отбора.')).toBeInTheDocument();
+      expect(genScheduleBtn).toBeDisabled();
+
+      // Move a team from Group B back to Group A to restore 3 + 3
+      const updatedSelects = screen.getAllByRole('combobox', { name: 'Премести в друга група' });
+      act(() => {
+        fireEvent.change(updatedSelects[updatedSelects.length - 1], { target: { value: 'group-0' } });
+      });
+
+      expect(screen.queryByText('Всяка група трябва да има поне 3 отбора.')).not.toBeInTheDocument();
+      expect(genScheduleBtn).not.toBeDisabled();
+
+      // Step 8: Click "📅 Генерирай програма с мачове"
+      act(() => {
+        fireEvent.click(genScheduleBtn);
+      });
+
+      expect(screen.getByText('Програмата е готова!')).toBeInTheDocument();
+
+      // Step 9: Verify 800ms debounced auto-save triggers saveTournamentDraft
+      await act(async () => {
+        vi.advanceTimersByTime(800);
+      });
+
+      expect(saveTournamentDraftMock).toHaveBeenCalled();
+      expect(saveTournamentDraftMock).toHaveBeenCalledWith(
+        'tourn-100',
+        expect.objectContaining({
+          groups: expect.arrayContaining([
+            expect.objectContaining({ name: 'Група А' }),
+            expect.objectContaining({ name: 'Група Б' }),
+          ]),
+        })
+      );
+    });
+  });
 });

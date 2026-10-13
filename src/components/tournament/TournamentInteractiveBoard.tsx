@@ -18,6 +18,7 @@ import { Card } from '../ui/Card';
 import { TeamList } from '../team/TeamList';
 import { TeamSlotPickerModal } from '../team/TeamSlotPickerModal';
 import { GroupList } from '../group/GroupList';
+import { GroupTeamPickerModal } from '../group/GroupTeamPickerModal';
 import { MatchScheduleList } from '../group/MatchScheduleList';
 import { PlayerSelector } from '../generator/PlayerSelector';
 import { GuestInput } from '../generator/GuestInput';
@@ -75,6 +76,9 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
   const [playerSearchQuery, setPlayerSearchQuery] = useState<string>('');
   const [activeSlotTeamId, setActiveSlotTeamId] = useState<string | null>(null);
   const [isPickerModalOpen, setIsPickerModalOpen] = useState<boolean>(false);
+  const [isGroupPickerOpen, setIsGroupPickerOpen] = useState<boolean>(false);
+  const [activeSlotGroupId, setActiveSlotGroupId] = useState<string | null>(null);
+  const [activeSlotGroupName, setActiveSlotGroupName] = useState<string>('');
   const [isSavingMatches, setIsSavingMatches] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [adjustmentBanner, setAdjustmentBanner] = useState<string | null>(null);
@@ -467,6 +471,33 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
     }
   }, [gen, totalEmptySlots, showAutoFillNotice]);
 
+  const handleSelectEmptyGroupSlot = useCallback(
+    (groupId: string) => {
+      const targetGroup = gen.groups.find((g) => g.id === groupId);
+      setActiveSlotGroupId(groupId);
+      setActiveSlotGroupName(targetGroup?.name ?? '');
+      setIsGroupPickerOpen(true);
+    },
+    [gen.groups]
+  );
+
+  const handleSelectTeamForGroup = useCallback(
+    (groupId: string, team: Team) => {
+      gen.assignTeamToGroup(groupId, team);
+      setIsGroupPickerOpen(false);
+    },
+    [gen]
+  );
+
+  const handleInitializeBlankGroups = useCallback(() => {
+    gen.initializeBlankGroups();
+    setAdjustmentBanner(null);
+  }, [gen]);
+
+  const handleAutoFillRemainingGroups = useCallback(() => {
+    gen.autoFillRemainingGroupTeams();
+  }, [gen]);
+
   // Bulk save matches handler
   const handleSaveAllMatches = useCallback(async () => {
     if (gen.schedule.length === 0) return;
@@ -710,17 +741,30 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
 
             {(gen.teams.length >= 6 || (gen.teams.length >= 3 && totalEmptySlots <= 1)) &&
               gen.groups.length === 0 && (
-                <Button
-                  type="button"
-                  id="drawGroupsBtn"
-                  variant="primary"
-                  size="sm"
-                  onClick={handleDrawGroups}
-                  disabled={totalEmptySlots > 1}
-                  className="cursor-pointer font-semibold"
-                >
-                  <span>🎲 Тегли жребий за групи</span>
-                </Button>
+                <>
+                  <Button
+                    type="button"
+                    id="initializeBlankGroupsBtn"
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleInitializeBlankGroups}
+                    disabled={totalEmptySlots > 1}
+                    className="cursor-pointer font-semibold"
+                  >
+                    <span>📋 Ръчно разпределение</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    id="drawGroupsBtn"
+                    variant="primary"
+                    size="sm"
+                    onClick={handleDrawGroups}
+                    disabled={totalEmptySlots > 1}
+                    className="cursor-pointer font-semibold"
+                  >
+                    <span>🎲 Тегли жребий за групи</span>
+                  </Button>
+                </>
               )}
           </div>
         </div>
@@ -826,8 +870,16 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
         <div className="space-y-6">
           <GroupList
             groups={gen.groups}
+            unassignedTeams={gen.unassignedTeams}
+            onSelectEmptySlot={handleSelectEmptyGroupSlot}
+            onRemoveTeam={gen.removeTeamFromGroup}
+            onMoveTeam={gen.moveTeamBetweenGroups}
             onRedraw={gen.teams.length >= 6 ? handleDrawGroups : undefined}
             onReset={gen.teams.length >= 6 ? gen.resetGroups : undefined}
+            onInitializeBlankGroups={handleInitializeBlankGroups}
+            onAutoFillRemainingGroups={handleAutoFillRemainingGroups}
+            canGenerateSchedule={gen.hasValidGroupsForSchedule}
+            validationMessage={gen.groupValidationMessage}
             onGenerateSchedule={gen.generateSchedule}
             hasSchedule={gen.schedule.length > 0}
             schedule={gen.schedule}
@@ -903,6 +955,17 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
         teamName={activeSlotTeam?.name}
         unassignedPlayers={unassignedPlayersList}
         onSelectPlayer={handleAssignPlayer}
+        format={tournament.format}
+      />
+
+      {/* Group Team Picker Modal */}
+      <GroupTeamPickerModal
+        isOpen={isGroupPickerOpen}
+        onClose={() => setIsGroupPickerOpen(false)}
+        groupId={activeSlotGroupId}
+        groupName={activeSlotGroupName}
+        unassignedTeams={gen.unassignedTeams}
+        onSelectTeam={handleSelectTeamForGroup}
         format={tournament.format}
       />
     </div>

@@ -128,5 +128,83 @@ describe('GroupList component', () => {
 
       expect(screen.queryByRole('button', { name: /генерирай програма с мачове/i })).not.toBeInTheDocument();
     });
+
+    it('disables "📅 Генерирай програма" button when canGenerateSchedule is false', () => {
+      render(
+        <GroupList
+          groups={dummyGroups}
+          onGenerateSchedule={vi.fn()}
+          hasSchedule={false}
+          canGenerateSchedule={false}
+          validationMessage="Всяка група трябва да има поне 3 отбора."
+        />
+      );
+
+      const genBtn = screen.getByRole('button', { name: /генерирай програма с мачове/i });
+      expect(genBtn).toBeDisabled();
+      expect(screen.getByText('Всяка група трябва да има поне 3 отбора.')).toBeInTheDocument();
+    });
+  });
+
+  describe('manual and hybrid grouping controls and status indicators', () => {
+    it('renders unassigned teams badge when unassignedTeams prop is provided', () => {
+      const mockUnassigned = [
+        { id: 't-1', name: 'Отбор X', players: [] },
+        { id: 't-2', name: 'Отбор Y', players: [] },
+      ];
+
+      const { rerender } = render(
+        <GroupList
+          groups={dummyGroups}
+          unassignedTeams={mockUnassigned}
+        />
+      );
+
+      expect(screen.getByText('Остават 2 неразпределени отбора')).toBeInTheDocument();
+
+      rerender(
+        <GroupList
+          groups={dummyGroups}
+          unassignedTeams={[]}
+        />
+      );
+
+      expect(screen.getByText('Няма неразпределени отбори')).toBeInTheDocument();
+    });
+
+    it('invokes onInitializeBlankGroups when clicking "📋 Ръчно разпределение"', () => {
+      const onInitMock = vi.fn();
+      render(
+        <GroupList
+          groups={dummyGroups}
+          onInitializeBlankGroups={onInitMock}
+        />
+      );
+
+      const initBtn = screen.getByRole('button', { name: /ръчно разпределение/i });
+      expect(initBtn).toBeInTheDocument();
+
+      fireEvent.click(initBtn);
+      expect(onInitMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders and invokes onAutoFillRemainingGroups when unassigned teams exist', () => {
+      const onAutoFillMock = vi.fn();
+      const mockUnassigned = [{ id: 't-1', name: 'Отбор X', players: [] }];
+
+      render(
+        <GroupList
+          groups={dummyGroups}
+          unassignedTeams={mockUnassigned}
+          onAutoFillRemainingGroups={onAutoFillMock}
+        />
+      );
+
+      const autoFillBtn = screen.getByRole('button', { name: /попълни останалите отбори автоматично/i });
+      expect(autoFillBtn).toBeInTheDocument();
+
+      fireEvent.click(autoFillBtn);
+      expect(onAutoFillMock).toHaveBeenCalledTimes(1);
+    });
   });
 });
