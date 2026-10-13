@@ -2308,6 +2308,106 @@ describe('useTeamGenerator', () => {
       expect(result.current.hasValidGroupsForSchedule).toBe(true);
       expect(result.current.groupValidationMessage).toBeNull();
     });
+
+    it('T-HOOK-7: initializeBlankGroups(16) creates 4 groups with total 16 slots ([4, 4, 4, 4])', () => {
+      const mockTeams = createMockTeams(16);
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialMode: 'tennis',
+          initialFormat: 'doubles',
+          initialDraftState: {
+            targetTeams: 16,
+            formationMode: 'auto',
+            teams: mockTeams,
+            activePool: [],
+          },
+        })
+      );
+
+      act(() => {
+        result.current.initializeBlankGroups(16);
+      });
+
+      expect(result.current.drawnGroups).toHaveLength(4);
+      expect(result.current.drawnGroups.map((g) => g.targetSize)).toEqual([4, 4, 4, 4]);
+      const totalSlots = result.current.drawnGroups.reduce((sum, g) => sum + (g.targetSize ?? 0), 0);
+      expect(totalSlots).toBe(16);
+      expect(result.current.drawnGroups.every((g) => (g.targetSize ?? 0) >= 3)).toBe(true);
+      expect(result.current.drawnGroups.map((g) => g.name)).toEqual(['Група А', 'Група Б', 'Група В', 'Група Г']);
+    });
+
+    it('T-HOOK-8: initializeBlankGroups for 9, 10, 11, 13, 14, 15 teams matches sum of slots = N and every group >= 3', () => {
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialMode: 'tennis',
+          initialFormat: 'doubles',
+        })
+      );
+
+      const testCounts = [9, 10, 11, 13, 14, 15];
+      for (const n of testCounts) {
+        act(() => {
+          result.current.initializeBlankGroups(n);
+        });
+
+        const groups = result.current.drawnGroups;
+        const totalSlots = groups.reduce((sum, g) => sum + (g.targetSize ?? 0), 0);
+        expect(totalSlots).toBe(n);
+        expect(groups.every((g) => (g.targetSize ?? 0) >= 3)).toBe(true);
+      }
+
+      // Explicit partition checks
+      act(() => {
+        result.current.initializeBlankGroups(9);
+      });
+      expect(result.current.drawnGroups.map((g) => g.targetSize)).toEqual([3, 3, 3]);
+
+      act(() => {
+        result.current.initializeBlankGroups(10);
+      });
+      expect(result.current.drawnGroups.map((g) => g.targetSize)).toEqual([4, 3, 3]);
+
+      act(() => {
+        result.current.initializeBlankGroups(11);
+      });
+      expect(result.current.drawnGroups.map((g) => g.targetSize)).toEqual([4, 4, 3]);
+
+      act(() => {
+        result.current.initializeBlankGroups(13);
+      });
+      expect(result.current.drawnGroups.map((g) => g.targetSize)).toEqual([4, 3, 3, 3]);
+
+      act(() => {
+        result.current.initializeBlankGroups(14);
+      });
+      expect(result.current.drawnGroups.map((g) => g.targetSize)).toEqual([4, 4, 3, 3]);
+
+      act(() => {
+        result.current.initializeBlankGroups(15);
+      });
+      expect(result.current.drawnGroups.map((g) => g.targetSize)).toEqual([4, 4, 4, 3]);
+    });
+
+    it('T-HOOK-9: initializeBlankGroups for 3, 4, 5 teams creates exactly 1 group (Група А) with N slots', () => {
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialMode: 'tennis',
+          initialFormat: 'doubles',
+        })
+      );
+
+      for (const n of [3, 4, 5]) {
+        act(() => {
+          result.current.initializeBlankGroups(n);
+        });
+
+        const groups = result.current.drawnGroups;
+        expect(groups).toHaveLength(1);
+        expect(groups[0].name).toBe('Група А');
+        expect(groups[0].targetSize).toBe(n);
+        expect(groups[0].teams).toEqual([]);
+      }
+    });
   });
 });
 

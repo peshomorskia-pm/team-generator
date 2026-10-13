@@ -395,6 +395,7 @@ export const GeneratorPage: React.FC = () => {
           <GroupList
             groups={groups}
             unassignedTeams={unassignedTeams}
+            targetGroupSizes={groups.map((g) => g.targetSize).filter((s): s is number => typeof s === 'number')}
             canGenerateSchedule={hasValidGroupsForSchedule}
             validationMessage={groupValidationMessage}
             onRedraw={teams.length >= 6 ? drawGroups : undefined}

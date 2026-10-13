@@ -50,6 +50,7 @@ export interface TournamentGroup {
   id: string; // e.g. 'group-0'
   name: string; // e.g. 'Група А'
   teams: Team[];
+  targetSize?: number;
 }
 
 export interface TournamentMatch {

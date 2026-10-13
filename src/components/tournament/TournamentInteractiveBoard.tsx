@@ -871,12 +871,13 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
           <GroupList
             groups={gen.groups}
             unassignedTeams={gen.unassignedTeams}
+            targetGroupSizes={gen.groups.map((g) => g.targetSize).filter((s): s is number => typeof s === 'number')}
             onSelectEmptySlot={handleSelectEmptyGroupSlot}
             onRemoveTeam={gen.removeTeamFromGroup}
             onMoveTeam={gen.moveTeamBetweenGroups}
             onRedraw={gen.teams.length >= 6 ? handleDrawGroups : undefined}
             onReset={gen.teams.length >= 6 ? gen.resetGroups : undefined}
-            onInitializeBlankGroups={handleInitializeBlankGroups}
+            onInitializeBlankGroups={gen.teams.length >= 6 ? handleInitializeBlankGroups : undefined}
             onAutoFillRemainingGroups={handleAutoFillRemainingGroups}
             canGenerateSchedule={gen.hasValidGroupsForSchedule}
             validationMessage={gen.groupValidationMessage}

@@ -5,6 +5,7 @@ import * as useTournamentsModule from '../../../hooks/useTournaments';
 import * as useMatchesModule from '../../../hooks/useMatches';
 import * as usePlayersModule from '../../../hooks/usePlayers';
 import type { Tournament, TournamentDraftState } from '../../../types/tournament';
+import type { Team } from '../../../types';
 
 describe('TournamentInteractiveBoard Component', () => {
   const saveTournamentDraftMock = vi.fn();
@@ -1159,6 +1160,47 @@ describe('TournamentInteractiveBoard Component', () => {
           ]),
         })
       );
+    });
+
+    it('initializes 4 groups of 4 slots (16 total slots) for 16 teams upon manual distribution', () => {
+      const mockTeams: Team[] = Array.from({ length: 16 }, (_, i) => ({
+        id: `team-${i + 1}`,
+        name: `Отбор ${i + 1}`,
+        players: [
+          { id: `p-${i * 2 + 1}`, name: `Играч ${i * 2 + 1}`, doubles_rating: 1200 },
+          { id: `p-${i * 2 + 2}`, name: `Играч ${i * 2 + 2}`, doubles_rating: 1200 },
+        ],
+      }));
+
+      const tournamentWith16Teams: Tournament = {
+        ...baseTournament,
+        draft_state: {
+          targetTeams: 16,
+          formationMode: 'auto',
+          teams: mockTeams,
+          activePool: [],
+          groups: [],
+          schedule: [],
+        },
+      };
+
+      render(<TournamentInteractiveBoard tournament={tournamentWith16Teams} />);
+
+      const manualGroupBtn = screen.getByRole('button', { name: /ръчно разпределение/i });
+      act(() => {
+        fireEvent.click(manualGroupBtn);
+      });
+
+      // 4 groups rendered
+      expect(screen.getByText('Група А')).toBeInTheDocument();
+      expect(screen.getByText('Група Б')).toBeInTheDocument();
+      expect(screen.getByText('Група В')).toBeInTheDocument();
+      expect(screen.getByText('Група Г')).toBeInTheDocument();
+
+      // Exactly 16 empty slot buttons rendered (4 groups x 4 empty slots)
+      const emptySlots = screen.getAllByTestId('empty-group-slot');
+      expect(emptySlots).toHaveLength(16);
+      expect(screen.getByText('Остават 16 неразпределени отбора.')).toBeInTheDocument();
     });
   });
 });

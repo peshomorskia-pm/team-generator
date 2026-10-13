@@ -134,7 +134,7 @@ export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGene
     }
     if (!hasIncompleteTeams) {
       if (teams.length >= 3 && teams.length <= 5) {
-        return [{ id: 'group-0', name: 'Група А', teams }];
+        return [{ id: 'group-0', name: 'Група А', teams, targetSize: teams.length }];
       }
       if (teams.length >= 6) {
         return drawnGroups;
@@ -767,23 +767,24 @@ export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGene
 
   const initializeBlankGroups = useCallback(
     (totalTeams?: number): TournamentGroup[] => {
-      const N = totalTeams ?? teams.length;
+      const N = totalTeams ?? (teams.length > 0 ? teams.length : (numberOfTeams ?? 0));
       if (N < 3) {
         setDrawnGroups([]);
         setSchedule([]);
         return [];
       }
       const sizes = calculateGroupSizes(N);
-      const blankGroups: TournamentGroup[] = sizes.map((_, i) => ({
+      const blankGroups: TournamentGroup[] = sizes.map((size, i) => ({
         id: `group-${i}`,
         name: getBulgarianGroupLabel(i),
         teams: [],
+        targetSize: size,
       }));
       setDrawnGroups(blankGroups);
       setSchedule([]);
       return blankGroups;
     },
-    [teams.length]
+    [teams.length, numberOfTeams]
   );
 
   const assignTeamToGroup = useCallback(
@@ -862,10 +863,11 @@ export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGene
       let base = prev;
       if (base.length === 0) {
         const sizes = calculateGroupSizes(teams.length);
-        base = sizes.map((_, i) => ({
+        base = sizes.map((size, i) => ({
           id: `group-${i}`,
           name: getBulgarianGroupLabel(i),
           teams: [],
+          targetSize: size,
         }));
       }
       if (base.length === 0) return prev;
@@ -875,8 +877,9 @@ export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGene
       if (unassigned.length === 0) return base;
 
       const sizes = calculateGroupSizes(teams.length);
-      const updated = base.map((g) => ({
+      const updated = base.map((g, i) => ({
         ...g,
+        targetSize: g.targetSize ?? (sizes.length === base.length ? sizes[i] : undefined),
         teams: [...g.teams],
       }));
 

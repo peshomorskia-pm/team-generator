@@ -27,7 +27,7 @@ export const GroupCard: React.FC<GroupCardProps> = ({
   const teamCountText =
     group.teams.length === 1 ? '1 отбор' : `${group.teams.length} отбора`;
 
-  const effectiveTargetSize = targetSize ?? 3;
+  const effectiveTargetSize = targetSize ?? group.targetSize ?? 3;
   const emptySlotsCount = Math.max(0, effectiveTargetSize - group.teams.length);
   const otherGroups = availableGroups.filter((g) => g.id !== group.id);
 

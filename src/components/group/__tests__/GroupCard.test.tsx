@@ -134,4 +134,43 @@ describe('GroupCard component', () => {
     expect(onMoveTeamMock).toHaveBeenCalledTimes(1);
     expect(onMoveTeamMock).toHaveBeenCalledWith('team-1', 'group-1');
   });
+
+  it('T-CARD-5: renders empty dashed slots up to group.targetSize when targetSize prop is omitted', () => {
+    const groupWithTarget: TournamentGroup = {
+      id: 'group-0',
+      name: 'Група А',
+      teams: [],
+      targetSize: 4,
+    };
+
+    render(
+      <GroupCard
+        group={groupWithTarget}
+        onSelectEmptySlot={vi.fn()}
+      />
+    );
+
+    const emptySlots = screen.getAllByTestId('empty-group-slot');
+    expect(emptySlots).toHaveLength(4);
+  });
+
+  it('T-CARD-6: renders targetCapacity - group.teams.length empty slots when partially filled', () => {
+    const partiallyFilledGroup: TournamentGroup = {
+      id: 'group-0',
+      name: 'Група А',
+      teams: [dummyGroup.teams[0]], // 1 team
+      targetSize: 4,
+    };
+
+    render(
+      <GroupCard
+        group={partiallyFilledGroup}
+        onSelectEmptySlot={vi.fn()}
+      />
+    );
+
+    // 4 - 1 = 3 empty slots
+    const emptySlots = screen.getAllByTestId('empty-group-slot');
+    expect(emptySlots).toHaveLength(3);
+  });
 });

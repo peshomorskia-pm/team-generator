@@ -4,6 +4,7 @@ import type { TournamentGroup, GeneratorMode, TournamentMatch, Team } from '../.
 import { GroupCard } from './GroupCard';
 import { Badge } from '../ui/Badge';
 import { copyTextToClipboard, formatGroupsForClipboard } from '../../utils/clipboard';
+import { calculateGroupSizes } from '../../utils/groupPartition';
 
 export interface GroupListProps {
   groups: TournamentGroup[];
@@ -76,6 +77,24 @@ export const GroupList: React.FC<GroupListProps> = ({
     () => groups.map((g) => ({ id: g.id, name: g.name })),
     [groups]
   );
+
+  const derivedTargetSizes = useMemo(() => {
+    if (targetGroupSizes && targetGroupSizes.length === groups.length) {
+      return targetGroupSizes;
+    }
+    const hasTargetSizes = groups.every((g) => typeof g.targetSize === 'number' && g.targetSize > 0);
+    if (hasTargetSizes) {
+      return groups.map((g) => g.targetSize!);
+    }
+    const totalTeams = groups.reduce((acc, g) => acc + g.teams.length, 0) + (unassignedTeams?.length ?? 0);
+    if (totalTeams >= 3) {
+      const calculated = calculateGroupSizes(totalTeams);
+      if (calculated.length === groups.length) {
+        return calculated;
+      }
+    }
+    return undefined;
+  }, [groups, targetGroupSizes, unassignedTeams]);
 
   if (!groups || groups.length === 0) {
     return null;
@@ -238,7 +257,7 @@ export const GroupList: React.FC<GroupListProps> = ({
             group={group}
             format={format}
             mode={mode}
-            targetSize={targetGroupSizes ? targetGroupSizes[idx] : undefined}
+            targetSize={targetGroupSizes?.[idx] ?? group.targetSize ?? derivedTargetSizes?.[idx]}
             onSelectEmptySlot={onSelectEmptySlot}
             onRemoveTeam={onRemoveTeam}
             onMoveTeam={onMoveTeam}

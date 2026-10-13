@@ -62,6 +62,22 @@ describe('groupPartition utility', () => {
       expect(calculateGroupSizes(12)).toEqual([4, 4, 4]);
     });
 
+    it('calculates exact sizes for N = 13 (4 groups: 4, 3, 3, 3)', () => {
+      expect(calculateGroupSizes(13)).toEqual([4, 3, 3, 3]);
+    });
+
+    it('calculates exact sizes for N = 14 (4 groups: 4, 4, 3, 3)', () => {
+      expect(calculateGroupSizes(14)).toEqual([4, 4, 3, 3]);
+    });
+
+    it('calculates exact sizes for N = 15 (4 groups: 4, 4, 4, 3)', () => {
+      expect(calculateGroupSizes(15)).toEqual([4, 4, 4, 3]);
+    });
+
+    it('calculates exact sizes for N = 16 (4 groups of 4: [4, 4, 4, 4])', () => {
+      expect(calculateGroupSizes(16)).toEqual([4, 4, 4, 4]);
+    });
+
     it('preserves group size bounds between 3 and 4 for all N >= 6 up to 32', () => {
       for (let n = 6; n <= 32; n++) {
         const sizes = calculateGroupSizes(n);
@@ -121,6 +137,7 @@ describe('groupPartition utility', () => {
       expect(groups[1].name).toBe('Група Б');
       expect(groups[2].name).toBe('Група В');
       expect(groups.map((g) => g.teams.length)).toEqual([4, 3, 3]);
+      expect(groups.map((g) => g.targetSize)).toEqual([4, 3, 3]);
     });
   });
 

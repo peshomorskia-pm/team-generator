@@ -13,10 +13,11 @@ Tournament organizers requested advanced group configuration capabilities beyond
 We extended the tournament generator hook and components with the following architecture:
 1. **State & Hook API (`useTeamGenerator`)**:
    - Added `initializeBlankGroups()`, `assignTeamToGroup()`, `removeTeamFromGroup()`, `moveTeamBetweenGroups()`, `autoFillRemainingGroupTeams()`, and `hasValidGroupsForSchedule`.
+   - **Group Sizing Alignment**: For $N \ge 6$ (including 9, 10, 11, 12, 13, 14, 15, 16, etc.), `initializeBlankGroups` uses the exact same `calculateGroupSizes(N)` formula as automatic draw, setting `targetSize` so that $\sum \text{slots} = N$ and every group has $\ge 3$ slots (e.g. 16 teams creates 4 groups of 4 slots = 16 empty dashed slots). For 3, 4, 5 teams, creates 1 single group (`Група А`) with $N$ slots.
    - Maintained 800ms debounced auto-save to Supabase `draft_state` for all group modifications.
 2. **Component Architecture**:
    - **`GroupTeamPickerModal`**: Modal dialog providing searchable selection of unassigned teams by team/player name and star rating.
-   - **`GroupCard`**: Enhanced with dashed `[ + Избери отбор ]` action slots up to calculated group capacity, remove (`X`) buttons, and inline group transfer selectors (`Премести в...`).
+   - **`GroupCard`**: Enhanced with dashed `[ + Избери отбор ]` action slots up to `targetSize`, remove (`X`) buttons, and inline group transfer selectors (`Премести в...`).
    - **`GroupList`**: Added manual grouping controls, validation status badges, warning banners, and schedule generation gating.
 3. **Localization & UX**:
    - All end-user UI copy is strictly in natural Bulgarian while code, comments, tests, and commit messages remain in English.
