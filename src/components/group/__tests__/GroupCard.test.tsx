@@ -173,4 +173,35 @@ describe('GroupCard component', () => {
     const emptySlots = screen.getAllByTestId('empty-group-slot');
     expect(emptySlots).toHaveLength(3);
   });
+
+  it('renders restructured spacious layout: team name is bold and untruncated, transfer select is in dedicated bottom row', () => {
+    const availableGroups = [
+      { id: 'group-0', name: 'Група А' },
+      { id: 'group-1', name: 'Група Б' },
+    ];
+
+    render(
+      <GroupCard
+        group={dummyGroup}
+        availableGroups={availableGroups}
+        onMoveTeam={vi.fn()}
+        onRemoveTeam={vi.fn()}
+      />
+    );
+
+    // Assert full team names are displayed with shrink-0 class
+    const team1Name = screen.getByText('Отбор 1');
+    expect(team1Name).toBeInTheDocument();
+    expect(team1Name).toHaveClass('shrink-0');
+    expect(team1Name).toHaveClass('font-semibold');
+
+    // Assert transfer select has "Премести в:" label container
+    const transferLabels = screen.getAllByText('Премести в:');
+    expect(transferLabels).toHaveLength(dummyGroup.teams.length);
+
+    // Comboboxes exist with target options
+    const selects = screen.getAllByRole('combobox', { name: 'Премести в друга група' });
+    expect(selects).toHaveLength(dummyGroup.teams.length);
+    expect(screen.getAllByText('Избери група...').length).toBeGreaterThanOrEqual(1);
+  });
 });

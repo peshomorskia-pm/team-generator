@@ -738,34 +738,6 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
                 <span>✨ Попълни останалите автоматично</span>
               </Button>
             )}
-
-            {(gen.teams.length >= 6 || (gen.teams.length >= 3 && totalEmptySlots <= 1)) &&
-              gen.groups.length === 0 && (
-                <>
-                  <Button
-                    type="button"
-                    id="initializeBlankGroupsBtn"
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleInitializeBlankGroups}
-                    disabled={totalEmptySlots > 1}
-                    className="cursor-pointer font-semibold"
-                  >
-                    <span>📋 Ръчно разпределение</span>
-                  </Button>
-                  <Button
-                    type="button"
-                    id="drawGroupsBtn"
-                    variant="primary"
-                    size="sm"
-                    onClick={handleDrawGroups}
-                    disabled={totalEmptySlots > 1}
-                    className="cursor-pointer font-semibold"
-                  >
-                    <span>🎲 Тегли жребий за групи</span>
-                  </Button>
-                </>
-              )}
           </div>
         </div>
       </Card>
@@ -942,6 +914,7 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
           onDeleteTeam={handleDeleteTeam}
           onAutoFillRemaining={handleAutoFillRemaining}
           onDrawGroups={handleDrawGroups}
+          onInitializeBlankGroups={handleInitializeBlankGroups}
           onShuffleTeam={gen.shuffleSingleTeam}
           onCopy={gen.copyResults}
           isCopied={gen.isCopied}

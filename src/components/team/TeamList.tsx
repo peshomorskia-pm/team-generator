@@ -13,6 +13,7 @@ export const TeamList = memo(function TeamList({
   format,
   mode = 'tennis',
   onDrawGroups,
+  onInitializeBlankGroups,
   hasIncompleteTeams: propHasIncompleteTeams,
   targetTeamSize: propTargetTeamSize,
   formationMode = 'auto',
@@ -66,7 +67,22 @@ export const TeamList = memo(function TeamList({
               </span>
             </button>
           )}
-          {isTennisMode && teams.length >= 6 && onDrawGroups && (
+          {isTennisMode && (teams.length >= 6 || (teams.length >= 3 && totalEmptySlots <= 1)) && onInitializeBlankGroups && (
+            <button
+              type="button"
+              id="initializeBlankGroupsBtn"
+              onClick={onInitializeBlankGroups}
+              disabled={hasIncomplete}
+              className={`text-sm font-semibold flex items-center px-3 py-1.5 rounded-lg shadow-sm border transition-colors ${
+                hasIncomplete
+                  ? 'bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500 border-gray-200 dark:border-slate-700 cursor-not-allowed opacity-60'
+                  : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 border-gray-200 dark:border-slate-700 cursor-pointer'
+              }`}
+            >
+              <span>📋 Ръчно разпредели по групи</span>
+            </button>
+          )}
+          {isTennisMode && (teams.length >= 6 || (teams.length >= 3 && totalEmptySlots <= 1)) && onDrawGroups && (
             <button
               type="button"
               id="drawGroupsBtn"
@@ -78,7 +94,7 @@ export const TeamList = memo(function TeamList({
                   : 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 hover:text-indigo-900 dark:hover:text-indigo-100 border-indigo-200 dark:border-indigo-800 cursor-pointer'
               }`}
             >
-              <span>🎲 Тегли жребий за групи</span>
+              <span>🎲 Автоматичен жребий за групи</span>
             </button>
           )}
           {isTennisMode && teams.length === 2 && onSaveAsMatch && (

@@ -172,7 +172,7 @@ describe('GroupList component', () => {
       expect(screen.getByText('Няма неразпределени отбори')).toBeInTheDocument();
     });
 
-    it('invokes onInitializeBlankGroups when clicking "📋 Ръчно разпределение"', () => {
+    it('invokes onInitializeBlankGroups when clicking "📋 Ръчно разпредели по групи"', () => {
       const onInitMock = vi.fn();
       render(
         <GroupList
@@ -181,7 +181,7 @@ describe('GroupList component', () => {
         />
       );
 
-      const initBtn = screen.getByRole('button', { name: /ръчно разпределение/i });
+      const initBtn = screen.getByRole('button', { name: /ръчно разпредели по групи/i });
       expect(initBtn).toBeInTheDocument();
 
       fireEvent.click(initBtn);

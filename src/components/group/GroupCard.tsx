@@ -29,7 +29,6 @@ export const GroupCard: React.FC<GroupCardProps> = ({
 
   const effectiveTargetSize = targetSize ?? group.targetSize ?? 3;
   const emptySlotsCount = Math.max(0, effectiveTargetSize - group.teams.length);
-  const otherGroups = availableGroups.filter((g) => g.id !== group.id);
 
   return (
     <div
@@ -71,44 +70,21 @@ export const GroupCard: React.FC<GroupCardProps> = ({
               key={team.id}
               className="bg-gray-50/70 dark:bg-slate-700/40 rounded-xl p-3 border border-gray-100 dark:border-slate-700/80"
             >
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="flex items-center space-x-2 min-w-0">
                   <span className="bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 w-5 h-5 rounded-full flex items-center justify-center text-xs font-semibold border border-gray-200 dark:border-slate-600 shrink-0">
                     {idx + 1}
                   </span>
-                  <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm truncate">
+                  <span className="font-semibold text-slate-800 dark:text-slate-100 text-sm shrink-0">
                     {team.name}
                   </span>
                 </div>
 
-                <div className="flex items-center space-x-2 shrink-0">
+                <div className="flex items-center space-x-1.5 shrink-0">
                   {mode !== 'generic' && displayTotalRating !== undefined && displayTotalRating > 0 && (
                     <Badge variant="amber" size="sm" icon={Star}>
                       {displayTotalRating}
                     </Badge>
-                  )}
-
-                  {/* Transfer to another group */}
-                  {onMoveTeam && otherGroups.length > 0 && (
-                    <select
-                      aria-label="Премести в друга група"
-                      value=""
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          onMoveTeam(team.id, e.target.value);
-                        }
-                      }}
-                      className="text-xs bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-slate-600 rounded-md px-1.5 py-1 focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-                    >
-                      <option value="" disabled>
-                        Премести в...
-                      </option>
-                      {otherGroups.map((g) => (
-                        <option key={g.id} value={g.id}>
-                          → {g.name}
-                        </option>
-                      ))}
-                    </select>
                   )}
 
                   {/* Remove team from group */}
@@ -159,6 +135,34 @@ export const GroupCard: React.FC<GroupCardProps> = ({
                   </li>
                 )}
               </ul>
+
+              {/* Group Transfer */}
+              {onMoveTeam && availableGroups.length > 1 && (
+                <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500">
+                  <span>Премести в:</span>
+                  <select
+                    aria-label="Премести в друга група"
+                    value=""
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        onMoveTeam(team.id, e.target.value);
+                      }
+                    }}
+                    className="text-xs rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-slate-700 dark:text-slate-300 focus:outline-hidden focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                  >
+                    <option value="" disabled>
+                      Избери група...
+                    </option>
+                    {availableGroups
+                      .filter((g) => g.id !== group.id)
+                      .map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
             </div>
           );
         })}

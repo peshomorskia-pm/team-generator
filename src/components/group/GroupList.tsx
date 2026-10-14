@@ -187,11 +187,11 @@ export const GroupList: React.FC<GroupListProps> = ({
               id="initializeBlankGroupsBtn"
               onClick={onInitializeBlankGroups}
               title="Инициализирай празни групи за ръчно разпределение"
-              aria-label="Ръчно разпределение"
+              aria-label="Ръчно разпредели по групи"
               className="text-sm text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium flex items-center bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700 transition-colors cursor-pointer"
             >
               <ClipboardList className="w-4 h-4 mr-1 text-gray-500 dark:text-gray-400" />
-              <span>📋 Ръчно разпределение</span>
+              <span>📋 Ръчно разпредели по групи</span>
             </button>
           )}
 
