@@ -236,10 +236,10 @@ describe('TournamentDetailPage Integration Tests', () => {
     renderComponent();
 
     // Matches of t-1: Отбор Алфа vs Отбор Бета, Отбор Гама vs Отбор Делта
-    expect(screen.getByText('Отбор Алфа')).toBeInTheDocument();
-    expect(screen.getByText('Отбор Бета')).toBeInTheDocument();
-    expect(screen.getByText('Отбор Гама')).toBeInTheDocument();
-    expect(screen.getByText('Отбор Делта')).toBeInTheDocument();
+    expect(screen.getAllByText('Отбор Алфа').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Отбор Бета').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Отбор Гама').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Отбор Делта').length).toBeGreaterThanOrEqual(1);
 
     // Match of t-other should NOT be rendered
     expect(screen.queryByText('Играч 1')).not.toBeInTheDocument();
@@ -259,13 +259,13 @@ describe('TournamentDetailPage Integration Tests', () => {
 
     // Filter to "Изиграни"
     fireEvent.click(screen.getByRole('button', { name: 'Изиграни (1)' }));
-    expect(screen.getByText('Отбор Алфа')).toBeInTheDocument();
-    expect(screen.queryByText('Отбор Гама')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Отбор Алфа').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByRole('heading', { level: 4, name: 'Отбор Гама' })).not.toBeInTheDocument();
 
     // Filter to "Предстоящи"
     fireEvent.click(screen.getByRole('button', { name: 'Предстоящи (1)' }));
-    expect(screen.queryByText('Отбор Алфа')).not.toBeInTheDocument();
-    expect(screen.getByText('Отбор Гама')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 4, name: 'Отбор Алфа' })).not.toBeInTheDocument();
+    expect(screen.getAllByText('Отбор Гама').length).toBeGreaterThanOrEqual(1);
   });
 
   it('filters tournament matches by group when multiple groups exist', () => {
@@ -277,13 +277,13 @@ describe('TournamentDetailPage Integration Tests', () => {
 
     // Filter to "Група А"
     fireEvent.click(screen.getByRole('button', { name: 'Група А' }));
-    expect(screen.getByText('Отбор Алфа')).toBeInTheDocument();
+    expect(screen.getAllByText('Отбор Алфа').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText('Отбор Гама')).not.toBeInTheDocument();
 
     // Filter to "Група Б"
     fireEvent.click(screen.getByRole('button', { name: 'Група Б' }));
     expect(screen.queryByText('Отбор Алфа')).not.toBeInTheDocument();
-    expect(screen.getByText('Отбор Гама')).toBeInTheDocument();
+    expect(screen.getAllByText('Отбор Гама').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders Bulgarian success banner when navigating from bulk create with state', () => {
@@ -359,5 +359,99 @@ describe('TournamentDetailPage Integration Tests', () => {
     renderComponent();
 
     expect(screen.getByText('Зареждане на турнира...')).toBeInTheDocument();
+  });
+
+  it('renders GroupStandingsTable for each group when matches exist', () => {
+    renderComponent();
+
+    // Standings section heading
+    expect(screen.getByText('Класиране в групите')).toBeInTheDocument();
+
+    // Table for Група А and Група Б
+    expect(screen.getByText('Класиране - Група А')).toBeInTheDocument();
+    expect(screen.getByText('Класиране - Група Б')).toBeInTheDocument();
+
+    // Group A has match: Отбор Алфа (6) vs Отбор Бета (4) -> Алфа won, 1 pt
+    expect(screen.getAllByText('Отбор Алфа').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('Отбор Бета').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('filters standings by active group tab', () => {
+    renderComponent();
+
+    // Both groups displayed initially under "Всички групи"
+    expect(screen.getByText('Класиране - Група А')).toBeInTheDocument();
+    expect(screen.getByText('Класиране - Група Б')).toBeInTheDocument();
+
+    // Click "Група А"
+    fireEvent.click(screen.getByRole('button', { name: 'Група А' }));
+    expect(screen.getByText('Класиране - Група А')).toBeInTheDocument();
+    expect(screen.queryByText('Класиране - Група Б')).not.toBeInTheDocument();
+
+    // Click "Всички групи"
+    fireEvent.click(screen.getByRole('button', { name: 'Всички групи' }));
+    expect(screen.getByText('Класиране - Група А')).toBeInTheDocument();
+    expect(screen.getByText('Класиране - Група Б')).toBeInTheDocument();
+  });
+
+  it('reactively updates standings when match score is saved via MatchModal', async () => {
+    const user = userEvent.setup();
+    mockUpdateMatch.mockResolvedValue({
+      ...dummyMatches[1],
+      team_1_score: 6,
+      team_2_score: 3,
+    });
+
+    const { rerender } = renderComponent();
+
+    // In Group B: initial stats have 0 matches played
+    expect(screen.getByText('Класиране - Група Б')).toBeInTheDocument();
+    expect(screen.getByText('Все още няма изиграни мачове в групата.')).toBeInTheDocument();
+
+    // Edit match m-2 (which is upcoming)
+    const editBtns = screen.getAllByRole('button', { name: /редактирай/i });
+    // Click edit on match card
+    await user.click(editBtns[1]);
+
+    const modal = screen.getByRole('dialog');
+    expect(modal).toBeInTheDocument();
+
+    // Rerender with updated matches to simulate reactive hook update
+    const updatedMatches: MatchDetail[] = [
+      dummyMatches[0],
+      {
+        ...dummyMatches[1],
+        team_1_score: 6,
+        team_2_score: 3,
+      },
+    ];
+
+    vi.spyOn(useMatchesModule, 'useMatches').mockReturnValue({
+      matches: updatedMatches,
+      loading: false,
+      error: null,
+      alert: null,
+      fetchMatches: vi.fn(),
+      createMatch: vi.fn(),
+      updateMatch: mockUpdateMatch,
+      deleteMatch: mockDeleteMatch,
+      bulkCreateMatches: vi.fn(),
+      clearAlert: vi.fn(),
+    });
+
+    rerender(
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/tournaments/t-1']}>
+          <Routes>
+            <Route path="/tournaments/:id" element={<TournamentDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>
+    );
+
+    // Group B now has an updated standings row with 1 win for Отбор Гама
+    expect(screen.queryByText('Все още няма изиграни мачове в групата.')).not.toBeInTheDocument();
+    const rows = screen.getAllByTestId('standings-row-1');
+    expect(rows.length).toBeGreaterThanOrEqual(1);
   });
 });

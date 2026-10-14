@@ -95,4 +95,5 @@ export interface NavItem {
 export * from './generator';
 export * from './matches';
 export * from './tournament';
+export * from './standings';
 

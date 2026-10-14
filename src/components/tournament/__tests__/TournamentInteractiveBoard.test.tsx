@@ -1247,4 +1247,167 @@ describe('TournamentInteractiveBoard Component', () => {
       expect(within(resultsContainer).getByRole('button', { name: '📋 Ръчно разпредели по групи' })).toBeInTheDocument();
     });
   });
+
+  describe('Schedule Reset Guardrail Integration', () => {
+    const createTeams = (count: number) =>
+      Array.from({ length: count }, (_, i) => ({
+        id: `team-${i + 1}`,
+        name: `Отбор ${i + 1}`,
+        players: [
+          { id: `p-${i * 2 + 1}`, name: `Играч ${i * 2 + 1}`, doubles_rating: 1200 },
+          { id: `p-${i * 2 + 2}`, name: `Играч ${i * 2 + 2}`, doubles_rating: 1200 },
+        ],
+      }));
+
+    it('executes group mutations without warning when schedule is empty', () => {
+      const teams = createTeams(6);
+      const draftWithoutSchedule: TournamentDraftState = {
+        targetTeams: 6,
+        formationMode: 'auto',
+        teams,
+        activePool: [],
+        groups: [
+          { id: 'group-0', name: 'Група А', teams: teams.slice(0, 3) },
+          { id: 'group-1', name: 'Група Б', teams: teams.slice(3, 6) },
+        ],
+        schedule: [],
+      };
+
+      render(
+        <TournamentInteractiveBoard
+          tournament={{ ...baseTournament, draft_state: draftWithoutSchedule }}
+        />
+      );
+
+      // Click remove team from group A
+      const removeBtn = screen.getByTestId('remove-team-team-1');
+      act(() => {
+        fireEvent.click(removeBtn);
+      });
+
+      // No modal is opened
+      expect(screen.queryByRole('dialog', { name: /предупреждение за промяна на групите/i })).not.toBeInTheDocument();
+      // Team 1 is removed from group and becomes unassigned
+      expect(screen.getByText('Остава 1 неразпределен отбор')).toBeInTheDocument();
+    });
+
+    it('intercepts team removal and opens ScheduleResetModal when schedule exists', () => {
+      const teams = createTeams(6);
+      const draftWithSchedule: TournamentDraftState = {
+        targetTeams: 6,
+        formationMode: 'auto',
+        teams,
+        activePool: [],
+        groups: [
+          { id: 'group-0', name: 'Група А', teams: teams.slice(0, 3) },
+          { id: 'group-1', name: 'Група Б', teams: teams.slice(3, 6) },
+        ],
+        schedule: [
+          {
+            id: 'match-1',
+            groupId: 'group-0',
+            groupName: 'Група А',
+            round: 1,
+            team1: teams[0],
+            team2: teams[1],
+          },
+        ],
+      };
+
+      render(
+        <TournamentInteractiveBoard
+          tournament={{ ...baseTournament, draft_state: draftWithSchedule }}
+        />
+      );
+
+      // Schedule is currently rendered
+      expect(screen.getByText('Програма на срещите')).toBeInTheDocument();
+
+      // Attempt to remove Team 1 from group
+      const removeBtn = screen.getByTestId('remove-team-team-1');
+      act(() => {
+        fireEvent.click(removeBtn);
+      });
+
+      // Warning modal appears
+      expect(
+        screen.getByRole('heading', { name: 'Предупреждение за промяна на групите' })
+      ).toBeInTheDocument();
+
+      // Click "Отказ"
+      const cancelBtn = screen.getByRole('button', { name: 'Отказ' });
+      act(() => {
+        fireEvent.click(cancelBtn);
+      });
+
+      // Modal closed, schedule still intact
+      expect(
+        screen.queryByRole('heading', { name: 'Предупреждение за промяна на групите' })
+      ).not.toBeInTheDocument();
+      expect(screen.getByText('Програма на срещите')).toBeInTheDocument();
+
+      // Click remove again
+      act(() => {
+        fireEvent.click(removeBtn);
+      });
+
+      // Click "Продължи" to confirm reset
+      const confirmBtn = screen.getByRole('button', { name: 'Продължи' });
+      act(() => {
+        fireEvent.click(confirmBtn);
+      });
+
+      // Schedule is cleared and Team 1 was removed
+      expect(screen.queryByText('Програма на срещите')).not.toBeInTheDocument();
+      expect(screen.getByText('Остава 1 неразпределен отбор')).toBeInTheDocument();
+    });
+
+    it('intercepts group redraw when schedule exists', () => {
+      const teams = createTeams(6);
+      const draftWithSchedule: TournamentDraftState = {
+        targetTeams: 6,
+        formationMode: 'auto',
+        teams,
+        activePool: [],
+        groups: [
+          { id: 'group-0', name: 'Група А', teams: teams.slice(0, 3) },
+          { id: 'group-1', name: 'Група Б', teams: teams.slice(3, 6) },
+        ],
+        schedule: [
+          {
+            id: 'match-1',
+            groupId: 'group-0',
+            groupName: 'Група А',
+            round: 1,
+            team1: teams[0],
+            team2: teams[1],
+          },
+        ],
+      };
+
+      render(
+        <TournamentInteractiveBoard
+          tournament={{ ...baseTournament, draft_state: draftWithSchedule }}
+        />
+      );
+
+      const redrawBtn = screen.getByRole('button', { name: /нов жребий/i });
+      act(() => {
+        fireEvent.click(redrawBtn);
+      });
+
+      // Warning modal appears
+      expect(
+        screen.getByRole('heading', { name: 'Предупреждение за промяна на групите' })
+      ).toBeInTheDocument();
+
+      // Confirm
+      act(() => {
+        fireEvent.click(screen.getByRole('button', { name: 'Продължи' }));
+      });
+
+      // Schedule is reset
+      expect(screen.queryByText('Програма на срещите')).not.toBeInTheDocument();
+    });
+  });
 });
