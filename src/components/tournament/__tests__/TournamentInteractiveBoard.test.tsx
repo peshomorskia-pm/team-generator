@@ -286,6 +286,8 @@ describe('TournamentInteractiveBoard Component', () => {
 
     const saveMatchesBtn = screen.getByRole('button', { name: /запиши мачове за турнира/i });
     expect(saveMatchesBtn).toBeInTheDocument();
+    expect(screen.queryByText('Програмата е готова!')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /запиши мачове за турнира/i })).toHaveLength(1);
 
     await act(async () => {
       fireEvent.click(saveMatchesBtn);
@@ -1142,7 +1144,9 @@ describe('TournamentInteractiveBoard Component', () => {
         fireEvent.click(genScheduleBtn);
       });
 
-      expect(screen.getByText('Програмата е готова!')).toBeInTheDocument();
+      expect(screen.queryByText('Програмата е готова!')).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 2, name: /програма на срещите/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /запиши мачове за турнира/i })).toBeInTheDocument();
 
       // Step 9: Verify 800ms debounced auto-save triggers saveTournamentDraft
       await act(async () => {
