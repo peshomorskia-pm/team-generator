@@ -605,8 +605,8 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
       // Generate teams
       await user.click(screen.getByRole('button', { name: /разпредели в отбори/i }));
 
-      // "🎲 Тегли жребий за групи" button is NOT visible for N in {3, 4, 5}
-      expect(screen.queryByRole('button', { name: /тегли жребий за групи/i })).not.toBeInTheDocument();
+      // "🎲 Автоматичен жребий за групи" button is NOT visible for N in {3, 4, 5}
+      expect(screen.queryByRole('button', { name: /жребий за групи/i })).not.toBeInTheDocument();
 
       // GroupList is mounted directly, showing "Турнирни групи" and "Група А"
       expect(screen.getByRole('heading', { level: 2, name: 'Турнирни групи' })).toBeInTheDocument();
@@ -632,7 +632,7 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
       expect(screen.getByRole('button', { name: /генерирай програма с мачове/i })).toBeInTheDocument();
     });
 
-    it('shows "🎲 Тегли жребий за групи" button for N >= 6 teams and allows drawing groups and generating schedule', async () => {
+    it('shows "🎲 Автоматичен жребий за групи" button for N >= 6 teams and allows drawing groups and generating schedule', async () => {
       const user = userEvent.setup();
       renderComponent();
 
@@ -650,8 +650,8 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
       // "Резултати" heading is visible
       expect(screen.getByRole('heading', { level: 2, name: 'Резултати' })).toBeInTheDocument();
 
-      // "🎲 Тегли жребий за групи" button is visible
-      const drawBtn = screen.getByRole('button', { name: /тегли жребий за групи/i });
+      // "🎲 Автоматичен жребий за групи" button is visible
+      const drawBtn = screen.getByRole('button', { name: /жребий за групи/i });
       expect(drawBtn).toBeInTheDocument();
 
       // Click to draw groups
@@ -674,10 +674,10 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
       // Groups cleared, TeamList returned
       expect(screen.queryByRole('heading', { level: 2, name: 'Турнирни групи' })).not.toBeInTheDocument();
       expect(screen.getByRole('heading', { level: 2, name: 'Резултати' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /тегли жребий за групи/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /жребий за групи/i })).toBeInTheDocument();
     });
 
-    it('does not display "🎲 Тегли жребий за групи" button when mode is generic even with >= 3 teams', async () => {
+    it('does not display "🎲 Автоматичен жребий за групи" button when mode is generic even with >= 3 teams', async () => {
       const user = userEvent.setup();
       renderComponent();
 
@@ -901,10 +901,10 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
       const createBlankBtn = screen.getByRole('button', { name: /създай празни отбори/i });
       await user.click(createBlankBtn);
 
-      // Verify 6 team cards are rendered and "🎲 Тегли жребий за групи" is disabled
+      // Verify 6 team cards are rendered and "🎲 Автоматичен жребий за групи" is disabled
       expect(screen.getByText('Отбор 1')).toBeInTheDocument();
       expect(screen.getByText('Отбор 6')).toBeInTheDocument();
-      const drawGroupsBtn = screen.getByRole('button', { name: /тегли жребий за групи/i });
+      const drawGroupsBtn = screen.getByRole('button', { name: /жребий за групи/i });
       expect(drawGroupsBtn).toBeDisabled();
 
       // Click empty slot in Team 1 to open slot picker modal
@@ -924,7 +924,7 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
       expect(screen.getAllByText('И1')).toHaveLength(2);
 
       // Draw groups button is still disabled because teams are incomplete
-      expect(screen.getByRole('button', { name: /тегли жребий за групи/i })).toBeDisabled();
+      expect(screen.getByRole('button', { name: /жребий за групи/i })).toBeDisabled();
 
       // Click "✨ Попълни останалите автоматично"
       const autoFillBtn = screen.getByRole('button', { name: /попълни останалите автоматично/i });
@@ -932,7 +932,7 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
       await user.click(autoFillBtn);
 
       // Now all slots are filled, draw groups button is enabled!
-      const enabledDrawBtn = screen.getByRole('button', { name: /тегли жребий за групи/i });
+      const enabledDrawBtn = screen.getByRole('button', { name: /жребий за групи/i });
       expect(enabledDrawBtn).not.toBeDisabled();
 
       // Click draw groups!

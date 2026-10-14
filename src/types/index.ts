@@ -58,6 +58,7 @@ export interface TeamListProps {
   format?: 'singles' | 'doubles';
   mode?: GeneratorMode;
   onDrawGroups?: () => void;
+  onInitializeBlankGroups?: () => void;
   hasIncompleteTeams?: boolean;
   targetTeamSize?: number;
   formationMode?: import('./generator').TeamFormationMode;

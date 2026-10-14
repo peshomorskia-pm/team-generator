@@ -2074,7 +2074,343 @@ describe('useTeamGenerator', () => {
       ]);
     });
   });
+
+  describe('Manual & Hybrid Tournament Group Builder', () => {
+    const createMockTeams = (count: number) => {
+      return Array.from({ length: count }, (_, i) => ({
+        id: `mock-team-${i + 1}`,
+        name: `Отбор ${i + 1}`,
+        totalRating: 2000 + i * 100,
+        players: [
+          { id: `p-${i * 2 + 1}`, name: `Играч ${i * 2 + 1}`, doubles_rating: 1000 + i * 50 },
+          { id: `p-${i * 2 + 2}`, name: `Играч ${i * 2 + 2}`, doubles_rating: 1000 + i * 50 },
+        ],
+      }));
+    };
+
+    it('T-HOOK-1: initializeBlankGroups creates groups with empty teams matching partition math and clears schedule', () => {
+      const mockTeams = createMockTeams(6);
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialMode: 'tennis',
+          initialFormat: 'doubles',
+          initialDraftState: {
+            targetTeams: 6,
+            formationMode: 'auto',
+            teams: mockTeams,
+            activePool: [],
+          },
+        })
+      );
+
+      act(() => {
+        result.current.initializeBlankGroups(6);
+      });
+
+      expect(result.current.drawnGroups).toHaveLength(2);
+      expect(result.current.drawnGroups[0].name).toBe('Група А');
+      expect(result.current.drawnGroups[0].teams).toEqual([]);
+      expect(result.current.drawnGroups[1].name).toBe('Група Б');
+      expect(result.current.drawnGroups[1].teams).toEqual([]);
+      expect(result.current.schedule).toEqual([]);
+      expect(result.current.unassignedTeams).toHaveLength(6);
+      expect(result.current.hasValidGroupsForSchedule).toBe(false);
+      expect(result.current.groupValidationMessage).toBe('Остават 6 неразпределени отбора.');
+    });
+
+    it('T-HOOK-2: assignTeamToGroup appends team to target group and removes from unassigned pool', () => {
+      const mockTeams = createMockTeams(6);
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialMode: 'tennis',
+          initialFormat: 'doubles',
+          initialDraftState: {
+            targetTeams: 6,
+            formationMode: 'auto',
+            teams: mockTeams,
+            activePool: [],
+          },
+        })
+      );
+
+      act(() => {
+        result.current.initializeBlankGroups(6);
+      });
+
+      const teamToAssign = mockTeams[0];
+      act(() => {
+        result.current.assignTeamToGroup('group-0', teamToAssign);
+      });
+
+      expect(result.current.drawnGroups[0].teams).toHaveLength(1);
+      expect(result.current.drawnGroups[0].teams[0].id).toBe(teamToAssign.id);
+      expect(result.current.unassignedTeams).toHaveLength(5);
+      expect(result.current.unassignedTeams.some((t) => t.id === teamToAssign.id)).toBe(false);
+      expect(result.current.schedule).toEqual([]);
+    });
+
+    it('T-HOOK-3: removeTeamFromGroup removes team and restores it to unassigned pool', () => {
+      const mockTeams = createMockTeams(6);
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialMode: 'tennis',
+          initialFormat: 'doubles',
+          initialDraftState: {
+            targetTeams: 6,
+            formationMode: 'auto',
+            teams: mockTeams,
+            activePool: [],
+          },
+        })
+      );
+
+      act(() => {
+        result.current.initializeBlankGroups(6);
+        result.current.assignTeamToGroup('group-0', mockTeams[0]);
+      });
+
+      expect(result.current.unassignedTeams).toHaveLength(5);
+
+      act(() => {
+        result.current.removeTeamFromGroup('group-0', mockTeams[0].id);
+      });
+
+      expect(result.current.drawnGroups[0].teams).toHaveLength(0);
+      expect(result.current.unassignedTeams).toHaveLength(6);
+      expect(result.current.unassignedTeams.some((t) => t.id === mockTeams[0].id)).toBe(true);
+      expect(result.current.schedule).toEqual([]);
+    });
+
+    it('T-HOOK-4: moveTeamBetweenGroups performs atomic transfer between groups', () => {
+      const mockTeams = createMockTeams(6);
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialMode: 'tennis',
+          initialFormat: 'doubles',
+          initialDraftState: {
+            targetTeams: 6,
+            formationMode: 'auto',
+            teams: mockTeams,
+            activePool: [],
+          },
+        })
+      );
+
+      act(() => {
+        result.current.initializeBlankGroups(6);
+        result.current.assignTeamToGroup('group-0', mockTeams[0]);
+      });
+
+      expect(result.current.drawnGroups[0].teams).toHaveLength(1);
+      expect(result.current.drawnGroups[1].teams).toHaveLength(0);
+
+      act(() => {
+        result.current.moveTeamBetweenGroups(mockTeams[0].id, 'group-1');
+      });
+
+      expect(result.current.drawnGroups[0].teams).toHaveLength(0);
+      expect(result.current.drawnGroups[1].teams).toHaveLength(1);
+      expect(result.current.drawnGroups[1].teams[0].id).toBe(mockTeams[0].id);
+      expect(result.current.unassignedTeams).toHaveLength(5);
+      expect(result.current.schedule).toEqual([]);
+    });
+
+    it('T-HOOK-5: autoFillRemainingGroupTeams distributes remaining teams into incomplete groups', () => {
+      const mockTeams = createMockTeams(7);
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialMode: 'tennis',
+          initialFormat: 'doubles',
+          initialDraftState: {
+            targetTeams: 7,
+            formationMode: 'auto',
+            teams: mockTeams,
+            activePool: [],
+          },
+        })
+      );
+
+      act(() => {
+        result.current.initializeBlankGroups(7);
+        result.current.assignTeamToGroup('group-0', mockTeams[0]);
+        result.current.assignTeamToGroup('group-0', mockTeams[1]);
+      });
+
+      expect(result.current.drawnGroups[0].teams).toHaveLength(2);
+      expect(result.current.drawnGroups[1].teams).toHaveLength(0);
+      expect(result.current.unassignedTeams).toHaveLength(5);
+
+      act(() => {
+        result.current.autoFillRemainingGroupTeams();
+      });
+
+      // 7 teams partition into [4, 3]
+      expect(result.current.drawnGroups[0].teams).toHaveLength(4);
+      expect(result.current.drawnGroups[1].teams).toHaveLength(3);
+      expect(result.current.unassignedTeams).toHaveLength(0);
+      expect(result.current.hasValidGroupsForSchedule).toBe(true);
+      expect(result.current.groupValidationMessage).toBeNull();
+      expect(result.current.schedule).toEqual([]);
+    });
+
+    it('T-HOOK-6: gating validation matrix strictly requires >= 3 teams per group and 0 unassigned teams', () => {
+      const mockTeams = createMockTeams(6);
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialMode: 'tennis',
+          initialFormat: 'doubles',
+          initialDraftState: {
+            targetTeams: 6,
+            formationMode: 'auto',
+            teams: mockTeams,
+            activePool: [],
+          },
+        })
+      );
+
+      // Condition 1: 0 groups -> false
+      expect(result.current.hasValidGroupsForSchedule).toBe(false);
+
+      // Initialize blank groups
+      act(() => {
+        result.current.initializeBlankGroups(6);
+      });
+
+      // Condition 2: 2 groups with 2 teams each and 2 unassigned teams -> false
+      act(() => {
+        result.current.assignTeamToGroup('group-0', mockTeams[0]);
+        result.current.assignTeamToGroup('group-0', mockTeams[1]);
+        result.current.assignTeamToGroup('group-1', mockTeams[2]);
+        result.current.assignTeamToGroup('group-1', mockTeams[3]);
+      });
+      expect(result.current.unassignedTeams).toHaveLength(2);
+      expect(result.current.hasValidGroupsForSchedule).toBe(false);
+      expect(result.current.groupValidationMessage).toBe('Остават 2 неразпределени отбора.');
+
+      // Condition 3: 2 groups with 4 and 2 teams and 0 unassigned teams -> false (group 1 has < 3)
+      act(() => {
+        result.current.assignTeamToGroup('group-0', mockTeams[4]);
+        result.current.assignTeamToGroup('group-0', mockTeams[5]);
+      });
+      expect(result.current.unassignedTeams).toHaveLength(0);
+      expect(result.current.drawnGroups[0].teams).toHaveLength(4);
+      expect(result.current.drawnGroups[1].teams).toHaveLength(2);
+      expect(result.current.hasValidGroupsForSchedule).toBe(false);
+      expect(result.current.groupValidationMessage).toBe('Всяка група трябва да има поне 3 отбора.');
+
+      // Condition 4: Move one team to make 3 and 3 -> true
+      act(() => {
+        result.current.moveTeamBetweenGroups(mockTeams[5].id, 'group-1');
+      });
+      expect(result.current.unassignedTeams).toHaveLength(0);
+      expect(result.current.drawnGroups[0].teams).toHaveLength(3);
+      expect(result.current.drawnGroups[1].teams).toHaveLength(3);
+      expect(result.current.hasValidGroupsForSchedule).toBe(true);
+      expect(result.current.groupValidationMessage).toBeNull();
+    });
+
+    it('T-HOOK-7: initializeBlankGroups(16) creates 4 groups with total 16 slots ([4, 4, 4, 4])', () => {
+      const mockTeams = createMockTeams(16);
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialMode: 'tennis',
+          initialFormat: 'doubles',
+          initialDraftState: {
+            targetTeams: 16,
+            formationMode: 'auto',
+            teams: mockTeams,
+            activePool: [],
+          },
+        })
+      );
+
+      act(() => {
+        result.current.initializeBlankGroups(16);
+      });
+
+      expect(result.current.drawnGroups).toHaveLength(4);
+      expect(result.current.drawnGroups.map((g) => g.targetSize)).toEqual([4, 4, 4, 4]);
+      const totalSlots = result.current.drawnGroups.reduce((sum, g) => sum + (g.targetSize ?? 0), 0);
+      expect(totalSlots).toBe(16);
+      expect(result.current.drawnGroups.every((g) => (g.targetSize ?? 0) >= 3)).toBe(true);
+      expect(result.current.drawnGroups.map((g) => g.name)).toEqual(['Група А', 'Група Б', 'Група В', 'Група Г']);
+    });
+
+    it('T-HOOK-8: initializeBlankGroups for 9, 10, 11, 13, 14, 15 teams matches sum of slots = N and every group >= 3', () => {
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialMode: 'tennis',
+          initialFormat: 'doubles',
+        })
+      );
+
+      const testCounts = [9, 10, 11, 13, 14, 15];
+      for (const n of testCounts) {
+        act(() => {
+          result.current.initializeBlankGroups(n);
+        });
+
+        const groups = result.current.drawnGroups;
+        const totalSlots = groups.reduce((sum, g) => sum + (g.targetSize ?? 0), 0);
+        expect(totalSlots).toBe(n);
+        expect(groups.every((g) => (g.targetSize ?? 0) >= 3)).toBe(true);
+      }
+
+      // Explicit partition checks
+      act(() => {
+        result.current.initializeBlankGroups(9);
+      });
+      expect(result.current.drawnGroups.map((g) => g.targetSize)).toEqual([3, 3, 3]);
+
+      act(() => {
+        result.current.initializeBlankGroups(10);
+      });
+      expect(result.current.drawnGroups.map((g) => g.targetSize)).toEqual([4, 3, 3]);
+
+      act(() => {
+        result.current.initializeBlankGroups(11);
+      });
+      expect(result.current.drawnGroups.map((g) => g.targetSize)).toEqual([4, 4, 3]);
+
+      act(() => {
+        result.current.initializeBlankGroups(13);
+      });
+      expect(result.current.drawnGroups.map((g) => g.targetSize)).toEqual([4, 3, 3, 3]);
+
+      act(() => {
+        result.current.initializeBlankGroups(14);
+      });
+      expect(result.current.drawnGroups.map((g) => g.targetSize)).toEqual([4, 4, 3, 3]);
+
+      act(() => {
+        result.current.initializeBlankGroups(15);
+      });
+      expect(result.current.drawnGroups.map((g) => g.targetSize)).toEqual([4, 4, 4, 3]);
+    });
+
+    it('T-HOOK-9: initializeBlankGroups for 3, 4, 5 teams creates exactly 1 group (Група А) with N slots', () => {
+      const { result } = renderHook(() =>
+        useTeamGenerator({
+          initialMode: 'tennis',
+          initialFormat: 'doubles',
+        })
+      );
+
+      for (const n of [3, 4, 5]) {
+        act(() => {
+          result.current.initializeBlankGroups(n);
+        });
+
+        const groups = result.current.drawnGroups;
+        expect(groups).toHaveLength(1);
+        expect(groups[0].name).toBe('Група А');
+        expect(groups[0].targetSize).toBe(n);
+        expect(groups[0].teams).toEqual([]);
+      }
+    });
+  });
 });
+
 
 
 

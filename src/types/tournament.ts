@@ -50,6 +50,7 @@ export interface TournamentGroup {
   id: string; // e.g. 'group-0'
   name: string; // e.g. 'Група А'
   teams: Team[];
+  targetSize?: number;
 }
 
 export interface TournamentMatch {
@@ -96,6 +97,14 @@ export interface UseTeamGeneratorReturn {
   clearGroups: () => void;
   drawnGroups: TournamentGroup[];
   setDrawnGroups: (groups: TournamentGroup[] | ((prev: TournamentGroup[]) => TournamentGroup[])) => void;
+  unassignedTeams: Team[];
+  hasValidGroupsForSchedule: boolean;
+  groupValidationMessage: string | null;
+  initializeBlankGroups: (totalTeams?: number) => TournamentGroup[];
+  assignTeamToGroup: (groupId: string, team: Team) => void;
+  removeTeamFromGroup: (groupId: string, teamId: string) => void;
+  moveTeamBetweenGroups: (teamId: string, targetGroupId: string) => void;
+  autoFillRemainingGroupTeams: () => void;
   schedule: TournamentMatch[];
   generateSchedule: () => void;
   resetSchedule: () => void;

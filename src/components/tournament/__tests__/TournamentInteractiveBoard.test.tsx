@@ -5,6 +5,7 @@ import * as useTournamentsModule from '../../../hooks/useTournaments';
 import * as useMatchesModule from '../../../hooks/useMatches';
 import * as usePlayersModule from '../../../hooks/usePlayers';
 import type { Tournament, TournamentDraftState } from '../../../types/tournament';
+import type { Team } from '../../../types';
 
 describe('TournamentInteractiveBoard Component', () => {
   const saveTournamentDraftMock = vi.fn();
@@ -226,7 +227,7 @@ describe('TournamentInteractiveBoard Component', () => {
     );
   });
 
-  it('verifies "🎲 Тегли жребий за групи" is disabled when incomplete teams exist', () => {
+  it('verifies "🎲 Автоматичен жребий за групи" is disabled when incomplete teams exist', () => {
     // 6 teams but with incomplete slots
     const draftWithIncomplete: TournamentDraftState = {
       targetTeams: 6,
@@ -248,9 +249,8 @@ describe('TournamentInteractiveBoard Component', () => {
       />
     );
 
-    const drawGroupsBtns = screen.getAllByRole('button', { name: /тегли жребий за групи/i });
-    expect(drawGroupsBtns.length).toBeGreaterThanOrEqual(1);
-    drawGroupsBtns.forEach((btn) => expect(btn).toBeDisabled());
+    const drawGroupsBtn = screen.getByRole('button', { name: /автоматичен жребий за групи/i });
+    expect(drawGroupsBtn).toBeDisabled();
   });
 
   it('clicking "💾 Запиши мачове за турнира" calls bulkCreateMatches and triggers onMatchesCreated', async () => {
@@ -286,6 +286,8 @@ describe('TournamentInteractiveBoard Component', () => {
 
     const saveMatchesBtn = screen.getByRole('button', { name: /запиши мачове за турнира/i });
     expect(saveMatchesBtn).toBeInTheDocument();
+    expect(screen.queryByText('Програмата е готова!')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /запиши мачове за турнира/i })).toHaveLength(1);
 
     await act(async () => {
       fireEvent.click(saveMatchesBtn);
@@ -695,7 +697,7 @@ describe('TournamentInteractiveBoard Component', () => {
       ).toBeInTheDocument();
 
       // Groups can be drawn for 7 teams
-      const drawGroupsBtn = screen.getAllByRole('button', { name: /тегли жребий за групи/i })[0];
+      const drawGroupsBtn = screen.getByRole('button', { name: /автоматичен жребий за групи/i });
       expect(drawGroupsBtn).not.toBeDisabled();
 
       act(() => {
@@ -703,8 +705,8 @@ describe('TournamentInteractiveBoard Component', () => {
       });
 
       // Groups are rendered (Група А and Група Б)
-      expect(screen.getByText('Група А')).toBeInTheDocument();
-      expect(screen.getByText('Група Б')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 3, name: 'Група А' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 3, name: 'Група Б' })).toBeInTheDocument();
     });
 
     it('P = 16, T = 7 (Case 1): adapts target teams to 8 teams, generates 8 full teams, and shows banner', () => {
@@ -798,7 +800,7 @@ describe('TournamentInteractiveBoard Component', () => {
       ).toBeInTheDocument();
 
       // Draw groups button is available and enabled
-      const drawGroupsBtn = screen.getAllByRole('button', { name: /тегли жребий за групи/i })[0];
+      const drawGroupsBtn = screen.getByRole('button', { name: /автоматичен жребий за групи/i });
       expect(drawGroupsBtn).not.toBeDisabled();
 
       // Clicking draw groups prunes the incomplete team to 6 teams and draws groups!
@@ -816,8 +818,8 @@ describe('TournamentInteractiveBoard Component', () => {
       ).toBeInTheDocument();
 
       // Groups are drawn (Група А and Група Б for 6 teams)
-      expect(screen.getByText('Група А')).toBeInTheDocument();
-      expect(screen.getByText('Група Б')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 3, name: 'Група А' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 3, name: 'Група Б' })).toBeInTheDocument();
     });
 
     it('P = 12, T = 7 (Case 5): adapts target teams to 6 teams, generates 6 full teams, and shows banner', () => {
@@ -870,7 +872,7 @@ describe('TournamentInteractiveBoard Component', () => {
         screen.getByText('Необходим е още 1 играч за попълване на 5 отбора.')
       ).toBeInTheDocument();
 
-      const drawGroupsBtn = screen.getAllByRole('button', { name: /тегли жребий за групи/i })[0];
+      const drawGroupsBtn = screen.getByRole('button', { name: /автоматичен жребий за групи/i });
       expect(drawGroupsBtn).not.toBeDisabled();
 
       act(() => {
@@ -910,7 +912,7 @@ describe('TournamentInteractiveBoard Component', () => {
         screen.getByText('Необходим е още 1 играч за попълване на 3 отбора.')
       ).toBeInTheDocument();
 
-      const drawGroupsBtn = screen.getAllByRole('button', { name: /тегли жребий за групи/i })[0];
+      const drawGroupsBtn = screen.getByRole('button', { name: /автоматичен жребий за групи/i });
       expect(drawGroupsBtn).not.toBeDisabled();
 
       act(() => {
@@ -1039,6 +1041,210 @@ describe('TournamentInteractiveBoard Component', () => {
       expect(spans[0]).toHaveTextContent('Ангел');
       expect(spans[1]).toHaveTextContent('Борис');
       expect(spans[2]).toHaveTextContent('Явор');
+    });
+  });
+
+  describe('Manual and Hybrid Group Assignment Integration', () => {
+    it('T-INT-1: end-to-end manual workflow: blank groups -> pick team -> auto-fill -> transfer -> gating -> generate schedule -> auto-save', async () => {
+      vi.useFakeTimers();
+
+      const mockTeams = Array.from({ length: 6 }, (_, i) => ({
+        id: `team-${i + 1}`,
+        name: `Отбор ${i + 1}`,
+        totalRating: 2400,
+        players: [
+          { id: `p-${i * 2 + 1}`, name: `Играч ${i * 2 + 1}`, doubles_rating: 1200 },
+          { id: `p-${i * 2 + 2}`, name: `Играч ${i * 2 + 2}`, doubles_rating: 1200 },
+        ],
+      }));
+
+      const tournamentWithTeams: Tournament = {
+        ...baseTournament,
+        draft_state: {
+          targetTeams: 6,
+          formationMode: 'auto',
+          teams: mockTeams,
+          activePool: [],
+          groups: [],
+          schedule: [],
+        },
+      };
+
+      render(<TournamentInteractiveBoard tournament={tournamentWithTeams} />);
+
+      // Step 2: Click "📋 Ръчно разпредели по групи"
+      const manualGroupBtn = screen.getByRole('button', { name: /ръчно разпредели по групи/i });
+      act(() => {
+        fireEvent.click(manualGroupBtn);
+      });
+
+      // 2 blank groups rendered with empty slots
+      expect(screen.getByText('Група А')).toBeInTheDocument();
+      expect(screen.getByText('Група Б')).toBeInTheDocument();
+      expect(screen.getByText('Остават 6 неразпределени отбора')).toBeInTheDocument();
+
+      // Step 3: "📅 Генерирай програма с мачове" is disabled
+      const genScheduleBtn = screen.getByRole('button', { name: /генерирай програма с мачове/i });
+      expect(genScheduleBtn).toBeDisabled();
+
+      // Step 4: Click empty slot in Group A -> GroupTeamPickerModal opens
+      const emptySlots = screen.getAllByTestId('empty-group-slot');
+      expect(emptySlots.length).toBeGreaterThanOrEqual(1);
+
+      act(() => {
+        fireEvent.click(emptySlots[0]);
+      });
+
+      const dialog = screen.getByRole('dialog');
+      expect(dialog).toBeInTheDocument();
+      expect(within(dialog).getByText(/избери отбор за група а/i)).toBeInTheDocument();
+      expect(within(dialog).getByText('Отбор 1')).toBeInTheDocument();
+
+      // Step 5: Select Отбор 1
+      const selectTeam1Btn = screen.getByTestId('select-team-team-1');
+      act(() => {
+        fireEvent.click(selectTeam1Btn);
+      });
+
+      // Dialog closed and Отбор 1 placed in Group A, unassigned drops to 5
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.getByText('Остават 5 неразпределени отбора')).toBeInTheDocument();
+
+      // Step 6: Click "✨ Попълни останалите отбори"
+      const autoFillBtn = screen.getByRole('button', { name: /попълни останалите отбори автоматично/i });
+      act(() => {
+        fireEvent.click(autoFillBtn);
+      });
+
+      // All 6 teams distributed (3 in Group A, 3 in Group B)
+      expect(screen.getByText('Няма неразпределени отбори')).toBeInTheDocument();
+      expect(genScheduleBtn).not.toBeDisabled();
+
+      // Step 7: Move Team 1 to Group B
+      const moveSelects = screen.getAllByRole('combobox', { name: 'Премести в друга група' });
+      act(() => {
+        fireEvent.change(moveSelects[0], { target: { value: 'group-1' } });
+      });
+
+      // Moving 1 team to Group B made Group A have 2 teams and Group B have 4 teams
+      expect(screen.getByText('Всяка група трябва да има поне 3 отбора.')).toBeInTheDocument();
+      expect(genScheduleBtn).toBeDisabled();
+
+      // Move a team from Group B back to Group A to restore 3 + 3
+      const updatedSelects = screen.getAllByRole('combobox', { name: 'Премести в друга група' });
+      act(() => {
+        fireEvent.change(updatedSelects[updatedSelects.length - 1], { target: { value: 'group-0' } });
+      });
+
+      expect(screen.queryByText('Всяка група трябва да има поне 3 отбора.')).not.toBeInTheDocument();
+      expect(genScheduleBtn).not.toBeDisabled();
+
+      // Step 8: Click "📅 Генерирай програма с мачове"
+      act(() => {
+        fireEvent.click(genScheduleBtn);
+      });
+
+      expect(screen.queryByText('Програмата е готова!')).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 2, name: /програма на срещите/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /запиши мачове за турнира/i })).toBeInTheDocument();
+
+      // Step 9: Verify 800ms debounced auto-save triggers saveTournamentDraft
+      await act(async () => {
+        vi.advanceTimersByTime(800);
+      });
+
+      expect(saveTournamentDraftMock).toHaveBeenCalled();
+      expect(saveTournamentDraftMock).toHaveBeenCalledWith(
+        'tourn-100',
+        expect.objectContaining({
+          groups: expect.arrayContaining([
+            expect.objectContaining({ name: 'Група А' }),
+            expect.objectContaining({ name: 'Група Б' }),
+          ]),
+        })
+      );
+    });
+
+    it('initializes 4 groups of 4 slots (16 total slots) for 16 teams upon manual distribution', () => {
+      const mockTeams: Team[] = Array.from({ length: 16 }, (_, i) => ({
+        id: `team-${i + 1}`,
+        name: `Отбор ${i + 1}`,
+        players: [
+          { id: `p-${i * 2 + 1}`, name: `Играч ${i * 2 + 1}`, doubles_rating: 1200 },
+          { id: `p-${i * 2 + 2}`, name: `Играч ${i * 2 + 2}`, doubles_rating: 1200 },
+        ],
+      }));
+
+      const tournamentWith16Teams: Tournament = {
+        ...baseTournament,
+        draft_state: {
+          targetTeams: 16,
+          formationMode: 'auto',
+          teams: mockTeams,
+          activePool: [],
+          groups: [],
+          schedule: [],
+        },
+      };
+
+      render(<TournamentInteractiveBoard tournament={tournamentWith16Teams} />);
+
+      const manualGroupBtn = screen.getByRole('button', { name: /ръчно разпредели по групи/i });
+      act(() => {
+        fireEvent.click(manualGroupBtn);
+      });
+
+      // 4 groups rendered
+      expect(screen.getByText('Група А')).toBeInTheDocument();
+      expect(screen.getByText('Група Б')).toBeInTheDocument();
+      expect(screen.getByText('Група В')).toBeInTheDocument();
+      expect(screen.getByText('Група Г')).toBeInTheDocument();
+
+      // Exactly 16 empty slot buttons rendered (4 groups x 4 empty slots)
+      const emptySlots = screen.getAllByTestId('empty-group-slot');
+      expect(emptySlots).toHaveLength(16);
+      expect(screen.getByText('Остават 16 неразпределени отбора.')).toBeInTheDocument();
+    });
+
+    it('verifies button placement and long labels: automatic draw and manual grouping buttons sit in Results header next to copy, removed from top settings panel', () => {
+      const mockTeams: Team[] = Array.from({ length: 6 }, (_, i) => ({
+        id: `team-${i + 1}`,
+        name: `Отбор ${i + 1}`,
+        players: [
+          { id: `p-${i * 2 + 1}`, name: `Играч ${i * 2 + 1}`, doubles_rating: 1200 },
+          { id: `p-${i * 2 + 2}`, name: `Играч ${i * 2 + 2}`, doubles_rating: 1200 },
+        ],
+      }));
+
+      const tournamentWithTeams: Tournament = {
+        ...baseTournament,
+        draft_state: {
+          targetTeams: 6,
+          formationMode: 'auto',
+          teams: mockTeams,
+          activePool: [],
+          groups: [],
+          schedule: [],
+        },
+      };
+
+      render(<TournamentInteractiveBoard tournament={tournamentWithTeams} />);
+
+      // Exactly ONE automatic draw button and ONE manual grouping button on the board
+      const autoDrawBtns = screen.getAllByRole('button', { name: '🎲 Автоматичен жребий за групи' });
+      expect(autoDrawBtns).toHaveLength(1);
+
+      const manualGroupBtns = screen.getAllByRole('button', { name: '📋 Ръчно разпредели по групи' });
+      expect(manualGroupBtns).toHaveLength(1);
+
+      // Verify they are located inside #resultsContainer alongside the copy button
+      const resultsContainer = document.getElementById('resultsContainer')!;
+      expect(resultsContainer).toBeInTheDocument();
+
+      const copyBtn = within(resultsContainer).getByRole('button', { name: /копирай/i });
+      expect(copyBtn).toBeInTheDocument();
+      expect(within(resultsContainer).getByRole('button', { name: '🎲 Автоматичен жребий за групи' })).toBeInTheDocument();
+      expect(within(resultsContainer).getByRole('button', { name: '📋 Ръчно разпредели по групи' })).toBeInTheDocument();
     });
   });
 });

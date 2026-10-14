@@ -97,6 +97,9 @@ export const GeneratorPage: React.FC = () => {
     assignPlayerToTeam,
     removePlayerFromTeam,
     autoFillRemainingSlots,
+    unassignedTeams,
+    hasValidGroupsForSchedule,
+    groupValidationMessage,
   } = useTeamGenerator();
 
   const [isPickerModalOpen, setIsPickerModalOpen] = useState(false);
@@ -391,6 +394,10 @@ export const GeneratorPage: React.FC = () => {
         <>
           <GroupList
             groups={groups}
+            unassignedTeams={unassignedTeams}
+            targetGroupSizes={groups.map((g) => g.targetSize).filter((s): s is number => typeof s === 'number')}
+            canGenerateSchedule={hasValidGroupsForSchedule}
+            validationMessage={groupValidationMessage}
             onRedraw={teams.length >= 6 ? drawGroups : undefined}
             onReset={teams.length >= 6 ? resetGroups : undefined}
             onGenerateSchedule={generateSchedule}
