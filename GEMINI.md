@@ -28,9 +28,12 @@ All agents, workflows, and tools must strictly adhere to the following core prot
 * **Sequential Handoff & Token Optimization Protocol:**
   To eliminate context bleed, optimize token expenditure, and preserve an immutable audit trail, roles communicate strictly via written artifacts saved in `.agent_handoffs/<branch_name>/`.
   - **Single-Hop Delta Handoff:** Agents strictly ingest only the immediate predecessor's artifact, never the entire historical chain.
-  - **Artifact Size Ceilings:** Strict token limits (1,500 to 3,000 tokens) are enforced per artifact stage (`0_context.md` through `5_documentation.md`).
+  - **Artifact Size Ceilings:** Strict token limits (1,500 to 3,000 tokens) are enforced per artifact stage (`0_context.md` through `6_documentation.md`).
   - **Diff-Based Auditing:** Code reviews operate on `git diff` with localized window fallbacks (<= 20 lines) to prevent loading massive source files.
   - **Progressive Disclosure Skills:** Operational runbooks are decoupled into `.agents/skills/` and loaded on demand rather than upfront.
+  - **Dual Feedback Loop Governance:**
+    - **PO / User Feedback Loop (External Boundary):** Any prompt, refinement, critique, or requirement shift originating from the human User (Product Owner) MUST strictly traverse the planning chain: `Orchestrator -> Intake Gatekeeper -> Architect -> Senior Dev`. Bypassing Intake Gatekeeper and Architect upon receiving user feedback is strictly prohibited under all circumstances ("Zero Cowboy Delegation Rule").
+    - **Internal Technical Review/QA Loop (Internal Boundary):** Direct re-invocation of Senior Dev is permitted ONLY when Code Reviewer (`4_review.md`) or Acceptance Gatekeeper (`5_acceptance_gate.md`) reject code or report defects against an *already approved architecture contract* (`2_architecture.md`).
   - Detailed Specification: [.agents/protocols/handoff-protocol.md](file:///D:/Projects/team-generator/.agents/protocols/handoff-protocol.md)
 
 * **Mandatory Automated Testing Protocol:**
@@ -73,11 +76,12 @@ flowchart LR
     Intake -->|Green / Cleared| Arch["Architect<br/>(2_architecture.md)"]
     Arch --> Dev["Senior Dev<br/>(3_implementation.md)"]
     Dev --> Rev["Code Reviewer<br/>(4_review.md)"]
-    Rev -->|Fixes Requested| Dev
+    Rev -->|Fixes Requested (Internal QA Loop)| Dev
     Rev -->|Approved| Accept["Acceptance Gate<br/>(5_acceptance_gate.md)"]
-    Accept -->|Defects Found| Dev
+    Accept -->|Defects Found (Internal QA Loop)| Dev
     Accept -->|Accepted| Doc["Document Writer<br/>(6_documentation.md)"]
     Doc --> OrchFinal["Orchestrator<br/>(PR & User Consent)"]
+    OrchFinal -.->|PO Feedback / Rejection (External Loop)| Orch0
 ```
 
 ### Model Tiering Policy & Roles Directory
@@ -120,6 +124,8 @@ To prevent token bloat, context pollution, and excessive PO involvement:
 7. **Business Acceptance & UAT:** The **Acceptance Gatekeeper** (`flash`) consumes `1_intake_gate.md` and `4_review.md`, verifies implementation against initial PO acceptance criteria, audits Bulgarian UI localization, and outputs `5_acceptance_gate.md` (ceiling: 2,000 tokens). If business defects are found, control returns to Senior Dev autonomously.
 8. **Documentation & PR:** Upon acceptance, the **Document Writer** (`flash_lite`) consumes `5_acceptance_gate.md`, drafts docs/ADRs (`docs/adr/`), creates `6_documentation.md` (ceiling: 2,000 tokens), and opens a PR targeting `dev`.
 9. **Hard Stop for Consent:** The Orchestrator presents the verified PR, UAT audit summary, and execution metrics to the user. The Orchestrator **MUST halt execution and request explicit user permission before merging**.
+   - **PO Approval:** Upon explicit user confirmation, Orchestrator merges the PR into `dev`.
+   - **PO Rejection / Feedback ("Zero Cowboy Delegation Rule"):** If the user requests modifications, reports bugs, or changes requirements, the Orchestrator is **strictly prohibited from delegating directly to Senior Dev**. The request MUST re-enter the planning pipeline: Orchestrator updates `0_context.md` -> summons Intake Gatekeeper (`1_intake_gate.md` delta) -> summons Architect (`2_architecture.md` delta) -> Senior Dev. Direct Senior Dev delegation is restricted exclusively to internal automated review loops.
 
 ### On-Demand Code Health Audit Workflow
 - **Manual Trigger Only:** The `code-health-auditor` operates independently outside the standard linear feature lifecycle. It must never be triggered automatically during feature runs.
