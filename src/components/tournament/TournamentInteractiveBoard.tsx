@@ -18,11 +18,13 @@ import { TeamList } from '../team/TeamList';
 import { TeamSlotPickerModal } from '../team/TeamSlotPickerModal';
 import { GroupList } from '../group/GroupList';
 import { GroupTeamPickerModal } from '../group/GroupTeamPickerModal';
+import { ScheduleResetModal } from '../group/ScheduleResetModal';
 import { MatchScheduleList } from '../group/MatchScheduleList';
 import { PlayerSelector } from '../generator/PlayerSelector';
 import { GuestInput } from '../generator/GuestInput';
 import { ActivePool } from '../generator/ActivePool';
 import { useTournaments } from '../../hooks/useTournaments';
+import { useScheduleResetGuard } from '../../hooks/useScheduleResetGuard';
 import { useMatches } from '../../hooks/useMatches';
 import { usePlayers } from '../../hooks/usePlayers';
 import { useTeamGenerator, calculateTeamRating } from '../../hooks/useTeamGenerator';
@@ -55,6 +57,16 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
     initialMode: 'tennis',
     initialFormat: tournament.format,
     initialDraftState: tournament.draft_state,
+  });
+
+  const {
+    isGuardModalOpen,
+    guardAction,
+    confirmResetAndExecute,
+    cancelReset,
+  } = useScheduleResetGuard({
+    hasSchedule: gen.schedule.length > 0,
+    onResetSchedule: gen.resetSchedule,
   });
 
   const [targetTeamCount, setTargetTeamCount] = useState<number>(() => {
@@ -844,12 +856,12 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
             unassignedTeams={gen.unassignedTeams}
             targetGroupSizes={gen.groups.map((g) => g.targetSize).filter((s): s is number => typeof s === 'number')}
             onSelectEmptySlot={handleSelectEmptyGroupSlot}
-            onRemoveTeam={gen.removeTeamFromGroup}
-            onMoveTeam={gen.moveTeamBetweenGroups}
-            onRedraw={gen.teams.length >= 6 ? handleDrawGroups : undefined}
-            onReset={gen.teams.length >= 6 ? gen.resetGroups : undefined}
-            onInitializeBlankGroups={gen.teams.length >= 6 ? handleInitializeBlankGroups : undefined}
-            onAutoFillRemainingGroups={handleAutoFillRemainingGroups}
+            onRemoveTeam={guardAction(gen.removeTeamFromGroup)}
+            onMoveTeam={guardAction(gen.moveTeamBetweenGroups)}
+            onRedraw={gen.teams.length >= 6 ? guardAction(handleDrawGroups) : undefined}
+            onReset={gen.teams.length >= 6 ? guardAction(gen.resetGroups) : undefined}
+            onInitializeBlankGroups={gen.teams.length >= 6 ? guardAction(handleInitializeBlankGroups) : undefined}
+            onAutoFillRemainingGroups={guardAction(handleAutoFillRemainingGroups)}
             canGenerateSchedule={gen.hasValidGroupsForSchedule}
             validationMessage={gen.groupValidationMessage}
             onGenerateSchedule={gen.generateSchedule}
@@ -907,8 +919,15 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
         groupId={activeSlotGroupId}
         groupName={activeSlotGroupName}
         unassignedTeams={gen.unassignedTeams}
-        onSelectTeam={handleSelectTeamForGroup}
+        onSelectTeam={guardAction(handleSelectTeamForGroup)}
         format={tournament.format}
+      />
+
+      {/* Schedule Invalidation Guardrail Modal */}
+      <ScheduleResetModal
+        isOpen={isGuardModalOpen}
+        onConfirm={confirmResetAndExecute}
+        onCancel={cancelReset}
       />
     </div>
   );

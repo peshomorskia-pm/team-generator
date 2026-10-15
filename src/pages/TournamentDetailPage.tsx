@@ -18,6 +18,8 @@ import { DeleteMatchModal } from '../components/match/DeleteMatchModal';
 import { TournamentModal } from '../components/tournament/TournamentModal';
 import { DeleteTournamentModal } from '../components/tournament/DeleteTournamentModal';
 import { TournamentInteractiveBoard } from '../components/tournament/TournamentInteractiveBoard';
+import { GroupStandingsTable } from '../components/group/GroupStandingsTable';
+import { calculateAllGroupStandings } from '../utils/standings';
 import { useTournaments } from '../hooks/useTournaments';
 import { useMatches } from '../hooks/useMatches';
 import { usePlayers } from '../hooks/usePlayers';
@@ -123,6 +125,18 @@ export const TournamentDetailPage: React.FC = () => {
     }
     return Array.from(groupsSet).sort();
   }, [tournamentMatches]);
+
+  // Reactive group standings calculation
+  const groupStandings = useMemo(() => {
+    if (tournamentMatches.length === 0) return [];
+    const groupsToCompute =
+      groupFilter === 'all'
+        ? availableGroups.length > 0
+          ? availableGroups.map((name) => ({ name }))
+          : [{ name: '' }]
+        : [{ name: groupFilter }];
+    return calculateAllGroupStandings(groupsToCompute, tournamentMatches);
+  }, [tournamentMatches, groupFilter, availableGroups]);
 
   // Matches stats
   const matchStats = useMemo(() => {
@@ -406,118 +420,146 @@ export const TournamentDetailPage: React.FC = () => {
           }}
         />
       ) : (
-        /* Matches List Section */
-        <div className="space-y-4">
-          {/* Section Heading & Filters */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-2">
-              <Swords className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                Мачове на турнира
-              </h2>
-              <span className="ml-2 text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                {matchStats.total}
-              </span>
+        /* Standings & Matches Section */
+        <div className="space-y-8">
+          {/* Group Standings Section */}
+          {groupStandings.length > 0 && (
+            <div className="space-y-4" data-testid="tournament-standings-section">
+              <div className="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <Trophy className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  Класиране в групите
+                </h2>
+              </div>
+              <div
+                className={`grid grid-cols-1 ${
+                  groupStandings.length > 1 ? 'lg:grid-cols-2' : ''
+                } gap-4`}
+              >
+                {groupStandings.map((grp) => (
+                  <GroupStandingsTable
+                    key={grp.groupId || grp.groupName}
+                    groupName={grp.groupName || undefined}
+                    standings={grp.rows}
+                  />
+                ))}
+              </div>
             </div>
+          )}
 
-            {/* Quick Filters (Status & Groups) */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Status Tabs */}
-              <div className="flex items-center rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700">
-                <button
-                  type="button"
-                  onClick={() => setMatchStatusFilter('all')}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                    matchStatusFilter === 'all'
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                >
-                  Всички ({matchStats.total})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMatchStatusFilter('completed')}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                    matchStatusFilter === 'completed'
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                >
-                  Изиграни ({matchStats.played})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMatchStatusFilter('upcoming')}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                    matchStatusFilter === 'upcoming'
-                      ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                >
-                  Предстоящи ({matchStats.upcoming})
-                </button>
+          {/* Matches List Section */}
+          <div className="space-y-4">
+            {/* Section Heading & Filters */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2">
+                <Swords className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  Мачове на турнира
+                </h2>
+                <span className="ml-2 text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                  {matchStats.total}
+                </span>
               </div>
 
-              {/* Group Filter (when multiple groups exist) */}
-              {availableGroups.length > 1 && (
+              {/* Quick Filters (Status & Groups) */}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Status Tabs */}
                 <div className="flex items-center rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700">
                   <button
                     type="button"
-                    onClick={() => setGroupFilter('all')}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-                      groupFilter === 'all'
+                    onClick={() => setMatchStatusFilter('all')}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                      matchStatusFilter === 'all'
                         ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                     }`}
                   >
-                    Всички групи
+                    Всички ({matchStats.total})
                   </button>
-                  {availableGroups.map((grp) => (
+                  <button
+                    type="button"
+                    onClick={() => setMatchStatusFilter('completed')}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                      matchStatusFilter === 'completed'
+                        ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Изиграни ({matchStats.played})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMatchStatusFilter('upcoming')}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                      matchStatusFilter === 'upcoming'
+                        ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    Предстоящи ({matchStats.upcoming})
+                  </button>
+                </div>
+
+                {/* Group Filter (when multiple groups exist) */}
+                {availableGroups.length > 1 && (
+                  <div className="flex items-center rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700">
                     <button
-                      key={grp}
                       type="button"
-                      onClick={() => setGroupFilter(grp)}
+                      onClick={() => setGroupFilter('all')}
                       className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-                        groupFilter === grp
+                        groupFilter === 'all'
                           ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
                           : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                       }`}
                     >
-                      {grp}
+                      Всички групи
                     </button>
-                  ))}
-                </div>
-              )}
+                    {availableGroups.map((grp) => (
+                      <button
+                        key={grp}
+                        type="button"
+                        onClick={() => setGroupFilter(grp)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                          groupFilter === grp
+                            ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                        }`}
+                      >
+                        {grp}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Matches Content */}
-          {matchesLoading && tournamentMatches.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-              <Loader2 className="w-6 h-6 animate-spin mb-2 text-indigo-600 dark:text-indigo-400" />
-              <p className="text-xs">Зареждане на мачовете...</p>
-            </div>
-          ) : filteredMatches.length === 0 ? (
-            /* Filtered Empty State */
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 text-center shadow-xs">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Няма намерени мачове за избраните критерии.
-              </p>
-            </div>
-          ) : (
-            /* Matches List */
-            <div className="space-y-4">
-              {filteredMatches.map((m) => (
-                <MatchCard
-                  key={m.id}
-                  match={m}
-                  onEdit={(match) => setEditingMatch(match)}
-                  onDelete={(match) => setDeletingMatch(match)}
-                />
-              ))}
-            </div>
-          )}
+            {/* Matches Content */}
+            {matchesLoading && tournamentMatches.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                <Loader2 className="w-6 h-6 animate-spin mb-2 text-indigo-600 dark:text-indigo-400" />
+                <p className="text-xs">Зареждане на мачовете...</p>
+              </div>
+            ) : filteredMatches.length === 0 ? (
+              /* Filtered Empty State */
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-8 text-center shadow-xs">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Няма намерени мачове за избраните критерии.
+                </p>
+              </div>
+            ) : (
+              /* Matches List */
+              <div className="space-y-4">
+                {filteredMatches.map((m) => (
+                  <MatchCard
+                    key={m.id}
+                    match={m}
+                    onEdit={(match) => setEditingMatch(match)}
+                    onDelete={(match) => setDeletingMatch(match)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
