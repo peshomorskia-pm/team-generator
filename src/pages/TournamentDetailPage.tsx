@@ -13,8 +13,7 @@ import {
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { MatchCard } from '../components/match/MatchCard';
-import { MatchModal } from '../components/match/MatchModal';
-import { DeleteMatchModal } from '../components/match/DeleteMatchModal';
+import { TournamentScoreModal } from '../components/tournament/TournamentScoreModal';
 import { TournamentModal } from '../components/tournament/TournamentModal';
 import { DeleteTournamentModal } from '../components/tournament/DeleteTournamentModal';
 import { TournamentInteractiveBoard } from '../components/tournament/TournamentInteractiveBoard';
@@ -22,12 +21,12 @@ import { GroupStandingsTable } from '../components/group/GroupStandingsTable';
 import { calculateAllGroupStandings } from '../utils/standings';
 import { useTournaments } from '../hooks/useTournaments';
 import { useMatches } from '../hooks/useMatches';
-import { usePlayers } from '../hooks/usePlayers';
 import type {
   TournamentStatus,
   UpdateTournamentInput,
 } from '../types/tournament';
-import type { MatchDetail, MatchFormData } from '../types/matches';
+import type { MatchDetail } from '../types/matches';
+import type { MatchSet } from '../types/match';
 
 export type TournamentMatchStatusFilter = 'all' | 'completed' | 'upcoming';
 
@@ -72,10 +71,7 @@ export const TournamentDetailPage: React.FC = () => {
     loading: matchesLoading,
     fetchMatches,
     updateMatch,
-    deleteMatch,
   } = useMatches();
-
-  const { players: availablePlayers } = usePlayers();
 
   const tournament = useMemo(
     () => tournaments.find((t) => t.id === id),
@@ -106,8 +102,6 @@ export const TournamentDetailPage: React.FC = () => {
   const [isDeleteTournamentOpen, setIsDeleteTournamentOpen] = useState(false);
 
   const [editingMatch, setEditingMatch] = useState<MatchDetail | null>(null);
-  const [deletingMatch, setDeletingMatch] = useState<MatchDetail | null>(null);
-  const [isDeletingMatch, setIsDeletingMatch] = useState(false);
 
   // Tournament matches
   const tournamentMatches = useMemo(() => {
@@ -208,22 +202,42 @@ export const TournamentDetailPage: React.FC = () => {
     navigate('/tournaments');
   };
 
-  // Match edit / delete handlers
-  const handleEditMatchSave = async (data: MatchFormData) => {
+  // Match score edit handler
+  const handleScoreModalSave = async (
+    matchId: string,
+    sets: MatchSet[] | null,
+    team1Score: number | null,
+    team2Score: number | null
+  ) => {
     if (!editingMatch) return;
-    await updateMatch(editingMatch.id, data);
-    setEditingMatch(null);
-  };
+    const t1Players = editingMatch.match_players
+      .filter((p) => p.team_side === 'team_1')
+      .map((p) => ({
+        player_id: p.player_id ?? undefined,
+        guest_name: p.guest_name ?? undefined,
+      }));
+    const t2Players = editingMatch.match_players
+      .filter((p) => p.team_side === 'team_2')
+      .map((p) => ({
+        player_id: p.player_id ?? undefined,
+        guest_name: p.guest_name ?? undefined,
+      }));
 
-  const handleDeleteMatchConfirm = async () => {
-    if (!deletingMatch) return;
-    try {
-      setIsDeletingMatch(true);
-      await deleteMatch(deletingMatch.id);
-      setDeletingMatch(null);
-    } finally {
-      setIsDeletingMatch(false);
-    }
+    await updateMatch(matchId, {
+      match_format: editingMatch.match_format,
+      played_at: editingMatch.played_at,
+      team_1_players: t1Players,
+      team_2_players: t2Players,
+      team_1_name: editingMatch.team_1_name,
+      team_2_name: editingMatch.team_2_name,
+      group_name: editingMatch.group_name,
+      round: editingMatch.round,
+      tournament_id: editingMatch.tournament_id,
+      team_1_score: team1Score,
+      team_2_score: team2Score,
+      sets,
+    });
+    setEditingMatch(null);
   };
 
   // 1. Loading State
@@ -554,7 +568,7 @@ export const TournamentDetailPage: React.FC = () => {
                     key={m.id}
                     match={m}
                     onEdit={(match) => setEditingMatch(match)}
-                    onDelete={(match) => setDeletingMatch(match)}
+                    hideDelete={true}
                   />
                 ))}
               </div>
@@ -583,24 +597,13 @@ export const TournamentDetailPage: React.FC = () => {
         />
       )}
 
-      {/* Edit Match Modal */}
+      {/* Edit Match Score Modal */}
       {editingMatch && (
-        <MatchModal
+        <TournamentScoreModal
           isOpen={Boolean(editingMatch)}
           match={editingMatch}
-          availablePlayers={availablePlayers}
           onClose={() => setEditingMatch(null)}
-          onSave={handleEditMatchSave}
-        />
-      )}
-
-      {/* Delete Match Modal */}
-      {deletingMatch && (
-        <DeleteMatchModal
-          isOpen={Boolean(deletingMatch)}
-          isLoading={isDeletingMatch}
-          onClose={() => setDeletingMatch(null)}
-          onConfirm={handleDeleteMatchConfirm}
+          onSave={handleScoreModalSave}
         />
       )}
     </div>

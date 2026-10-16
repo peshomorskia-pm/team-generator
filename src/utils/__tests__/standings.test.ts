@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateGroupStandings, calculateAllGroupStandings } from '../standings';
+import { calculateGroupStandings, calculateAllGroupStandings, formatMatchScoreDisplay } from '../standings';
 import type { StandingsMatchInput } from '../../types/standings';
 
 describe('calculateGroupStandings Engine', () => {
@@ -228,5 +228,131 @@ describe('calculateGroupStandings Engine', () => {
     expect(allStandings[1].groupName).toBe('Група Б');
     expect(allStandings[1].rows[0].teamName).toBe('Б2');
     expect(allStandings[1].rows[0].points).toBe(1);
+  });
+
+  // Scenario 7: Multi-Set Games Aggregation vs Won Sets
+  it('correctly calculates points and aggregates games for multi-set tennis matches', () => {
+    const teams = ['Отбор 1', 'Отбор 2'];
+    const matches: StandingsMatchInput[] = [
+      {
+        team_1_name: 'Отбор 1',
+        team_2_name: 'Отбор 2',
+        team_1_score: 2, // 2 sets won
+        team_2_score: 1, // 1 set won
+        sets: [
+          { set_number: 1, team_1_score: 1, team_2_score: 6 },
+          { set_number: 2, team_1_score: 7, team_2_score: 6 },
+          { set_number: 3, team_1_score: 7, team_2_score: 6 },
+        ],
+      },
+    ];
+
+    const standings = calculateGroupStandings(teams, matches);
+
+    expect(standings).toHaveLength(2);
+    const row1 = standings.find((r) => r.teamName === 'Отбор 1')!;
+    const row2 = standings.find((r) => r.teamName === 'Отбор 2')!;
+
+    // Team 1 won the match (2 sets to 1) -> won = 1, points = 1
+    expect(row1.won).toBe(1);
+    expect(row1.lost).toBe(0);
+    expect(row1.points).toBe(1);
+    expect(row1.gamesWon).toBe(15);
+    expect(row1.gamesLost).toBe(18);
+    expect(row1.gameDiff).toBe(-3);
+
+    // Team 2 lost -> won = 0, points = 0
+    expect(row2.won).toBe(0);
+    expect(row2.lost).toBe(1);
+    expect(row2.points).toBe(0);
+    expect(row2.gamesWon).toBe(18);
+    expect(row2.gamesLost).toBe(15);
+    expect(row2.gameDiff).toBe(3);
+
+    // Team 1 is ranked #1 because points take priority over game difference
+    expect(row1.rank).toBe(1);
+    expect(row2.rank).toBe(2);
+  });
+
+  // Scenario 8: Head-to-Head Multi-Set Resolution
+  it('resolves head-to-head tie between two teams using multi-set outcome', () => {
+    const teams = ['Отбор А', 'Отбор Б', 'Отбор В', 'Отбор Г'];
+    // Team C wins 2 matches (2 points): beats A and beats D
+    // Team D loses both matches (0 points)
+    // Direct match: Team A beats Team B in 3 sets (2 sets to 1: 1-6, 7-6, 7-6)
+    // Team B beats Team D (6-0) -> Team B ends with 1 point
+    // Team A lost to Team C (0-6) -> Team A ends with 1 point
+    // Both Team A and Team B are tied on exactly 1 point each.
+    const matches: StandingsMatchInput[] = [
+      {
+        team_1_name: 'Отбор В',
+        team_2_name: 'Отбор А',
+        team_1_score: 6,
+        team_2_score: 0,
+      },
+      {
+        team_1_name: 'Отбор В',
+        team_2_name: 'Отбор Г',
+        team_1_score: 6,
+        team_2_score: 0,
+      },
+      {
+        team_1_name: 'Отбор Б',
+        team_2_name: 'Отбор Г',
+        team_1_score: 6,
+        team_2_score: 0,
+      },
+      {
+        team_1_name: 'Отбор А',
+        team_2_name: 'Отбор Б',
+        team_1_score: 2,
+        team_2_score: 1,
+        sets: [
+          { set_number: 1, team_1_score: 1, team_2_score: 6 },
+          { set_number: 2, team_1_score: 7, team_2_score: 6 },
+          { set_number: 3, team_1_score: 7, team_2_score: 6 },
+        ],
+      },
+    ];
+
+    const standings = calculateGroupStandings(teams, matches);
+    const rowA = standings.find((r) => r.teamName === 'Отбор А')!;
+    const rowB = standings.find((r) => r.teamName === 'Отбор Б')!;
+
+    expect(rowA.points).toBe(1);
+    expect(rowB.points).toBe(1);
+    // Despite rowA having -9 gameDiff and rowB having +5 gameDiff,
+    // Team A beat Team B in H2H multi-set match, so Team A must rank above Team B!
+    expect(rowA.rank).toBeLessThan(rowB.rank);
+  });
+
+  // Scenario 9: formatMatchScoreDisplay formatting
+  it('formats single and multi-set match scores correctly', () => {
+    expect(
+      formatMatchScoreDisplay({
+        team_1_score: 6,
+        team_2_score: 4,
+        sets: null,
+      })
+    ).toBe('6 : 4');
+
+    expect(
+      formatMatchScoreDisplay({
+        team_1_score: 2,
+        team_2_score: 1,
+        sets: [
+          { set_number: 1, team_1_score: 6, team_2_score: 4 },
+          { set_number: 2, team_1_score: 3, team_2_score: 6 },
+          { set_number: 3, team_1_score: 10, team_2_score: 7 },
+        ],
+      })
+    ).toBe('6:4, 3:6, 10:7');
+
+    expect(
+      formatMatchScoreDisplay({
+        team_1_score: null,
+        team_2_score: null,
+      })
+    ).toBe('- : -');
   });
 });

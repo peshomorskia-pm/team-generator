@@ -1,5 +1,91 @@
 import type { Team } from '../types';
 import type { GroupStandingRow, GroupStanding, StandingsMatchInput } from '../types/standings';
+import type { MatchSet } from '../types/match';
+
+export interface MatchOutcome {
+  isCompleted: boolean;
+  winner: 'team_1' | 'team_2' | 'draw' | null;
+  team1GamesWon: number;
+  team2GamesWon: number;
+  team1SetsWon: number;
+  team2SetsWon: number;
+}
+
+export function getMatchOutcome(m: StandingsMatchInput): MatchOutcome {
+  // 1. Multi-set evaluation if sets array is present and non-empty
+  if (m.sets && m.sets.length > 0) {
+    let t1Sets = 0;
+    let t2Sets = 0;
+    let t1Games = 0;
+    let t2Games = 0;
+
+    for (const s of m.sets) {
+      t1Games += s.team_1_score;
+      t2Games += s.team_2_score;
+      if (s.team_1_score > s.team_2_score) t1Sets += 1;
+      else if (s.team_2_score > s.team_1_score) t2Sets += 1;
+    }
+
+    const winner = t1Sets > t2Sets ? 'team_1' : t2Sets > t1Sets ? 'team_2' : 'draw';
+    return {
+      isCompleted: true,
+      winner,
+      team1GamesWon: t1Games,
+      team2GamesWon: t2Games,
+      team1SetsWon: t1Sets,
+      team2SetsWon: t2Sets,
+    };
+  }
+
+  // 2. Legacy fallback for single-set or historical score records
+  const isCompleted =
+    m.team_1_score !== null &&
+    m.team_1_score !== undefined &&
+    typeof m.team_1_score === 'number' &&
+    !Number.isNaN(m.team_1_score) &&
+    m.team_2_score !== null &&
+    m.team_2_score !== undefined &&
+    typeof m.team_2_score === 'number' &&
+    !Number.isNaN(m.team_2_score);
+
+  if (!isCompleted) {
+    return {
+      isCompleted: false,
+      winner: null,
+      team1GamesWon: 0,
+      team2GamesWon: 0,
+      team1SetsWon: 0,
+      team2SetsWon: 0,
+    };
+  }
+
+  const s1 = m.team_1_score!;
+  const s2 = m.team_2_score!;
+  const winner = s1 > s2 ? 'team_1' : s2 > s1 ? 'team_2' : 'draw';
+
+  return {
+    isCompleted: true,
+    winner,
+    team1GamesWon: s1,
+    team2GamesWon: s2,
+    team1SetsWon: s1 > s2 ? 1 : 0,
+    team2SetsWon: s2 > s1 ? 1 : 0,
+  };
+}
+
+export function formatMatchScoreDisplay(match: {
+  team_1_score: number | null;
+  team_2_score: number | null;
+  sets?: MatchSet[] | null;
+}): string {
+  if (match.sets && match.sets.length > 0) {
+    return match.sets.map((s) => `${s.team_1_score}:${s.team_2_score}`).join(', ');
+  }
+  if (match.team_1_score !== null && match.team_2_score !== null) {
+    return `${match.team_1_score} : ${match.team_2_score}`;
+  }
+  return '- : -';
+}
 
 /**
  * Normalizes an entry from teams parameter into an id and name.
@@ -24,8 +110,8 @@ function resolveTwoTeamTie(
   let bWins = 0;
 
   for (const m of matches) {
-    if (m.team_1_score === null || m.team_1_score === undefined ||
-        m.team_2_score === null || m.team_2_score === undefined) {
+    const outcome = getMatchOutcome(m);
+    if (!outcome.isCompleted) {
       continue;
     }
 
@@ -33,11 +119,11 @@ function resolveTwoTeamTie(
     const t2 = m.team_2_name;
 
     if (t1 === a.teamName && t2 === b.teamName) {
-      if (m.team_1_score > m.team_2_score) aWins++;
-      else if (m.team_2_score > m.team_1_score) bWins++;
+      if (outcome.winner === 'team_1') aWins++;
+      else if (outcome.winner === 'team_2') bWins++;
     } else if (t1 === b.teamName && t2 === a.teamName) {
-      if (m.team_1_score > m.team_2_score) bWins++;
-      else if (m.team_2_score > m.team_1_score) aWins++;
+      if (outcome.winner === 'team_1') bWins++;
+      else if (outcome.winner === 'team_2') aWins++;
     }
   }
 
@@ -74,8 +160,8 @@ function resolveMultiTeamTie(
 
   // Count head-to-head points among only the tied teams
   for (const m of matches) {
-    if (m.team_1_score === null || m.team_1_score === undefined ||
-        m.team_2_score === null || m.team_2_score === undefined) {
+    const outcome = getMatchOutcome(m);
+    if (!outcome.isCompleted) {
       continue;
     }
 
@@ -83,9 +169,9 @@ function resolveMultiTeamTie(
     const t2 = m.team_2_name;
 
     if (t1 && t2 && teamNames.has(t1) && teamNames.has(t2)) {
-      if (m.team_1_score > m.team_2_score) {
+      if (outcome.winner === 'team_1') {
         miniPoints.set(t1, (miniPoints.get(t1) ?? 0) + 1);
-      } else if (m.team_2_score > m.team_1_score) {
+      } else if (outcome.winner === 'team_2') {
         miniPoints.set(t2, (miniPoints.get(t2) ?? 0) + 1);
       }
     }
@@ -214,16 +300,8 @@ export function calculateGroupStandings(
 
   // 3. Process completed matches
   for (const m of matches) {
-    if (
-      m.team_1_score === null ||
-      m.team_1_score === undefined ||
-      m.team_2_score === null ||
-      m.team_2_score === undefined ||
-      typeof m.team_1_score !== 'number' ||
-      typeof m.team_2_score !== 'number' ||
-      Number.isNaN(m.team_1_score) ||
-      Number.isNaN(m.team_2_score)
-    ) {
+    const outcome = getMatchOutcome(m);
+    if (!outcome.isCompleted) {
       continue;
     }
 
@@ -237,17 +315,17 @@ export function calculateGroupStandings(
     t1.played += 1;
     t2.played += 1;
 
-    t1.gamesWon += m.team_1_score;
-    t1.gamesLost += m.team_2_score;
+    t1.gamesWon += outcome.team1GamesWon;
+    t1.gamesLost += outcome.team2GamesWon;
 
-    t2.gamesWon += m.team_2_score;
-    t2.gamesLost += m.team_1_score;
+    t2.gamesWon += outcome.team2GamesWon;
+    t2.gamesLost += outcome.team1GamesWon;
 
-    if (m.team_1_score > m.team_2_score) {
+    if (outcome.winner === 'team_1') {
       t1.won += 1;
       t1.points += 1;
       t2.lost += 1;
-    } else if (m.team_2_score > m.team_1_score) {
+    } else if (outcome.winner === 'team_2') {
       t2.won += 1;
       t2.points += 1;
       t1.lost += 1;

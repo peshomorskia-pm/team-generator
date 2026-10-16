@@ -394,13 +394,19 @@ describe('TournamentDetailPage Integration Tests', () => {
     expect(screen.getByText('Класиране - Група Б')).toBeInTheDocument();
   });
 
-  it('reactively updates standings when match score is saved via MatchModal', async () => {
+  it('protects matches from deletion by hiding delete buttons on match cards', () => {
+    renderComponent();
+
+    // Verify there are match cards
+    expect(screen.getAllByRole('button', { name: /редактирай/i }).length).toBeGreaterThanOrEqual(1);
+
+    // Verify NO match card has a delete button
+    expect(screen.queryByLabelText('Изтрий')).not.toBeInTheDocument();
+  });
+
+  it('reactively updates standings when match score is saved via TournamentScoreModal', async () => {
     const user = userEvent.setup();
-    mockUpdateMatch.mockResolvedValue({
-      ...dummyMatches[1],
-      team_1_score: 6,
-      team_2_score: 3,
-    });
+    mockUpdateMatch.mockResolvedValue(undefined);
 
     const { rerender } = renderComponent();
 
@@ -408,13 +414,31 @@ describe('TournamentDetailPage Integration Tests', () => {
     expect(screen.getByText('Класиране - Група Б')).toBeInTheDocument();
     expect(screen.getByText('Все още няма изиграни мачове в групата.')).toBeInTheDocument();
 
-    // Edit match m-2 (which is upcoming)
+    // Edit match m-2 (which is upcoming, the second match card)
     const editBtns = screen.getAllByRole('button', { name: /редактирай/i });
-    // Click edit on match card
-    await user.click(editBtns[1]);
+    // Click edit on match card m-2
+    await user.click(editBtns[2]);
 
     const modal = screen.getByRole('dialog');
     expect(modal).toBeInTheDocument();
+    expect(screen.getByText('Въвеждане на резултат')).toBeInTheDocument();
+
+    // Fill in score: 6 : 3 in Set 1
+    const set1Team1 = screen.getByLabelText('Сет 1 Отбор 1');
+    const set1Team2 = screen.getByLabelText('Сет 1 Отбор 2');
+    await user.type(set1Team1, '6');
+    await user.type(set1Team2, '3');
+
+    await user.click(screen.getByText('💾 Запази резултат'));
+
+    expect(mockUpdateMatch).toHaveBeenCalledWith(
+      'm-2',
+      expect.objectContaining({
+        team_1_score: 6,
+        team_2_score: 3,
+        sets: [{ set_number: 1, team_1_score: 6, team_2_score: 3 }],
+      })
+    );
 
     // Rerender with updated matches to simulate reactive hook update
     const updatedMatches: MatchDetail[] = [
@@ -423,6 +447,7 @@ describe('TournamentDetailPage Integration Tests', () => {
         ...dummyMatches[1],
         team_1_score: 6,
         team_2_score: 3,
+        sets: [{ set_number: 1, team_1_score: 6, team_2_score: 3 }],
       },
     ];
 
