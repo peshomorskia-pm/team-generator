@@ -1,4 +1,5 @@
 import type { Database } from './database.types';
+import type { MatchSet } from './match';
 
 export type MatchRow = Database['public']['Tables']['matches']['Row'];
 export type MatchPlayerRow = Database['public']['Tables']['match_players']['Row'];
@@ -7,13 +8,14 @@ export interface MatchPlayerDetail extends MatchPlayerRow {
   players?: { id: string; name: string } | null;
 }
 
-export interface MatchDetail extends MatchRow {
+export interface MatchDetail extends Omit<MatchRow, 'sets'> {
   match_players: MatchPlayerDetail[];
   team_1_name?: string | null;
   team_2_name?: string | null;
   group_name?: string | null;
   round?: number | null;
   tournament_id?: string | null;
+  sets?: MatchSet[] | null;
 }
 
 export type MatchFormat = 'singles' | 'doubles';
@@ -30,4 +32,5 @@ export interface MatchFormData {
   group_name?: string | null;
   round?: number | null;
   tournament_id?: string | null;
+  sets?: MatchSet[] | null;
 }

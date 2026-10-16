@@ -68,6 +68,7 @@ export interface Database {
           tournament_id?: string | null; // uuid
           team_1_score: number | null; // integer
           team_2_score: number | null; // integer
+          sets?: Json | null;
           played_at: string; // timestamptz
           created_at: string; // timestamptz
           updated_at: string; // timestamptz
@@ -82,6 +83,7 @@ export interface Database {
           tournament_id?: string | null;
           team_1_score?: number | null;
           team_2_score?: number | null;
+          sets?: Json | null;
           played_at?: string;
           created_at?: string;
           updated_at?: string;
@@ -96,6 +98,7 @@ export interface Database {
           tournament_id?: string | null;
           team_1_score?: number | null;
           team_2_score?: number | null;
+          sets?: Json | null;
           played_at?: string;
           created_at?: string;
           updated_at?: string;

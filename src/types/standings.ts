@@ -1,3 +1,5 @@
+import type { MatchSet } from './match';
+
 export interface GroupStandingRow {
   rank: number; // 1-indexed position (1, 2, 3...)
   teamId: string; // Team identifier or name
@@ -27,4 +29,5 @@ export interface StandingsMatchInput {
   team_2_score?: number | null;
   group_name?: string | null;
   completed?: boolean;
+  sets?: MatchSet[] | null;
 }

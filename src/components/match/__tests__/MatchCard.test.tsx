@@ -242,4 +242,86 @@ describe('MatchCard Component', () => {
     expect(screen.queryByText(/Кръг/)).not.toBeInTheDocument();
     unmount();
   });
+
+  it('hides delete button when hideDelete is true or onDelete is not provided', () => {
+    const { rerender } = render(
+      <MatchCard
+        match={sampleMatch}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        hideDelete={true}
+      />
+    );
+    expect(screen.queryByLabelText('Изтрий')).not.toBeInTheDocument();
+
+    rerender(
+      <MatchCard
+        match={sampleMatch}
+        onEdit={vi.fn()}
+        hideDelete={false}
+      />
+    );
+    expect(screen.queryByLabelText('Изтрий')).not.toBeInTheDocument();
+  });
+
+  it('renders and allows clicking delete button when hideDelete is false and onDelete is passed', async () => {
+    const user = userEvent.setup();
+    const handleDelete = vi.fn();
+
+    render(
+      <MatchCard
+        match={sampleMatch}
+        onEdit={vi.fn()}
+        onDelete={handleDelete}
+        hideDelete={false}
+      />
+    );
+
+    const deleteBtn = screen.getByLabelText('Изтрий');
+    expect(deleteBtn).toBeInTheDocument();
+    await user.click(deleteBtn);
+    expect(handleDelete).toHaveBeenCalledWith(sampleMatch);
+  });
+
+  it('renders multi-set tennis scores compactly', () => {
+    const multiSetMatch: MatchDetail = {
+      ...sampleMatch,
+      team_1_score: 2,
+      team_2_score: 1,
+      sets: [
+        { set_number: 1, team_1_score: 6, team_2_score: 4 },
+        { set_number: 2, team_1_score: 3, team_2_score: 6 },
+        { set_number: 3, team_1_score: 10, team_2_score: 7 },
+      ],
+    };
+
+    render(<MatchCard match={multiSetMatch} onEdit={vi.fn()} />);
+
+    expect(screen.getByText('6:4, 3:6, 10:7')).toBeInTheDocument();
+  });
+
+  it('awards trophy icon to multi-set match winner based on sets won, not game difference', () => {
+    // Team 1 won 2 sets to 1, but Team 2 won more total games (18 vs 15)
+    const multiSetMatch: MatchDetail = {
+      ...sampleMatch,
+      team_1_name: 'Отбор Победител',
+      team_2_name: 'Отбор Загубил',
+      team_1_score: 2,
+      team_2_score: 1,
+      sets: [
+        { set_number: 1, team_1_score: 1, team_2_score: 6 },
+        { set_number: 2, team_1_score: 7, team_2_score: 6 },
+        { set_number: 3, team_1_score: 7, team_2_score: 6 },
+      ],
+    };
+
+    render(<MatchCard match={multiSetMatch} onEdit={vi.fn()} />);
+
+    // Team 1 header should have the Trophy SVG and emerald text color
+    const team1Header = screen.getByText('Отбор Победител');
+    expect(team1Header).toHaveClass('text-emerald-600');
+
+    const team2Header = screen.getByText('Отбор Загубил');
+    expect(team2Header).not.toHaveClass('text-emerald-600');
+  });
 });

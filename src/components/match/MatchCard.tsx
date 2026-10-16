@@ -4,21 +4,29 @@ import { Badge } from '../ui/Badge';
 import type { MatchDetail } from '../../types/matches';
 
 import { resolveMatchFormat } from '../../utils/eloRecalculation';
+import { getMatchOutcome } from '../../utils/standings';
 
 export interface MatchCardProps {
   match: MatchDetail;
   onEdit: (match: MatchDetail) => void;
-  onDelete: (match: MatchDetail) => void;
+  onDelete?: (match: MatchDetail) => void;
+  hideDelete?: boolean;
 }
 
-export const MatchCard: React.FC<MatchCardProps> = ({ match, onEdit, onDelete }) => {
+export const MatchCard: React.FC<MatchCardProps> = ({
+  match,
+  onEdit,
+  onDelete,
+  hideDelete = false,
+}) => {
   const team1Players = match.match_players.filter((p) => p.team_side === 'team_1');
   const team2Players = match.match_players.filter((p) => p.team_side === 'team_2');
 
-  const isUpcoming = match.team_1_score === null || match.team_2_score === null;
-  const team1Won = !isUpcoming && match.team_1_score! > match.team_2_score!;
-  const team2Won = !isUpcoming && match.team_2_score! > match.team_1_score!;
-  const isDraw = !isUpcoming && match.team_1_score === match.team_2_score;
+  const outcome = getMatchOutcome(match);
+  const isUpcoming = !outcome.isCompleted;
+  const team1Won = outcome.winner === 'team_1';
+  const team2Won = outcome.winner === 'team_2';
+  const isDraw = outcome.winner === 'draw';
 
   const formattedDate = new Date(match.played_at).toLocaleDateString('bg-BG', {
     day: '2-digit',
@@ -76,14 +84,16 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, onEdit, onDelete })
           >
             <Edit2 className="w-4 h-4" />
           </button>
-          <button
-            type="button"
-            onClick={() => onDelete(match)}
-            className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-            aria-label="Изтрий"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          {!hideDelete && onDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(match)}
+              className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+              aria-label="Изтрий"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -148,13 +158,17 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, onEdit, onDelete })
 
         {/* Score Board */}
         <div className="md:col-span-1 flex flex-col items-center justify-center py-2 px-3 rounded-xl bg-gray-50 dark:bg-gray-700/40 border border-gray-100 dark:border-gray-700">
-          <div className="flex items-center justify-center text-2xl sm:text-3xl font-extrabold">
+          <div className="flex items-center justify-center text-center">
             {isUpcoming ? (
               <span className="text-gray-400 dark:text-gray-500 text-xl font-semibold tracking-widest">
                 - : -
               </span>
+            ) : match.sets && match.sets.length > 1 ? (
+              <span className="font-mono text-sm sm:text-base font-bold text-gray-800 dark:text-gray-200 text-center whitespace-nowrap">
+                {match.sets.map((s) => `${s.team_1_score}:${s.team_2_score}`).join(', ')}
+              </span>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 text-2xl sm:text-3xl font-extrabold">
                 <span
                   className={
                     team1Won
@@ -162,7 +176,9 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, onEdit, onDelete })
                       : 'text-gray-800 dark:text-gray-200'
                   }
                 >
-                  {match.team_1_score}
+                  {match.sets && match.sets.length === 1
+                    ? match.sets[0].team_1_score
+                    : match.team_1_score}
                 </span>
                 <span className="text-gray-400 dark:text-gray-500 text-xl font-normal">:</span>
                 <span
@@ -172,7 +188,9 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, onEdit, onDelete })
                       : 'text-gray-800 dark:text-gray-200'
                   }
                 >
-                  {match.team_2_score}
+                  {match.sets && match.sets.length === 1
+                    ? match.sets[0].team_2_score
+                    : match.team_2_score}
                 </span>
               </div>
             )}

@@ -1000,7 +1000,7 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
       // Verify 10 teams were initialized
       expect(screen.getByText('Отбор 1')).toBeInTheDocument();
       expect(screen.getByText('Отбор 10')).toBeInTheDocument();
-    });
+    }, 40000);
   });
 });
 

@@ -1,5 +1,11 @@
 import type { MatchFormat } from './matches';
 
+export interface MatchSet {
+  set_number: number;
+  team_1_score: number;
+  team_2_score: number;
+}
+
 export interface Match {
   id: string;
   match_format: MatchFormat;
@@ -13,6 +19,7 @@ export interface Match {
   group_name?: string | null;
   round?: number | null;
   tournament_id?: string | null;
+  sets?: MatchSet[] | null;
 }
 
 export interface MatchPlayer {
@@ -37,6 +44,7 @@ export interface CreateMatchInput {
   group_name?: string | null;
   round?: number | null;
   tournament_id?: string | null;
+  sets?: MatchSet[] | null;
 }
 
 export interface UpdateMatchInput {
@@ -51,6 +59,7 @@ export interface UpdateMatchInput {
   group_name?: string | null;
   round?: number | null;
   tournament_id?: string | null;
+  sets?: MatchSet[] | null;
 }
 
 export * from './matches';
