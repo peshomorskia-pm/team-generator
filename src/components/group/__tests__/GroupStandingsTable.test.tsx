@@ -108,4 +108,60 @@ describe('GroupStandingsTable Component', () => {
 
     expect(screen.getByText('Няма добавени отбори в групата.')).toBeInTheDocument();
   });
+
+  it('renders direct and wildcard badges when qualifierMap is provided', () => {
+    const qualifierMap = new Map([
+      [
+        't1',
+        {
+          teamId: 't1',
+          teamName: 'Отбор 1',
+          seed: 1,
+          isWildcard: false,
+          groupOrigin: 'Група А',
+          rankInGroup: 1,
+          played: 2,
+          pointsPerMatch: 1,
+          gameDiffPerMatch: 3.5,
+          gamesWonPerMatch: 6,
+        },
+      ],
+      [
+        't2',
+        {
+          teamId: 't2',
+          teamName: 'Отбор 2',
+          seed: 4,
+          isWildcard: true,
+          groupOrigin: 'Група А',
+          rankInGroup: 2,
+          played: 2,
+          pointsPerMatch: 0.5,
+          gameDiffPerMatch: 0,
+          gamesWonPerMatch: 5,
+        },
+      ],
+    ]);
+
+    render(
+      <GroupStandingsTable
+        groupName="Група А"
+        standings={mockStandings}
+        qualifierMap={qualifierMap}
+      />
+    );
+
+    expect(screen.getByText('Плейофи')).toBeInTheDocument();
+    expect(screen.getByText('Плейофи (Wildcard)')).toBeInTheDocument();
+
+    const row1 = screen.getByTestId('standings-row-1');
+    const row2 = screen.getByTestId('standings-row-2');
+    const row3 = screen.getByTestId('standings-row-3');
+
+    expect(row1).toHaveClass('bg-emerald-50/40');
+    expect(row2).toHaveClass('bg-purple-50/40');
+    expect(row3).not.toHaveClass('bg-emerald-50/40');
+    expect(row3).not.toHaveClass('bg-purple-50/40');
+  });
 });
+

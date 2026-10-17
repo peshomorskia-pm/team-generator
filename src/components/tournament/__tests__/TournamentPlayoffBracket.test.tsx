@@ -1,0 +1,211 @@
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { TournamentPlayoffBracket } from '../TournamentPlayoffBracket';
+import type { Tournament } from '../../../types/tournament';
+import type { MatchDetail } from '../../../types/matches';
+
+describe('TournamentPlayoffBracket Component', () => {
+  const dummyTournament: Tournament = {
+    id: 't-1',
+    title: 'Турнир София 2026',
+    date: '2026-04-18',
+    format: 'doubles',
+    status: 'in_progress',
+    winner_team_name: null,
+    notes: null,
+    created_at: '2026-04-01T10:00:00Z',
+    updated_at: '2026-04-01T10:00:00Z',
+  };
+
+  const completedGroupMatch: MatchDetail = {
+    id: 'm-g-1',
+    match_format: 'doubles',
+    team_1_score: 6,
+    team_2_score: 3,
+    played_at: '2026-04-18T10:00:00Z',
+    team_1_name: 'Отбор 1',
+    team_2_name: 'Отбор 2',
+    group_name: 'Група А',
+    round: 1,
+    tournament_id: 't-1',
+    created_at: '2026-04-18T10:00:00Z',
+    updated_at: '2026-04-18T10:00:00Z',
+    match_players: [],
+  };
+
+  const unplayedGroupMatch: MatchDetail = {
+    id: 'm-g-2',
+    match_format: 'doubles',
+    team_1_score: null,
+    team_2_score: null,
+    played_at: '2026-04-18T11:00:00Z',
+    team_1_name: 'Отбор 3',
+    team_2_name: 'Отбор 4',
+    group_name: 'Група А',
+    round: 1,
+    tournament_id: 't-1',
+    created_at: '2026-04-18T10:00:00Z',
+    updated_at: '2026-04-18T10:00:00Z',
+    match_players: [],
+  };
+
+  it('renders CTA empty state when playoffMatches is empty', () => {
+    render(
+      <TournamentPlayoffBracket
+        tournament={dummyTournament}
+        playoffMatches={[]}
+        groupMatches={[completedGroupMatch]}
+        onGeneratePlayoffs={vi.fn()}
+        onEditMatchScore={vi.fn()}
+      />
+    );
+
+    expect(
+      screen.getByText('Елиминационната схема все още не е генерирана')
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('generate-playoffs-cta-btn')).toBeInTheDocument();
+  });
+
+  it('shows warning modal on generate click when group matches remain unplayed', () => {
+    const handleGenerate = vi.fn();
+    render(
+      <TournamentPlayoffBracket
+        tournament={dummyTournament}
+        playoffMatches={[]}
+        groupMatches={[completedGroupMatch, unplayedGroupMatch]}
+        onGeneratePlayoffs={handleGenerate}
+        onEditMatchScore={vi.fn()}
+      />
+    );
+
+    const btn = screen.getByTestId('generate-playoffs-cta-btn');
+    fireEvent.click(btn);
+
+    expect(screen.getByTestId('playoff-warning-modal')).toBeInTheDocument();
+    expect(
+      screen.getByText('Внимание: Неизграни мачове')
+    ).toBeInTheDocument();
+    expect(handleGenerate).not.toHaveBeenCalled();
+
+    const confirmBtn = screen.getByTestId('confirm-generate-playoffs-btn');
+    fireEvent.click(confirmBtn);
+
+    expect(handleGenerate).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('playoff-warning-modal')).not.toBeInTheDocument();
+  });
+
+  it('calls onGeneratePlayoffs immediately when all group matches are completed', () => {
+    const handleGenerate = vi.fn();
+    render(
+      <TournamentPlayoffBracket
+        tournament={dummyTournament}
+        playoffMatches={[]}
+        groupMatches={[completedGroupMatch]}
+        onGeneratePlayoffs={handleGenerate}
+        onEditMatchScore={vi.fn()}
+      />
+    );
+
+    const btn = screen.getByTestId('generate-playoffs-cta-btn');
+    fireEvent.click(btn);
+
+    expect(handleGenerate).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('playoff-warning-modal')).not.toBeInTheDocument();
+  });
+
+  it('renders bracket columns and handles edit modal clicks on valid matches', () => {
+    const handleEdit = vi.fn();
+    const playoffMatches: MatchDetail[] = [
+      {
+        id: 'p-sf-1',
+        match_format: 'doubles',
+        team_1_score: 6,
+        team_2_score: 2,
+        played_at: '2026-04-18T13:00:00Z',
+        team_1_name: 'Отбор Алфа',
+        team_2_name: 'Отбор Бета',
+        group_name: 'Полуфинал',
+        round: 1,
+        tournament_id: 't-1',
+        created_at: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+        match_players: [],
+      },
+      {
+        id: 'p-final',
+        match_format: 'doubles',
+        team_1_score: null,
+        team_2_score: null,
+        played_at: '2026-04-18T15:00:00Z',
+        team_1_name: 'Отбор Алфа',
+        team_2_name: 'Победител от Полуфинал 2',
+        group_name: 'Финал',
+        round: 2,
+        tournament_id: 't-1',
+        created_at: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+        match_players: [],
+      },
+    ];
+
+    render(
+      <TournamentPlayoffBracket
+        tournament={dummyTournament}
+        playoffMatches={playoffMatches}
+        groupMatches={[completedGroupMatch]}
+        onGeneratePlayoffs={vi.fn()}
+        onEditMatchScore={handleEdit}
+      />
+    );
+
+    expect(screen.getByTestId('sf-column')).toBeInTheDocument();
+    expect(screen.getByTestId('final-column')).toBeInTheDocument();
+
+    // Clicking edit on non-placeholder match triggers onEditMatchScore
+    const editBtns = screen.getAllByRole('button', { name: /редактирай/i });
+    fireEvent.click(editBtns[0]);
+    expect(handleEdit).toHaveBeenCalledWith(playoffMatches[0]);
+
+    // Clicking edit on placeholder match (final match with 'Победител от...') does NOT trigger handleEdit
+    handleEdit.mockClear();
+    fireEvent.click(editBtns[1]);
+    expect(handleEdit).not.toHaveBeenCalled();
+  });
+
+  it('renders celebratory Champion banner and complete button when Final is completed', () => {
+    const handleComplete = vi.fn();
+    const finalMatch: MatchDetail = {
+      id: 'p-final',
+      match_format: 'doubles',
+      team_1_score: 6,
+      team_2_score: 4,
+      played_at: '2026-04-18T15:00:00Z',
+      team_1_name: 'Отбор Шампиони',
+      team_2_name: 'Отбор Финалисти',
+      group_name: 'Финал',
+      round: 2,
+      tournament_id: 't-1',
+      created_at: '2026-04-18T10:00:00Z',
+      updated_at: '2026-04-18T10:00:00Z',
+      match_players: [],
+    };
+
+    render(
+      <TournamentPlayoffBracket
+        tournament={dummyTournament}
+        playoffMatches={[finalMatch]}
+        groupMatches={[completedGroupMatch]}
+        onGeneratePlayoffs={vi.fn()}
+        onEditMatchScore={vi.fn()}
+        onCompleteTournament={handleComplete}
+      />
+    );
+
+    expect(screen.getByTestId('playoff-champion-banner')).toBeInTheDocument();
+    expect(screen.getByText('🏆 Отбор Шампиони')).toBeInTheDocument();
+
+    const completeBtn = screen.getByTestId('mark-tournament-completed-btn');
+    fireEvent.click(completeBtn);
+    expect(handleComplete).toHaveBeenCalledTimes(1);
+  });
+});

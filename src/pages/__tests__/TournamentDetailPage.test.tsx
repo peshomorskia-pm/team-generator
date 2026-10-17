@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { TournamentDetailPage } from '../TournamentDetailPage';
@@ -479,4 +479,130 @@ describe('TournamentDetailPage Integration Tests', () => {
     const rows = screen.getAllByTestId('standings-row-1');
     expect(rows.length).toBeGreaterThanOrEqual(1);
   });
+
+  it('renders PlayoffFinalistsSelector and updates draft state on finalist count change', async () => {
+    const user = userEvent.setup();
+    renderComponent();
+
+    expect(screen.getByTestId('playoff-finalists-selector')).toBeInTheDocument();
+    const opt4 = screen.getByTestId('finalists-option-4');
+    await user.click(opt4);
+
+    expect(mockUpdateTournament).toHaveBeenCalledWith(
+      't-1',
+      expect.objectContaining({
+        draft_state: expect.objectContaining({
+          playoffFinalists: 4,
+        }),
+      })
+    );
+  });
+
+  it('generates playoff bracket and calls bulkCreateMatches and updateTournament', async () => {
+    const user = userEvent.setup();
+    const mockBulkCreate = vi.fn().mockResolvedValue({ count: 3, error: null });
+
+    vi.spyOn(useMatchesModule, 'useMatches').mockReturnValue({
+      matches: dummyMatches,
+      loading: false,
+      error: null,
+      alert: null,
+      fetchMatches: vi.fn(),
+      createMatch: vi.fn(),
+      updateMatch: mockUpdateMatch,
+      deleteMatch: mockDeleteMatch,
+      bulkCreateMatches: mockBulkCreate,
+      clearAlert: vi.fn(),
+    });
+
+    renderComponent();
+
+    // Group matches has m-2 which is unplayed, so clicking generate opens confirmation modal
+    const generateBtn = screen.getByTestId('generate-playoffs-cta-btn');
+    await user.click(generateBtn);
+
+    expect(screen.getByTestId('playoff-warning-modal')).toBeInTheDocument();
+
+    const confirmBtn = screen.getByTestId('confirm-generate-playoffs-btn');
+    await user.click(confirmBtn);
+
+    expect(mockBulkCreate).toHaveBeenCalledTimes(1);
+    expect(mockUpdateTournament).toHaveBeenCalledWith(
+      't-1',
+      expect.objectContaining({
+        draft_state: expect.objectContaining({
+          playoffs: expect.objectContaining({
+            tree: expect.any(Object),
+          }),
+        }),
+      })
+    );
+  });
+
+  it('scores Final playoff match, crowns champion, and updates tournament winner (Scenario D)', async () => {
+    const user = userEvent.setup();
+
+    const finalMatch: MatchDetail = {
+      id: 'm-final',
+      match_format: 'doubles',
+      team_1_score: null,
+      team_2_score: null,
+      played_at: '2026-04-18T16:00:00Z',
+      team_1_name: 'Отбор Алфа',
+      team_2_name: 'Отбор Бета',
+      group_name: 'Финал',
+      round: 2,
+      tournament_id: 't-1',
+      created_at: '2026-04-18T16:00:00Z',
+      updated_at: '2026-04-18T16:00:00Z',
+      match_players: [],
+    };
+
+    const matchesWithFinal = [...dummyMatches, finalMatch];
+
+    vi.spyOn(useMatchesModule, 'useMatches').mockReturnValue({
+      matches: matchesWithFinal,
+      loading: false,
+      error: null,
+      alert: null,
+      fetchMatches: vi.fn(),
+      createMatch: vi.fn(),
+      updateMatch: mockUpdateMatch,
+      deleteMatch: mockDeleteMatch,
+      bulkCreateMatches: vi.fn(),
+      clearAlert: vi.fn(),
+    });
+
+    renderComponent();
+
+    // Click edit on Final match directly within the playoff section
+    const playoffsSection = screen.getByTestId('tournament-playoffs-section');
+    const finalEditBtn = within(playoffsSection).getByRole('button', { name: /редактирай/i });
+    await user.click(finalEditBtn);
+
+    const set1Team1 = screen.getByLabelText('Сет 1 Отбор 1');
+    const set1Team2 = screen.getByLabelText('Сет 1 Отбор 2');
+
+    await user.type(set1Team1, '6');
+    await user.type(set1Team2, '4');
+
+    await user.click(screen.getByText('💾 Запази резултат'));
+
+    expect(mockUpdateMatch).toHaveBeenCalledWith(
+      'm-final',
+      expect.objectContaining({
+        team_1_score: 6,
+        team_2_score: 4,
+      })
+    );
+
+    // Assert updateTournament called with winner_team_name
+    expect(mockUpdateTournament).toHaveBeenCalledWith(
+      't-1',
+      expect.objectContaining({
+        winner_team_name: 'Отбор Алфа',
+      })
+    );
+  });
 });
+

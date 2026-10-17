@@ -668,7 +668,13 @@ export function useMatches(): UseMatchesReturn {
         const playedAt = new Date().toISOString();
 
         for (const item of schedule) {
-          const matchId = crypto.randomUUID();
+          const matchId =
+            item.id &&
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+              item.id
+            )
+              ? item.id
+              : crypto.randomUUID();
 
           matchRows.push({
             id: matchId,
