@@ -7,6 +7,7 @@ import {
   generatePlayoffBracketNodes,
   generatePlayoffMatches,
   propagatePlayoffWinner,
+  extractTournamentTeams,
 } from '../playoffs';
 import type { GroupStanding } from '../../types/standings';
 import type { Team } from '../../types';
@@ -585,6 +586,301 @@ describe('playoffs utility engine', () => {
       });
 
       expect(result).toBeNull();
+    });
+
+    it('PO-PROP-01: propagatePlayoffWinner carries player rosters into downstream updatedMatch', () => {
+      const qf1MatchId = 'match-qf-1';
+      const sf1MatchId = 'match-sf-1';
+
+      const tree = {
+        finalistsCount: 4 as const,
+        generatedAt: '2026-04-18T10:00:00Z',
+        nodes: [
+          {
+            nodeId: 'sf-1',
+            matchId: sf1MatchId,
+            stage: 'sf' as const,
+            stageLabel: 'Полуфинал',
+            round: 1,
+            matchIndex: 0,
+            nextMatchNodeId: 'final',
+            nextMatchSlot: 'team_1' as const,
+          },
+        ],
+      };
+
+      const completedMatch: MatchDetail = {
+        id: qf1MatchId,
+        team_1_score: 6,
+        team_2_score: 2,
+        team_1_name: 'Отбор Титан',
+        team_2_name: 'Отбор Олимп',
+        group_name: '1/4-финал',
+        round: 1,
+        match_format: 'doubles',
+        played_at: '2026-04-18T12:00:00Z',
+        created_at: '2026-04-18T12:00:00Z',
+        updated_at: '2026-04-18T12:00:00Z',
+        match_players: [
+          {
+            id: 'mp-1',
+            match_id: qf1MatchId,
+            player_id: 'p-1',
+            team_side: 'team_1',
+            rating_before: 1200,
+            rating_after: 1215,
+            guest_name: null,
+            players: { id: 'p-1', name: 'Иван' },
+          },
+          {
+            id: 'mp-2',
+            match_id: qf1MatchId,
+            player_id: 'p-2',
+            team_side: 'team_1',
+            rating_before: 1200,
+            rating_after: 1215,
+            guest_name: null,
+            players: { id: 'p-2', name: 'Петър' },
+          },
+        ],
+      };
+
+      const downstreamMatch: MatchDetail = {
+        id: sf1MatchId,
+        team_1_score: null,
+        team_2_score: null,
+        team_1_name: 'Победител от 1/4-финал 1',
+        team_2_name: 'Победител от 1/4-финал 2',
+        group_name: 'Полуфинал',
+        round: 2,
+        match_format: 'doubles',
+        played_at: '2026-04-18T14:00:00Z',
+        created_at: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+        match_players: [],
+      };
+
+      const currentTree = {
+        finalistsCount: 8 as const,
+        generatedAt: '2026-04-18T10:00:00Z',
+        nodes: [
+          {
+            nodeId: 'qf-1',
+            matchId: qf1MatchId,
+            stage: 'qf' as const,
+            stageLabel: '1/4-финал',
+            round: 1,
+            matchIndex: 0,
+            nextMatchNodeId: 'sf-1',
+            nextMatchSlot: 'team_1' as const,
+          },
+          ...tree.nodes,
+        ],
+      };
+
+      const result = propagatePlayoffWinner({
+        completedMatch,
+        allMatches: [completedMatch, downstreamMatch],
+        tree: currentTree,
+      });
+
+      expect(result).not.toBeNull();
+      expect(result?.updatedMatch.team_1_name).toBe('Отбор Титан');
+      expect(result?.updatedMatch.team_1_players).toHaveLength(2);
+      expect(result?.updatedMatch.team_1_players).toEqual([
+        { player_id: 'p-1', guest_name: undefined },
+        { player_id: 'p-2', guest_name: undefined },
+      ]);
+    });
+  });
+
+  describe('extractTournamentTeams & playoff player propagation', () => {
+    it('PO-EXT-01: extractTournamentTeams recovers full team objects from groupMatches when draftTeams is null', () => {
+      const groupMatches: MatchDetail[] = [
+        {
+          id: 'm-g-1',
+          match_format: 'doubles',
+          team_1_score: 6,
+          team_2_score: 4,
+          played_at: '2026-04-18T10:00:00Z',
+          team_1_name: 'Отбор Алфа',
+          team_2_name: 'Отбор Бета',
+          group_name: 'Група А',
+          round: 1,
+          tournament_id: 't-1',
+          created_at: '2026-04-18T10:00:00Z',
+          updated_at: '2026-04-18T10:00:00Z',
+          match_players: [
+            {
+              id: 'mp-1',
+              match_id: 'm-g-1',
+              player_id: 'p-1',
+              team_side: 'team_1',
+              rating_before: 1200,
+              rating_after: 1215,
+              guest_name: null,
+              players: { id: 'p-1', name: 'Георги' },
+            },
+            {
+              id: 'mp-2',
+              match_id: 'm-g-1',
+              player_id: null,
+              team_side: 'team_2',
+              rating_before: null,
+              rating_after: null,
+              guest_name: 'Николай (Гост)',
+              players: null,
+            },
+          ],
+        },
+      ];
+
+      const teams = extractTournamentTeams(groupMatches, null);
+
+      expect(teams).toHaveLength(2);
+      const teamAlpha = teams.find((t) => t.name === 'Отбор Алфа');
+      const teamBeta = teams.find((t) => t.name === 'Отбор Бета');
+
+      expect(teamAlpha).toBeDefined();
+      expect(teamAlpha?.players).toEqual([
+        { id: 'p-1', name: 'Георги', is_guest: false },
+      ]);
+
+      expect(teamBeta).toBeDefined();
+      expect(teamBeta?.players).toEqual([
+        { id: '', name: 'Николай (Гост)', is_guest: true },
+      ]);
+    });
+
+    it('PO-EXT-02: extractTournamentTeams preserves draftTeams and supplements missing matches', () => {
+      const draftTeams: Team[] = [
+        {
+          id: 't-draft-1',
+          name: 'Отбор Чернова',
+          players: [{ id: 'p-draft', name: 'Александър' }],
+        },
+      ];
+
+      const matches: MatchDetail[] = [
+        {
+          id: 'm-g-2',
+          match_format: 'singles',
+          team_1_score: 6,
+          team_2_score: 1,
+          played_at: '2026-04-18T11:00:00Z',
+          team_1_name: 'Отбор Чернова',
+          team_2_name: 'Отбор Мач',
+          group_name: 'Група Б',
+          round: 1,
+          tournament_id: 't-1',
+          created_at: '2026-04-18T11:00:00Z',
+          updated_at: '2026-04-18T11:00:00Z',
+          match_players: [
+            {
+              id: 'mp-3',
+              match_id: 'm-g-2',
+              player_id: 'p-new',
+              team_side: 'team_2',
+              rating_before: 1200,
+              rating_after: 1190,
+              guest_name: null,
+              players: { id: 'p-new', name: 'Мартин' },
+            },
+          ],
+        },
+      ];
+
+      const combined = extractTournamentTeams(matches, draftTeams);
+
+      expect(combined).toHaveLength(2);
+      const draftMatch = combined.find((t) => t.name === 'Отбор Чернова');
+      const matchOnly = combined.find((t) => t.name === 'Отбор Мач');
+
+      expect(draftMatch?.players[0].name).toBe('Александър');
+      expect(matchOnly?.players[0].name).toBe('Мартин');
+    });
+
+    it('PO-GEN-01: generatePlayoffMatches includes players in team objects', () => {
+      const qualifiers = [
+        {
+          teamId: 't-1',
+          teamName: 'Отбор 1',
+          seed: 1,
+          isWildcard: false,
+          groupOrigin: 'Група А',
+          rankInGroup: 1,
+          played: 2,
+          pointsPerMatch: 1,
+          gameDiffPerMatch: 2,
+          gamesWonPerMatch: 6,
+        },
+        {
+          teamId: 't-2',
+          teamName: 'Отбор 2',
+          seed: 2,
+          isWildcard: false,
+          groupOrigin: 'Група Б',
+          rankInGroup: 1,
+          played: 2,
+          pointsPerMatch: 1,
+          gameDiffPerMatch: 1,
+          gamesWonPerMatch: 6,
+        },
+        {
+          teamId: 't-3',
+          teamName: 'Отбор 3',
+          seed: 3,
+          isWildcard: false,
+          groupOrigin: 'Група А',
+          rankInGroup: 2,
+          played: 2,
+          pointsPerMatch: 0.5,
+          gameDiffPerMatch: 0,
+          gamesWonPerMatch: 4,
+        },
+        {
+          teamId: 't-4',
+          teamName: 'Отбор 4',
+          seed: 4,
+          isWildcard: false,
+          groupOrigin: 'Група Б',
+          rankInGroup: 2,
+          played: 2,
+          pointsPerMatch: 0.5,
+          gameDiffPerMatch: -1,
+          gamesWonPerMatch: 3,
+        },
+      ];
+
+      const teams: Team[] = qualifiers.map((q) => ({
+        id: q.teamId,
+        name: q.teamName,
+        players: [{ id: `p-${q.seed}`, name: `Играч ${q.seed}` }],
+      }));
+
+      const { matches } = generatePlayoffMatches({
+        tournamentId: 't-tourn',
+        format: 'singles',
+        qualifiers,
+        teams,
+        finalistsCount: 4,
+      });
+
+      // SF1: Seed 1 vs Seed 4
+      const sf1 = matches.find((m) => m.team1.name === 'Отбор 1');
+      expect(sf1).toBeDefined();
+      expect(sf1?.team1.players.length).toBeGreaterThan(0);
+      expect(sf1?.team2.players.length).toBeGreaterThan(0);
+      expect(sf1?.team1.players[0].name).toBe('Играч 1');
+      expect(sf1?.team2.players[0].name).toBe('Играч 4');
+
+      // SF2: Seed 2 vs Seed 3
+      const sf2 = matches.find((m) => m.team1.name === 'Отбор 2');
+      expect(sf2).toBeDefined();
+      expect(sf2?.team1.players.length).toBeGreaterThan(0);
+      expect(sf2?.team2.players.length).toBeGreaterThan(0);
+      expect(sf2?.team1.players[0].name).toBe('Играч 2');
+      expect(sf2?.team2.players[0].name).toBe('Играч 3');
     });
   });
 });

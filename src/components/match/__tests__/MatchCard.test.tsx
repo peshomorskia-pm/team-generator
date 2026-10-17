@@ -324,4 +324,63 @@ describe('MatchCard Component', () => {
     const team2Header = screen.getByText('Отбор Загубил');
     expect(team2Header).not.toHaveClass('text-emerald-600');
   });
+
+  describe('Playoff MatchCard Badges Streamlining', () => {
+    it('MC-PLY-01: suppresses format and round badges when isPlayoff={true}', () => {
+      const match: MatchDetail = {
+        ...sampleMatch,
+        match_format: 'doubles',
+        group_name: 'Полуфинал',
+        round: 2,
+      };
+
+      render(<MatchCard match={match} onEdit={vi.fn()} isPlayoff={true} />);
+
+      expect(screen.queryByText('По двойки')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Кръг 2/)).not.toBeInTheDocument();
+      expect(screen.getByText('Полуфинал')).toBeInTheDocument();
+    });
+
+    it('MC-PLY-02: automatically detects playoff from group_name without explicit prop', () => {
+      const match: MatchDetail = {
+        ...sampleMatch,
+        match_format: 'doubles',
+        group_name: '1/4-финал',
+        round: 1,
+      };
+
+      render(<MatchCard match={match} onEdit={vi.fn()} />);
+
+      expect(screen.queryByText('По двойки')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Кръг 1/)).not.toBeInTheDocument();
+      expect(screen.getByText('1/4-финал')).toBeInTheDocument();
+    });
+
+    it('MC-PLY-03: renders trophy badge for Final stage', () => {
+      const match: MatchDetail = {
+        ...sampleMatch,
+        match_format: 'doubles',
+        group_name: 'Финал',
+      };
+
+      render(<MatchCard match={match} onEdit={vi.fn()} isPlayoff={true} />);
+
+      expect(screen.getByText('🏆 Финал')).toBeInTheDocument();
+    });
+
+    it('MC-GRP-01: preserves format and round badges for non-playoff (group) matches', () => {
+      const match: MatchDetail = {
+        ...sampleMatch,
+        match_format: 'doubles',
+        group_name: 'Група А',
+        round: 1,
+      };
+
+      render(<MatchCard match={match} onEdit={vi.fn()} isPlayoff={false} />);
+
+      expect(screen.getByText('По двойки')).toBeInTheDocument();
+      expect(screen.getByText('Кръг 1')).toBeInTheDocument();
+      expect(screen.getByText('Група А')).toBeInTheDocument();
+    });
+  });
 });

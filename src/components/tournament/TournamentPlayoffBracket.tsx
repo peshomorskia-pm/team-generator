@@ -3,6 +3,7 @@ import { Trophy, AlertTriangle, Sparkles, CheckCircle2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { MatchCard } from '../match/MatchCard';
 import { getMatchOutcome } from '../../utils/standings';
+import { isPlaceholderTeam } from '../../utils/playoffs';
 import type { Tournament } from '../../types/tournament';
 import type { MatchDetail } from '../../types/matches';
 import type { TournamentPlayoffTree } from '../../types/playoffs';
@@ -17,11 +18,6 @@ export interface TournamentPlayoffBracketProps {
   onCompleteTournament?: () => Promise<void> | void;
   isGenerating?: boolean;
   className?: string;
-}
-
-function isPlaceholderTeam(name?: string | null): boolean {
-  if (!name) return true;
-  return /^(победител от|tbd)/i.test(name.trim());
 }
 
 export const TournamentPlayoffBracket: React.FC<TournamentPlayoffBracketProps> = ({
@@ -231,6 +227,7 @@ export const TournamentPlayoffBracket: React.FC<TournamentPlayoffBracketProps> =
                     >
                       <MatchCard
                         match={m}
+                        isPlayoff={true}
                         onEdit={(matchToEdit) => {
                           if (!hasPlaceholder) {
                             onEditMatchScore(matchToEdit);
@@ -272,6 +269,7 @@ export const TournamentPlayoffBracket: React.FC<TournamentPlayoffBracketProps> =
                     >
                       <MatchCard
                         match={m}
+                        isPlayoff={true}
                         onEdit={(matchToEdit) => {
                           if (!hasPlaceholder) {
                             onEditMatchScore(matchToEdit);
@@ -313,6 +311,7 @@ export const TournamentPlayoffBracket: React.FC<TournamentPlayoffBracketProps> =
                     >
                       <MatchCard
                         match={m}
+                        isPlayoff={true}
                         onEdit={(matchToEdit) => {
                           if (!hasPlaceholder) {
                             onEditMatchScore(matchToEdit);

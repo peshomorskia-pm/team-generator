@@ -604,5 +604,48 @@ describe('TournamentDetailPage Integration Tests', () => {
       })
     );
   });
+
+  it('TDP-ROST-01: renders player names under team names in group standings section', () => {
+    renderComponent();
+
+    const standingsSection = screen.getByTestId('tournament-standings-section');
+    expect(within(standingsSection).getByText('Иван')).toBeInTheDocument();
+    expect(within(standingsSection).getByText('Георги')).toBeInTheDocument();
+  });
+
+  it('TDP-PLY-01: generates playoffs with player rosters even when draft_state.teams is null', async () => {
+    const user = userEvent.setup();
+    const mockBulkCreate = vi.fn().mockResolvedValue({ count: 3, error: null });
+
+    vi.spyOn(useMatchesModule, 'useMatches').mockReturnValue({
+      matches: dummyMatches,
+      loading: false,
+      error: null,
+      alert: null,
+      fetchMatches: vi.fn(),
+      createMatch: vi.fn(),
+      updateMatch: mockUpdateMatch,
+      deleteMatch: mockDeleteMatch,
+      bulkCreateMatches: mockBulkCreate,
+      clearAlert: vi.fn(),
+    });
+
+    renderComponent();
+
+    const generateBtn = screen.getByTestId('generate-playoffs-cta-btn');
+    await user.click(generateBtn);
+
+    const confirmBtn = screen.getByTestId('confirm-generate-playoffs-btn');
+    await user.click(confirmBtn);
+
+    expect(mockBulkCreate).toHaveBeenCalledTimes(1);
+    const createdMatches = mockBulkCreate.mock.calls[0][0];
+    const matchWithAlpha = createdMatches.find(
+      (m: { team1: { name: string } }) => m.team1.name === 'Отбор Алфа'
+    );
+    expect(matchWithAlpha).toBeDefined();
+    expect(matchWithAlpha.team1.players).toHaveLength(1);
+    expect(matchWithAlpha.team1.players[0].name).toBe('Иван');
+  });
 });
 

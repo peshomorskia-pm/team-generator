@@ -26,6 +26,12 @@ Tournament organizers required the flexibility to configure how many teams advan
    - Implements an unplayed match warning modal before bracket generation.
    - Automatically propagates winners from SF to Final and crowns the champion upon Final completion.
 
+5. **PO Refinements (Oct 2026):**
+   - **Standings Rosters:** Render player names (comma-delimited) under team names in the standings table roster column.
+   - **Robust Roster Reconstruction (`extractTournamentTeams`):** Reconstruct team rosters from group matches and draft state, eliminating `"Няма играчи"` in playoff brackets.
+   - **Streamlined Match Cards:** Suppress redundant format (`По двойки`) and round (`Кръг X`) badges on playoff cards while highlighting stage badges (`🏆 Финал`).
+
 ## Consequences
-- **Positive:** Full flexibility for tournament organizers with mathematically sound qualification logic and complete Bulgarian UI localization.
+- **Positive:** Full flexibility for tournament organizers with mathematically sound qualification logic, player roster visibility, and clean Bulgarian UI localization.
 - **Negative:** Slightly increased state complexity in tournament matching workflows, managed cleanly via immutable utility helpers and React hooks.
+

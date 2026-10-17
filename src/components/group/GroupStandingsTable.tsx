@@ -2,12 +2,15 @@ import React from 'react';
 import { Trophy } from 'lucide-react';
 import type { GroupStandingRow } from '../../types/standings';
 import type { PlayoffQualifier } from '../../types/playoffs';
+import type { Team } from '../../types';
 
 export interface GroupStandingsTableProps {
   groupName?: string;
   standings: GroupStandingRow[];
   highlightTop?: number; // legacy default: 2
   qualifierMap?: Map<string, PlayoffQualifier>;
+  teamRosterMap?: Record<string, string[]> | Map<string, string[]>;
+  teams?: Team[];
   className?: string;
 }
 
@@ -16,6 +19,8 @@ export const GroupStandingsTable: React.FC<GroupStandingsTableProps> = ({
   standings,
   highlightTop = 2,
   qualifierMap,
+  teamRosterMap,
+  teams,
   className = '',
 }) => {
   const hasCompletedMatches = standings.some((s) => s.played > 0);
@@ -83,6 +88,24 @@ export const GroupStandingsTable: React.FC<GroupStandingsTableProps> = ({
                   const isDirect = qualifier ? !qualifier.isWildcard : !qualifierMap && row.rank <= highlightTop;
                   const isWildcard = qualifier ? qualifier.isWildcard : false;
 
+                  let playerNames: string[] | undefined;
+                  if (teamRosterMap) {
+                    if (teamRosterMap instanceof Map) {
+                      playerNames = teamRosterMap.get(row.teamId) || teamRosterMap.get(row.teamName);
+                    } else {
+                      playerNames = teamRosterMap[row.teamId] || teamRosterMap[row.teamName];
+                    }
+                  }
+                  if (!playerNames && teams && Array.isArray(teams)) {
+                    const foundTeam = teams.find(
+                      (t) => t.id === row.teamId || t.name === row.teamName
+                    );
+                    if (foundTeam && foundTeam.players) {
+                      playerNames = foundTeam.players.map((p) => p.name).filter(Boolean);
+                    }
+                  }
+                  const rosterText = playerNames && playerNames.length > 0 ? playerNames.join(', ') : null;
+
                   const diffDisplay =
                     row.gameDiff > 0
                       ? `+${row.gameDiff}`
@@ -131,6 +154,14 @@ export const GroupStandingsTable: React.FC<GroupStandingsTableProps> = ({
                             </span>
                           )}
                         </div>
+                        {rosterText && (
+                          <div
+                            className="text-xs text-slate-500 dark:text-slate-400 font-normal truncate mt-0.5"
+                            data-testid={`team-roster-${row.rank}`}
+                          >
+                            {rosterText}
+                          </div>
+                        )}
                       </td>
                       <td className="px-2 py-2.5 text-center text-gray-600 dark:text-gray-300">
                         {row.played}

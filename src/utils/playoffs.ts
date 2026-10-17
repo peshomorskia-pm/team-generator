@@ -79,6 +79,69 @@ export function isPlayoffMatch(match: { group_name?: string | null }): boolean {
 }
 
 /**
+ * Checks if a team name is a placeholder for bracket feeder matches.
+ */
+export function isPlaceholderTeam(name?: string | null): boolean {
+  if (!name) return true;
+  return /^(победител от|tbd)/i.test(name.trim());
+}
+
+/**
+ * Extracts unique tournament teams and their player rosters from match history
+ * and/or draft state. Guarantees full team objects with player lists even when
+ * tournament.draft_state is null or cleared upon saving matches.
+ */
+export function extractTournamentTeams(
+  matches: MatchDetail[],
+  draftTeams?: Team[] | null
+): Team[] {
+  const teamsByName = new Map<string, Team>();
+
+  if (draftTeams && Array.isArray(draftTeams)) {
+    for (const t of draftTeams) {
+      if (t && t.name) {
+        const key = t.name.trim();
+        teamsByName.set(key, {
+          ...t,
+          players: t.players ? [...t.players] : [],
+        });
+      }
+    }
+  }
+
+  for (const match of matches) {
+    const processTeamSide = (teamName: string | null | undefined, side: 'team_1' | 'team_2') => {
+      if (!teamName || isPlaceholderTeam(teamName)) return;
+      const key = teamName.trim();
+      const matchPlayers = (match.match_players || []).filter((p) => p.team_side === side);
+      const players = matchPlayers.map((p) => ({
+        id: p.player_id ?? '',
+        name: p.players?.name ?? p.guest_name ?? 'Играч',
+        is_guest: !p.player_id,
+      }));
+
+      if (teamsByName.has(key)) {
+        const existing = teamsByName.get(key)!;
+        if (existing.players.length === 0 && players.length > 0) {
+          existing.players = players;
+        }
+      } else {
+        teamsByName.set(key, {
+          id: key,
+          name: key,
+          players,
+        });
+      }
+    };
+
+    processTeamSide(match.team_1_name, 'team_1');
+    processTeamSide(match.team_2_name, 'team_2');
+  }
+
+  return Array.from(teamsByName.values());
+}
+
+/**
  * Comparator for cross-group ranking using normalized metrics:
  * 1. points / (played || 1) DESC
  * 2. gameDiff / (played || 1) DESC
@@ -489,9 +552,17 @@ export function generatePlayoffMatches(
       return { id: '', name: 'TBD', players: [] };
     }
     const found = params.teams.find(
-      (t) => t.id === q.teamId || t.name === q.teamName
+      (t) =>
+        t.id === q.teamId ||
+        t.name === q.teamName ||
+        (t.name && q.teamName && t.name.trim() === q.teamName.trim())
     );
-    if (found) return found;
+    if (found) {
+      return {
+        ...found,
+        players: found.players ? [...found.players] : [],
+      };
+    }
     return {
       id: q.teamId,
       name: q.teamName,
@@ -613,13 +684,13 @@ export function propagatePlayoffWinner(params: {
     .filter((p) => p.team_side === 'team_1')
     .map((p) => ({
       player_id: p.player_id ?? undefined,
-      guest_name: p.guest_name ?? undefined,
+      guest_name: p.player_id ? undefined : (p.guest_name ?? p.players?.name ?? undefined),
     }));
   let newTeam2Players = (nextMatch.match_players || [])
     .filter((p) => p.team_side === 'team_2')
     .map((p) => ({
       player_id: p.player_id ?? undefined,
-      guest_name: p.guest_name ?? undefined,
+      guest_name: p.player_id ? undefined : (p.guest_name ?? p.players?.name ?? undefined),
     }));
 
   if (hasWinner) {
@@ -632,7 +703,7 @@ export function propagatePlayoffWinner(params: {
       .filter((p) => p.team_side === winningSide)
       .map((p) => ({
         player_id: p.player_id ?? undefined,
-        guest_name: p.guest_name ?? undefined,
+        guest_name: p.player_id ? undefined : (p.guest_name ?? p.players?.name ?? undefined),
       }));
 
     if (slot === 'team_1') {

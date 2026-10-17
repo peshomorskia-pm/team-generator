@@ -208,4 +208,55 @@ describe('TournamentPlayoffBracket Component', () => {
     fireEvent.click(completeBtn);
     expect(handleComplete).toHaveBeenCalledTimes(1);
   });
+
+  it('renders playoff matches with streamlined header badges (no format/round badges, trophy for final)', () => {
+    const playoffMatches: MatchDetail[] = [
+      {
+        id: 'p-sf-1',
+        match_format: 'doubles',
+        team_1_score: null,
+        team_2_score: null,
+        played_at: '2026-04-18T13:00:00Z',
+        team_1_name: 'Отбор Алфа',
+        team_2_name: 'Отбор Бета',
+        group_name: 'Полуфинал',
+        round: 1,
+        tournament_id: 't-1',
+        created_at: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+        match_players: [],
+      },
+      {
+        id: 'p-final',
+        match_format: 'doubles',
+        team_1_score: null,
+        team_2_score: null,
+        played_at: '2026-04-18T15:00:00Z',
+        team_1_name: 'Победител от Полуфинал 1',
+        team_2_name: 'Победител от Полуфинал 2',
+        group_name: 'Финал',
+        round: 2,
+        tournament_id: 't-1',
+        created_at: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+        match_players: [],
+      },
+    ];
+
+    render(
+      <TournamentPlayoffBracket
+        tournament={dummyTournament}
+        playoffMatches={playoffMatches}
+        groupMatches={[completedGroupMatch]}
+        onGeneratePlayoffs={vi.fn()}
+        onEditMatchScore={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByText('По двойки')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Кръг 1/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Кръг 2/)).not.toBeInTheDocument();
+    expect(screen.getByText('Полуфинал')).toBeInTheDocument();
+    expect(screen.getByText('🏆 Финал')).toBeInTheDocument();
+  });
 });

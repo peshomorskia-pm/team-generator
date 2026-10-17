@@ -27,6 +27,7 @@ import {
   generatePlayoffMatches,
   propagatePlayoffWinner,
   getDefaultFinalistsCount,
+  extractTournamentTeams,
 } from '../utils/playoffs';
 import { useTournaments } from '../hooks/useTournaments';
 import { useMatches } from '../hooks/useMatches';
@@ -197,6 +198,23 @@ export const TournamentDetailPage: React.FC = () => {
     }
   };
 
+  // Tournament teams & roster map extraction for standings display
+  const tournamentTeams = useMemo(() => {
+    return extractTournamentTeams(groupMatches, tournament?.draft_state?.teams);
+  }, [groupMatches, tournament?.draft_state?.teams]);
+
+  const teamRosterMap = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const t of tournamentTeams) {
+      const names = t.players.map((p) => p.name).filter(Boolean);
+      if (names.length > 0) {
+        if (t.id) map.set(t.id, names);
+        if (t.name) map.set(t.name, names);
+      }
+    }
+    return map;
+  }, [tournamentTeams]);
+
   // Playoff qualification resolver
   const playoffResolution = useMemo(() => {
     return resolvePlayoffTeams(allGroupStandings, selectedFinalistsCount);
@@ -209,7 +227,10 @@ export const TournamentDetailPage: React.FC = () => {
     if (!tournament) return;
     setIsGeneratingPlayoffs(true);
     try {
-      const knownTeams: Team[] = tournament.draft_state?.teams || [];
+      const knownTeams: Team[] = extractTournamentTeams(
+        groupMatches,
+        tournament.draft_state?.teams
+      );
       const { matches: newMatches, tree } = generatePlayoffMatches({
         tournamentId: tournament.id,
         format: tournament.format,
@@ -642,6 +663,7 @@ export const TournamentDetailPage: React.FC = () => {
                     groupName={grp.groupName || undefined}
                     standings={grp.rows}
                     qualifierMap={playoffResolution.qualifierMap}
+                    teamRosterMap={teamRosterMap}
                   />
                 ))}
               </div>
