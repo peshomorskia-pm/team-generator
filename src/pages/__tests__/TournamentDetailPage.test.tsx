@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, act, within } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { TournamentDetailPage } from '../TournamentDetailPage';
@@ -317,13 +317,20 @@ describe('TournamentDetailPage Integration Tests', () => {
     const modal = screen.getByRole('dialog');
     expect(modal).toBeInTheDocument();
     expect(
-      screen.getByText(/сигурни ли сте, че искате да изтриете турнира/i)
+      within(modal).getByRole('heading', { name: 'Необратимо изтриване на турнир' })
+    ).toBeInTheDocument();
+    expect(
+      within(modal).getByText(/⚠️ Внимание: Този турнир съдържа записани мачове и официални резултати/i)
     ).toBeInTheDocument();
 
-    const confirmBtn = screen.getByRole('button', { name: 'Изтриване' });
-    await act(async () => {
-      await user.click(confirmBtn);
-    });
+    const confirmBtn = within(modal).getByRole('button', { name: /🗑️ Изтрий безвъзвратно/i });
+    expect(confirmBtn).toBeDisabled();
+
+    const input = within(modal).getByPlaceholderText('Въведете името на турнира тук...');
+    await user.type(input, 'Пролетен Мастърс 2026');
+    expect(confirmBtn).toBeEnabled();
+
+    await user.click(confirmBtn);
 
     expect(mockDeleteTournament).toHaveBeenCalledWith('t-1');
     expect(mockNavigate).toHaveBeenCalledWith('/tournaments');
@@ -689,8 +696,21 @@ describe('TournamentDetailPage Integration Tests', () => {
       expect(deleteBtn).toBeInTheDocument();
       await user.click(deleteBtn);
 
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
-      expect(screen.getByText(/сигурни ли сте, че искате да изтриете турнира/i)).toBeInTheDocument();
+      const dialog = screen.getByRole('dialog');
+      expect(within(dialog).getByRole('heading', { name: 'Необратимо изтриване на турнир' })).toBeInTheDocument();
+      expect(
+        within(dialog).getByText(/⚠️ Внимание: Този турнир съдържа записани мачове и официални резултати/i)
+      ).toBeInTheDocument();
+
+      const confirmDeleteBtn = within(dialog).getByRole('button', { name: /🗑️ Изтрий безвъзвратно/i });
+      expect(confirmDeleteBtn).toBeDisabled();
+
+      const input = within(dialog).getByPlaceholderText('Въведете името на турнира тук...');
+      await user.type(input, 'Пролетен Мастърс 2026');
+      expect(confirmDeleteBtn).toBeEnabled();
+
+      await user.click(confirmDeleteBtn);
+      expect(mockDeleteTournament).toHaveBeenCalledWith('t-1');
     });
 
     it('TDP-LOCK-03: renders group and playoff matches in readOnly mode with zero edit buttons', () => {
