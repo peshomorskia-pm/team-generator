@@ -93,14 +93,16 @@ export const TournamentCard: React.FC<TournamentCardProps> = ({
         </Link>
 
         <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => onEdit(tournament)}
-            aria-label="Редактиране"
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
-          >
-            <Edit className="w-4 h-4" />
-          </button>
+          {tournament.status !== 'completed' && (
+            <button
+              type="button"
+              onClick={() => onEdit(tournament)}
+              aria-label="Редактиране"
+              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+            >
+              <Edit className="w-4 h-4" />
+            </button>
+          )}
           <button
             type="button"
             onClick={() => onDelete(tournament.id)}

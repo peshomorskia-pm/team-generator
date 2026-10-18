@@ -96,4 +96,5 @@ export * from './generator';
 export * from './matches';
 export * from './tournament';
 export * from './standings';
+export * from './playoffs';
 

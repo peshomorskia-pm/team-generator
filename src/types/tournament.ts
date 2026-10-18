@@ -11,6 +11,8 @@ export interface TournamentDraftState {
   activePool: GeneratorPlayer[];
   groups?: TournamentGroup[] | null;
   schedule?: TournamentMatch[] | null;
+  playoffFinalists?: import('./playoffs').PlayoffFinalistsCount | null;
+  playoffs?: import('./playoffs').TournamentPlayoffState | null;
 }
 
 export interface Tournament {

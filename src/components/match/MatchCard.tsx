@@ -5,12 +5,15 @@ import type { MatchDetail } from '../../types/matches';
 
 import { resolveMatchFormat } from '../../utils/eloRecalculation';
 import { getMatchOutcome } from '../../utils/standings';
+import { isPlayoffMatch } from '../../utils/playoffs';
 
 export interface MatchCardProps {
   match: MatchDetail;
   onEdit: (match: MatchDetail) => void;
   onDelete?: (match: MatchDetail) => void;
   hideDelete?: boolean;
+  isPlayoff?: boolean;
+  readOnly?: boolean;
 }
 
 export const MatchCard: React.FC<MatchCardProps> = ({
@@ -18,6 +21,8 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   onEdit,
   onDelete,
   hideDelete = false,
+  isPlayoff,
+  readOnly = false,
 }) => {
   const team1Players = match.match_players.filter((p) => p.team_side === 'team_1');
   const team2Players = match.match_players.filter((p) => p.team_side === 'team_2');
@@ -34,6 +39,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
     year: 'numeric',
   });
 
+  const effectiveIsPlayoff = isPlayoff !== undefined ? isPlayoff : isPlayoffMatch(match);
   const resolvedFormat = resolveMatchFormat(match);
   const formatLabel = resolvedFormat === 'doubles' ? 'По двойки' : 'Поединично';
 
@@ -44,18 +50,29 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         <div className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
           <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           <span>{formattedDate}</span>
-          <Badge variant="indigo" size="sm" className="ml-2 font-semibold">
-            {formatLabel}
-          </Badge>
-          {match.group_name && (
-            <Badge
-              variant="outline"
-              className="text-xs font-semibold bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800"
-            >
-              {match.group_name}
+          {!effectiveIsPlayoff && (
+            <Badge variant="indigo" size="sm" className="ml-2 font-semibold">
+              {formatLabel}
             </Badge>
           )}
-          {match.round != null && match.round > 0 && (
+          {match.group_name && (
+            effectiveIsPlayoff && /^финал/i.test(match.group_name.trim()) && !match.group_name.includes('🏆') ? (
+              <Badge
+                variant="outline"
+                className="text-xs font-semibold bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800"
+              >
+                🏆 {match.group_name}
+              </Badge>
+            ) : (
+              <Badge
+                variant="outline"
+                className="text-xs font-semibold bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800"
+              >
+                {match.group_name}
+              </Badge>
+            )
+          )}
+          {!effectiveIsPlayoff && match.round != null && match.round > 0 && (
             <Badge
               variant="outline"
               className="text-xs font-semibold bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800"
@@ -76,14 +93,16 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         </div>
 
         <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => onEdit(match)}
-            className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-            aria-label="Редактирай"
-          >
-            <Edit2 className="w-4 h-4" />
-          </button>
+          {!readOnly && onEdit && (
+            <button
+              type="button"
+              onClick={() => onEdit(match)}
+              className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+              aria-label="Редактирай"
+            >
+              <Edit2 className="w-4 h-4" />
+            </button>
+          )}
           {!hideDelete && onDelete && (
             <button
               type="button"

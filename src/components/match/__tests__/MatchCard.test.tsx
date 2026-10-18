@@ -324,4 +324,107 @@ describe('MatchCard Component', () => {
     const team2Header = screen.getByText('Отбор Загубил');
     expect(team2Header).not.toHaveClass('text-emerald-600');
   });
+
+  describe('Playoff MatchCard Badges Streamlining', () => {
+    it('MC-PLY-01: suppresses format and round badges when isPlayoff={true}', () => {
+      const match: MatchDetail = {
+        ...sampleMatch,
+        match_format: 'doubles',
+        group_name: 'Полуфинал',
+        round: 2,
+      };
+
+      render(<MatchCard match={match} onEdit={vi.fn()} isPlayoff={true} />);
+
+      expect(screen.queryByText('По двойки')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Кръг 2/)).not.toBeInTheDocument();
+      expect(screen.getByText('Полуфинал')).toBeInTheDocument();
+    });
+
+    it('MC-PLY-02: automatically detects playoff from group_name without explicit prop', () => {
+      const match: MatchDetail = {
+        ...sampleMatch,
+        match_format: 'doubles',
+        group_name: '1/4-финал',
+        round: 1,
+      };
+
+      render(<MatchCard match={match} onEdit={vi.fn()} />);
+
+      expect(screen.queryByText('По двойки')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Кръг 1/)).not.toBeInTheDocument();
+      expect(screen.getByText('1/4-финал')).toBeInTheDocument();
+    });
+
+    it('MC-PLY-03: renders trophy badge for Final stage', () => {
+      const match: MatchDetail = {
+        ...sampleMatch,
+        match_format: 'doubles',
+        group_name: 'Финал',
+      };
+
+      render(<MatchCard match={match} onEdit={vi.fn()} isPlayoff={true} />);
+
+      expect(screen.getByText('🏆 Финал')).toBeInTheDocument();
+    });
+
+    it('MC-GRP-01: preserves format and round badges for non-playoff (group) matches', () => {
+      const match: MatchDetail = {
+        ...sampleMatch,
+        match_format: 'doubles',
+        group_name: 'Група А',
+        round: 1,
+      };
+
+      render(<MatchCard match={match} onEdit={vi.fn()} isPlayoff={false} />);
+
+      expect(screen.getByText('По двойки')).toBeInTheDocument();
+      expect(screen.getByText('Кръг 1')).toBeInTheDocument();
+      expect(screen.getByText('Група А')).toBeInTheDocument();
+    });
+  });
+
+  describe('readOnly Lockdown', () => {
+    it('MC-LOCK-01: suppresses edit button when readOnly is true', () => {
+      const handleEdit = vi.fn();
+      render(<MatchCard match={sampleMatch} onEdit={handleEdit} readOnly={true} />);
+
+      expect(screen.getByText('5')).toBeInTheDocument();
+      expect(screen.getByText('3')).toBeInTheDocument();
+      expect(screen.getByText('Димитър Бербатов')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Редактирай' })).not.toBeInTheDocument();
+    });
+
+    it('MC-LOCK-02: renders edit button and triggers onEdit when readOnly is false or default', async () => {
+      const user = userEvent.setup();
+      const handleEdit = vi.fn();
+      render(<MatchCard match={sampleMatch} onEdit={handleEdit} readOnly={false} />);
+
+      const editBtn = screen.getByRole('button', { name: 'Редактирай' });
+      expect(editBtn).toBeInTheDocument();
+      await user.click(editBtn);
+      expect(handleEdit).toHaveBeenCalledWith(sampleMatch);
+    });
+
+    it('MC-LOCK-03: retains delete button when readOnly is true if hideDelete is false and onDelete provided', async () => {
+      const user = userEvent.setup();
+      const handleDelete = vi.fn();
+      render(
+        <MatchCard
+          match={sampleMatch}
+          onEdit={vi.fn()}
+          onDelete={handleDelete}
+          hideDelete={false}
+          readOnly={true}
+        />
+      );
+
+      expect(screen.queryByRole('button', { name: 'Редактирай' })).not.toBeInTheDocument();
+      const deleteBtn = screen.getByRole('button', { name: 'Изтрий' });
+      expect(deleteBtn).toBeInTheDocument();
+      await user.click(deleteBtn);
+      expect(handleDelete).toHaveBeenCalledWith(sampleMatch);
+    });
+  });
 });
+

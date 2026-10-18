@@ -18,7 +18,17 @@ import { TournamentModal } from '../components/tournament/TournamentModal';
 import { DeleteTournamentModal } from '../components/tournament/DeleteTournamentModal';
 import { TournamentInteractiveBoard } from '../components/tournament/TournamentInteractiveBoard';
 import { GroupStandingsTable } from '../components/group/GroupStandingsTable';
-import { calculateAllGroupStandings } from '../utils/standings';
+import { PlayoffFinalistsSelector } from '../components/tournament/PlayoffFinalistsSelector';
+import { TournamentPlayoffBracket } from '../components/tournament/TournamentPlayoffBracket';
+import { calculateAllGroupStandings, getMatchOutcome } from '../utils/standings';
+import {
+  isPlayoffMatch,
+  resolvePlayoffTeams,
+  generatePlayoffMatches,
+  propagatePlayoffWinner,
+  getDefaultFinalistsCount,
+  extractTournamentTeams,
+} from '../utils/playoffs';
 import { useTournaments } from '../hooks/useTournaments';
 import { useMatches } from '../hooks/useMatches';
 import type {
@@ -27,6 +37,8 @@ import type {
 } from '../types/tournament';
 import type { MatchDetail } from '../types/matches';
 import type { MatchSet } from '../types/match';
+import type { PlayoffFinalistsCount } from '../types/playoffs';
+import type { Team } from '../types';
 
 export type TournamentMatchStatusFilter = 'all' | 'completed' | 'upcoming';
 
@@ -71,12 +83,15 @@ export const TournamentDetailPage: React.FC = () => {
     loading: matchesLoading,
     fetchMatches,
     updateMatch,
+    bulkCreateMatches,
   } = useMatches();
 
   const tournament = useMemo(
     () => tournaments.find((t) => t.id === id),
     [tournaments, id]
   );
+
+  const isCompleted = tournament?.status === 'completed';
 
   const [bulkAlertMessage, setBulkAlertMessage] = useState<string | null>(() => {
     if (locationState?.fromBulkCreate) {
@@ -103,34 +118,159 @@ export const TournamentDetailPage: React.FC = () => {
 
   const [editingMatch, setEditingMatch] = useState<MatchDetail | null>(null);
 
-  // Tournament matches
+  // Tournament matches partitioned into group stage and playoff stage
   const tournamentMatches = useMemo(() => {
     if (!tournament) return [];
     return matches.filter((m) => m.tournament_id === tournament.id);
   }, [matches, tournament]);
 
+  const groupMatches = useMemo(
+    () => tournamentMatches.filter((m) => !isPlayoffMatch(m)),
+    [tournamentMatches]
+  );
+
+  const playoffMatches = useMemo(
+    () => tournamentMatches.filter((m) => isPlayoffMatch(m)),
+    [tournamentMatches]
+  );
+
   // Available groups for filtering
   const availableGroups = useMemo(() => {
     const groupsSet = new Set<string>();
-    for (const m of tournamentMatches) {
+    for (const m of groupMatches) {
       if (m.group_name) {
         groupsSet.add(m.group_name);
       }
     }
     return Array.from(groupsSet).sort();
-  }, [tournamentMatches]);
+  }, [groupMatches]);
 
-  // Reactive group standings calculation
-  const groupStandings = useMemo(() => {
-    if (tournamentMatches.length === 0) return [];
+  // Reactive group standings calculation strictly from group stage matches
+  const allGroupStandings = useMemo(() => {
+    if (groupMatches.length === 0) return [];
     const groupsToCompute =
-      groupFilter === 'all'
-        ? availableGroups.length > 0
-          ? availableGroups.map((name) => ({ name }))
-          : [{ name: '' }]
-        : [{ name: groupFilter }];
-    return calculateAllGroupStandings(groupsToCompute, tournamentMatches);
-  }, [tournamentMatches, groupFilter, availableGroups]);
+      availableGroups.length > 0
+        ? availableGroups.map((name) => ({ name }))
+        : [{ name: '' }];
+    return calculateAllGroupStandings(groupsToCompute, groupMatches);
+  }, [groupMatches, availableGroups]);
+
+  const groupStandings = useMemo(() => {
+    if (groupFilter === 'all') return allGroupStandings;
+    return allGroupStandings.filter((g) => g.groupName === groupFilter);
+  }, [allGroupStandings, groupFilter]);
+
+  const totalTeamsCount = useMemo(() => {
+    if (tournament?.draft_state?.teams && tournament.draft_state.teams.length > 0) {
+      return tournament.draft_state.teams.length;
+    }
+    return allGroupStandings.reduce((sum, g) => sum + g.rows.length, 0);
+  }, [tournament, allGroupStandings]);
+
+  // Playoff finalists selector state
+  const defaultFinalistsCount = useMemo(() => {
+    if (tournament?.draft_state?.playoffFinalists) {
+      return tournament.draft_state.playoffFinalists;
+    }
+    if (allGroupStandings.length > 0) {
+      return getDefaultFinalistsCount(allGroupStandings.length, totalTeamsCount);
+    }
+    return 2 as PlayoffFinalistsCount;
+  }, [tournament, allGroupStandings.length, totalTeamsCount]);
+
+  const [customFinalistsCount, setCustomFinalistsCount] =
+    useState<PlayoffFinalistsCount | null>(null);
+
+  const selectedFinalistsCount = customFinalistsCount ?? defaultFinalistsCount;
+
+  const handleFinalistsCountChange = async (count: PlayoffFinalistsCount) => {
+    setCustomFinalistsCount(count);
+    if (tournament) {
+      await updateTournament(tournament.id, {
+        draft_state: {
+          ...(tournament.draft_state || {
+            targetTeams: totalTeamsCount,
+            formationMode: 'auto',
+            teams: [],
+            activePool: [],
+          }),
+          playoffFinalists: count,
+        },
+      });
+    }
+  };
+
+  // Tournament teams & roster map extraction for standings display
+  const tournamentTeams = useMemo(() => {
+    return extractTournamentTeams(groupMatches, tournament?.draft_state?.teams);
+  }, [groupMatches, tournament?.draft_state?.teams]);
+
+  const teamRosterMap = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const t of tournamentTeams) {
+      const names = t.players.map((p) => p.name).filter(Boolean);
+      if (names.length > 0) {
+        if (t.id) map.set(t.id, names);
+        if (t.name) map.set(t.name, names);
+      }
+    }
+    return map;
+  }, [tournamentTeams]);
+
+  // Playoff qualification resolver
+  const playoffResolution = useMemo(() => {
+    return resolvePlayoffTeams(allGroupStandings, selectedFinalistsCount);
+  }, [allGroupStandings, selectedFinalistsCount]);
+
+  // Playoff bracket generation & lifecycle
+  const [isGeneratingPlayoffs, setIsGeneratingPlayoffs] = useState(false);
+
+  const handleGeneratePlayoffs = async () => {
+    if (!tournament) return;
+    setIsGeneratingPlayoffs(true);
+    try {
+      const knownTeams: Team[] = extractTournamentTeams(
+        groupMatches,
+        tournament.draft_state?.teams
+      );
+      const { matches: newMatches, tree } = generatePlayoffMatches({
+        tournamentId: tournament.id,
+        format: tournament.format,
+        qualifiers: playoffResolution.qualifiers,
+        teams: knownTeams,
+        finalistsCount: selectedFinalistsCount,
+      });
+
+      const { error } = await bulkCreateMatches(newMatches, tournament.format, tournament.id);
+      if (error) throw error;
+
+      await updateTournament(tournament.id, {
+        draft_state: {
+          ...(tournament.draft_state || {
+            targetTeams: totalTeamsCount,
+            formationMode: 'auto',
+            teams: [],
+            activePool: [],
+          }),
+          playoffFinalists: selectedFinalistsCount,
+          playoffs: {
+            finalistsCount: selectedFinalistsCount,
+            tree,
+          },
+        },
+      });
+      await fetchMatches();
+    } catch {
+      // Handled in hooks
+    } finally {
+      setIsGeneratingPlayoffs(false);
+    }
+  };
+
+  const handleCompleteTournament = async () => {
+    if (!tournament) return;
+    await updateTournament(tournament.id, { status: 'completed' });
+  };
 
   // Matches stats
   const matchStats = useMemo(() => {
@@ -192,7 +332,7 @@ export const TournamentDetailPage: React.FC = () => {
 
   // Tournament edit / delete handlers
   const handleEditTournamentSave = async (data: UpdateTournamentInput) => {
-    if (!tournament) return;
+    if (!tournament || isCompleted) return;
     await updateTournament(tournament.id, data);
   };
 
@@ -209,7 +349,7 @@ export const TournamentDetailPage: React.FC = () => {
     team1Score: number | null,
     team2Score: number | null
   ) => {
-    if (!editingMatch) return;
+    if (!editingMatch || isCompleted) return;
     const t1Players = editingMatch.match_players
       .filter((p) => p.team_side === 'team_1')
       .map((p) => ({
@@ -237,6 +377,62 @@ export const TournamentDetailPage: React.FC = () => {
       team_2_score: team2Score,
       sets,
     });
+
+    // Check if edited match is in playoffs to propagate winner downstream and handle champion
+    const isPlayoff = isPlayoffMatch(editingMatch);
+    if (isPlayoff) {
+      const outcome = getMatchOutcome({
+        sets,
+        team_1_score: team1Score,
+        team_2_score: team2Score,
+      });
+
+      // 1. If Final completed, declare champion
+      const isFinal = Boolean(
+        editingMatch.group_name && /^финал/i.test(editingMatch.group_name.trim())
+      );
+      if (isFinal) {
+        if (
+          outcome.isCompleted &&
+          (outcome.winner === 'team_1' || outcome.winner === 'team_2')
+        ) {
+          const championName =
+            outcome.winner === 'team_1'
+              ? editingMatch.team_1_name
+              : editingMatch.team_2_name;
+          if (tournament) {
+            await updateTournament(tournament.id, {
+              winner_team_name: championName,
+            });
+          }
+        } else if (!outcome.isCompleted && tournament?.winner_team_name) {
+          await updateTournament(tournament.id, {
+            winner_team_name: null,
+          });
+        }
+      }
+
+      // 2. Propagate winner downstream
+      const tree = tournament?.draft_state?.playoffs?.tree;
+      if (tree) {
+        const completedMatch: MatchDetail = {
+          ...editingMatch,
+          sets,
+          team_1_score: team1Score,
+          team_2_score: team2Score,
+        };
+        const propagation = propagatePlayoffWinner({
+          completedMatch,
+          allMatches: tournamentMatches,
+          tree,
+        });
+        if (propagation) {
+          await updateMatch(propagation.matchId, propagation.updatedMatch);
+          await fetchMatches();
+        }
+      }
+    }
+
     setEditingMatch(null);
   };
 
@@ -354,61 +550,65 @@ export const TournamentDetailPage: React.FC = () => {
           {/* Right Actions: Quick Status & Buttons */}
           <div className="flex flex-col sm:flex-row md:flex-col items-start sm:items-center md:items-end gap-3 shrink-0">
             {/* Quick Status Segmented Control */}
-            <div className="space-y-1">
-              <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400 block md:text-right">
-                Бърза смяна на статус:
-              </span>
-              <div className="flex items-center rounded-xl bg-gray-100 dark:bg-gray-700/60 p-1 border border-gray-200 dark:border-gray-600">
-                <button
-                  type="button"
-                  onClick={() => handleStatusChange('draft')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    tournament.status === 'draft'
-                      ? 'bg-white dark:bg-gray-800 text-amber-600 dark:text-amber-400 shadow-xs'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                  aria-pressed={tournament.status === 'draft'}
-                >
-                  Чернова
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleStatusChange('in_progress')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    tournament.status === 'in_progress'
-                      ? 'bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-xs'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                  aria-pressed={tournament.status === 'in_progress'}
-                >
-                  В ход
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleStatusChange('completed')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    tournament.status === 'completed'
-                      ? 'bg-white dark:bg-gray-800 text-slate-700 dark:text-slate-300 shadow-xs'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                  aria-pressed={tournament.status === 'completed'}
-                >
-                  Приключил
-                </button>
+            {!isCompleted && (
+              <div className="space-y-1">
+                <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400 block md:text-right">
+                  Бърза смяна на статус:
+                </span>
+                <div className="flex items-center rounded-xl bg-gray-100 dark:bg-gray-700/60 p-1 border border-gray-200 dark:border-gray-600">
+                  <button
+                    type="button"
+                    onClick={() => handleStatusChange('draft')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      tournament.status === 'draft'
+                        ? 'bg-white dark:bg-gray-800 text-amber-600 dark:text-amber-400 shadow-xs'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                    aria-pressed={tournament.status === 'draft'}
+                  >
+                    Чернова
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleStatusChange('in_progress')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      tournament.status === 'in_progress'
+                        ? 'bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                    aria-pressed={tournament.status === 'in_progress'}
+                  >
+                    В ход
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleStatusChange('completed')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      tournament.status === 'completed'
+                        ? 'bg-white dark:bg-gray-800 text-slate-700 dark:text-slate-300 shadow-xs'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                    aria-pressed={tournament.status === 'completed'}
+                  >
+                    Приключил
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Edit / Delete Buttons */}
             <div className="flex items-center gap-2 mt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditTournamentOpen(true)}
-                className="flex items-center gap-1.5"
-              >
-                <Edit className="w-3.5 h-3.5" />
-                <span>Редактирай</span>
-              </Button>
+              {!isCompleted && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditTournamentOpen(true)}
+                  className="flex items-center gap-1.5"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  <span>Редактирай</span>
+                </Button>
+              )}
               <button
                 type="button"
                 onClick={() => setIsDeleteTournamentOpen(true)}
@@ -437,7 +637,7 @@ export const TournamentDetailPage: React.FC = () => {
         /* Standings & Matches Section */
         <div className="space-y-8">
           {/* Group Standings Section */}
-          {groupStandings.length > 0 && (
+          {allGroupStandings.length > 0 && (
             <div className="space-y-4" data-testid="tournament-standings-section">
               <div className="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
                 <Trophy className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
@@ -445,6 +645,19 @@ export const TournamentDetailPage: React.FC = () => {
                   Класиране в групите
                 </h2>
               </div>
+
+              {/* Playoff Finalists Selector */}
+              {totalTeamsCount >= 2 && (
+                <PlayoffFinalistsSelector
+                  groupCount={allGroupStandings.length}
+                  totalTeams={totalTeamsCount}
+                  selectedCount={selectedFinalistsCount}
+                  onChange={handleFinalistsCountChange}
+                  disabled={isCompleted || playoffMatches.length > 0}
+                />
+              )}
+
+              {/* Group Tables Grid */}
               <div
                 className={`grid grid-cols-1 ${
                   groupStandings.length > 1 ? 'lg:grid-cols-2' : ''
@@ -455,11 +668,30 @@ export const TournamentDetailPage: React.FC = () => {
                     key={grp.groupId || grp.groupName}
                     groupName={grp.groupName || undefined}
                     standings={grp.rows}
+                    qualifierMap={playoffResolution.qualifierMap}
+                    teamRosterMap={teamRosterMap}
                   />
                 ))}
               </div>
             </div>
           )}
+
+          {/* Knockout Playoff Bracket Section */}
+          <div data-testid="tournament-playoffs-section">
+            <TournamentPlayoffBracket
+              tournament={tournament}
+              playoffMatches={playoffMatches}
+              groupMatches={groupMatches}
+              tree={tournament.draft_state?.playoffs?.tree ?? null}
+              onGeneratePlayoffs={handleGeneratePlayoffs}
+              onEditMatchScore={(match) => {
+                if (!isCompleted) setEditingMatch(match);
+              }}
+              onCompleteTournament={handleCompleteTournament}
+              isGenerating={isGeneratingPlayoffs}
+              readOnly={isCompleted}
+            />
+          </div>
 
           {/* Matches List Section */}
           <div className="space-y-4">
@@ -567,7 +799,10 @@ export const TournamentDetailPage: React.FC = () => {
                   <MatchCard
                     key={m.id}
                     match={m}
-                    onEdit={(match) => setEditingMatch(match)}
+                    readOnly={isCompleted}
+                    onEdit={(match) => {
+                      if (!isCompleted) setEditingMatch(match);
+                    }}
                     hideDelete={true}
                   />
                 ))}

@@ -108,4 +108,137 @@ describe('GroupStandingsTable Component', () => {
 
     expect(screen.getByText('Няма добавени отбори в групата.')).toBeInTheDocument();
   });
+
+  it('renders direct and wildcard badges when qualifierMap is provided', () => {
+    const qualifierMap = new Map([
+      [
+        't1',
+        {
+          teamId: 't1',
+          teamName: 'Отбор 1',
+          seed: 1,
+          isWildcard: false,
+          groupOrigin: 'Група А',
+          rankInGroup: 1,
+          played: 2,
+          pointsPerMatch: 1,
+          gameDiffPerMatch: 3.5,
+          gamesWonPerMatch: 6,
+        },
+      ],
+      [
+        't2',
+        {
+          teamId: 't2',
+          teamName: 'Отбор 2',
+          seed: 4,
+          isWildcard: true,
+          groupOrigin: 'Група А',
+          rankInGroup: 2,
+          played: 2,
+          pointsPerMatch: 0.5,
+          gameDiffPerMatch: 0,
+          gamesWonPerMatch: 5,
+        },
+      ],
+    ]);
+
+    render(
+      <GroupStandingsTable
+        groupName="Група А"
+        standings={mockStandings}
+        qualifierMap={qualifierMap}
+      />
+    );
+
+    expect(screen.getByText('Плейофи')).toBeInTheDocument();
+    expect(screen.getByText('Плейофи (Wildcard)')).toBeInTheDocument();
+
+    const row1 = screen.getByTestId('standings-row-1');
+    const row2 = screen.getByTestId('standings-row-2');
+    const row3 = screen.getByTestId('standings-row-3');
+
+    expect(row1).toHaveClass('bg-emerald-50/40');
+    expect(row2).toHaveClass('bg-purple-50/40');
+    expect(row3).not.toHaveClass('bg-emerald-50/40');
+    expect(row3).not.toHaveClass('bg-purple-50/40');
+  });
+
+  it('GST-01: renders player roster below team name when teamRosterMap provided as Map', () => {
+    const teamRosterMap = new Map<string, string[]>([
+      ['t1', ['Иван Иванов', 'Петър Петров']],
+    ]);
+
+    render(
+      <GroupStandingsTable
+        groupName="Група А"
+        standings={mockStandings}
+        teamRosterMap={teamRosterMap}
+      />
+    );
+
+    const rosterEl = screen.getByText('Иван Иванов, Петър Петров');
+    expect(rosterEl).toBeInTheDocument();
+    expect(rosterEl).toHaveClass('truncate', 'mt-0.5', 'text-xs', 'text-slate-500');
+    expect(screen.getByTestId('team-roster-1')).toBe(rosterEl);
+  });
+
+  it('GST-02: renders player roster when teamRosterMap is passed as Record / Object', () => {
+    const teamRosterMap = {
+      'Отбор 2': ['Димитър Михайлов'],
+    };
+
+    render(
+      <GroupStandingsTable
+        groupName="Група А"
+        standings={mockStandings}
+        teamRosterMap={teamRosterMap}
+      />
+    );
+
+    const rosterEl = screen.getByText('Димитър Михайлов');
+    expect(rosterEl).toBeInTheDocument();
+    expect(screen.getByTestId('team-roster-2')).toBe(rosterEl);
+  });
+
+  it('GST-03: graceful fallback when team has no roster in map', () => {
+    const teamRosterMap = new Map<string, string[]>([
+      ['t1', ['Иван Иванов']],
+    ]);
+
+    render(
+      <GroupStandingsTable
+        groupName="Група А"
+        standings={mockStandings}
+        teamRosterMap={teamRosterMap}
+      />
+    );
+
+    expect(screen.getByTestId('team-roster-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('team-roster-3')).not.toBeInTheDocument();
+    expect(screen.getByText('Отбор 3')).toBeInTheDocument();
+  });
+
+  it('GST-04: supports teams prop fallback', () => {
+    const teams = [
+      {
+        id: 't1',
+        name: 'Отбор 1',
+        players: [{ id: 'p1', name: 'Георги' }],
+      },
+    ];
+
+    render(
+      <GroupStandingsTable
+        groupName="Група А"
+        standings={mockStandings}
+        teams={teams}
+      />
+    );
+
+    const rosterEl = screen.getByText('Георги');
+    expect(rosterEl).toBeInTheDocument();
+    expect(screen.getByTestId('team-roster-1')).toBe(rosterEl);
+  });
 });
+
