@@ -13,6 +13,7 @@ export interface MatchCardProps {
   onDelete?: (match: MatchDetail) => void;
   hideDelete?: boolean;
   isPlayoff?: boolean;
+  readOnly?: boolean;
 }
 
 export const MatchCard: React.FC<MatchCardProps> = ({
@@ -21,6 +22,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   onDelete,
   hideDelete = false,
   isPlayoff,
+  readOnly = false,
 }) => {
   const team1Players = match.match_players.filter((p) => p.team_side === 'team_1');
   const team2Players = match.match_players.filter((p) => p.team_side === 'team_2');
@@ -91,14 +93,16 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         </div>
 
         <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => onEdit(match)}
-            className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-            aria-label="Редактирай"
-          >
-            <Edit2 className="w-4 h-4" />
-          </button>
+          {!readOnly && onEdit && (
+            <button
+              type="button"
+              onClick={() => onEdit(match)}
+              className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+              aria-label="Редактирай"
+            >
+              <Edit2 className="w-4 h-4" />
+            </button>
+          )}
           {!hideDelete && onDelete && (
             <button
               type="button"

@@ -383,4 +383,48 @@ describe('MatchCard Component', () => {
       expect(screen.getByText('Група А')).toBeInTheDocument();
     });
   });
+
+  describe('readOnly Lockdown', () => {
+    it('MC-LOCK-01: suppresses edit button when readOnly is true', () => {
+      const handleEdit = vi.fn();
+      render(<MatchCard match={sampleMatch} onEdit={handleEdit} readOnly={true} />);
+
+      expect(screen.getByText('5')).toBeInTheDocument();
+      expect(screen.getByText('3')).toBeInTheDocument();
+      expect(screen.getByText('Димитър Бербатов')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Редактирай' })).not.toBeInTheDocument();
+    });
+
+    it('MC-LOCK-02: renders edit button and triggers onEdit when readOnly is false or default', async () => {
+      const user = userEvent.setup();
+      const handleEdit = vi.fn();
+      render(<MatchCard match={sampleMatch} onEdit={handleEdit} readOnly={false} />);
+
+      const editBtn = screen.getByRole('button', { name: 'Редактирай' });
+      expect(editBtn).toBeInTheDocument();
+      await user.click(editBtn);
+      expect(handleEdit).toHaveBeenCalledWith(sampleMatch);
+    });
+
+    it('MC-LOCK-03: retains delete button when readOnly is true if hideDelete is false and onDelete provided', async () => {
+      const user = userEvent.setup();
+      const handleDelete = vi.fn();
+      render(
+        <MatchCard
+          match={sampleMatch}
+          onEdit={vi.fn()}
+          onDelete={handleDelete}
+          hideDelete={false}
+          readOnly={true}
+        />
+      );
+
+      expect(screen.queryByRole('button', { name: 'Редактирай' })).not.toBeInTheDocument();
+      const deleteBtn = screen.getByRole('button', { name: 'Изтрий' });
+      expect(deleteBtn).toBeInTheDocument();
+      await user.click(deleteBtn);
+      expect(handleDelete).toHaveBeenCalledWith(sampleMatch);
+    });
+  });
 });
+

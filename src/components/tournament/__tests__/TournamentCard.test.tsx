@@ -124,4 +124,37 @@ describe('TournamentCard', () => {
     const link = screen.getByRole('link', { name: /към турнира/i });
     expect(link).toHaveAttribute('href', '/tournaments/t-1');
   });
+
+  describe('Completed Tournament Card Lockdown', () => {
+    it('TC-LOCK-01: suppresses edit button but retains delete button for completed tournament', () => {
+      const { onDelete } = renderCard({
+        tournament: {
+          ...mockTournament,
+          status: 'completed',
+        },
+      });
+
+      expect(screen.queryByRole('button', { name: 'Редактиране' })).not.toBeInTheDocument();
+
+      const deleteBtn = screen.getByRole('button', { name: 'Изтриване' });
+      expect(deleteBtn).toBeInTheDocument();
+      fireEvent.click(deleteBtn);
+      expect(onDelete).toHaveBeenCalledWith('t-1');
+    });
+
+    it('TC-LOCK-02: renders edit button and triggers onEdit for active/draft tournaments', () => {
+      const { onEdit } = renderCard({
+        tournament: {
+          ...mockTournament,
+          status: 'in_progress',
+        },
+      });
+
+      const editBtn = screen.getByRole('button', { name: 'Редактиране' });
+      expect(editBtn).toBeInTheDocument();
+      fireEvent.click(editBtn);
+      expect(onEdit).toHaveBeenCalledTimes(1);
+    });
+  });
 });
+

@@ -18,6 +18,7 @@ export interface TournamentPlayoffBracketProps {
   onCompleteTournament?: () => Promise<void> | void;
   isGenerating?: boolean;
   className?: string;
+  readOnly?: boolean;
 }
 
 export const TournamentPlayoffBracket: React.FC<TournamentPlayoffBracketProps> = ({
@@ -30,7 +31,9 @@ export const TournamentPlayoffBracket: React.FC<TournamentPlayoffBracketProps> =
   onCompleteTournament,
   isGenerating = false,
   className = '',
+  readOnly,
 }) => {
+  const isReadOnly = readOnly !== undefined ? readOnly : tournament.status === 'completed';
   const [showWarningModal, setShowWarningModal] = useState(false);
 
   // Group matches completion check
@@ -134,7 +137,7 @@ export const TournamentPlayoffBracket: React.FC<TournamentPlayoffBracketProps> =
               </p>
             </div>
 
-            {tournament.status !== 'completed' && onCompleteTournament && (
+            {!isReadOnly && tournament.status !== 'completed' && onCompleteTournament && (
               <Button
                 type="button"
                 variant="secondary"
@@ -171,7 +174,7 @@ export const TournamentPlayoffBracket: React.FC<TournamentPlayoffBracketProps> =
             type="button"
             variant="primary"
             onClick={handleGenerateClick}
-            disabled={isGenerating}
+            disabled={isGenerating || isReadOnly}
             data-testid="generate-playoffs-cta-btn"
             className="inline-flex items-center gap-2"
           >
@@ -213,8 +216,9 @@ export const TournamentPlayoffBracket: React.FC<TournamentPlayoffBracketProps> =
                       <MatchCard
                         match={m}
                         isPlayoff={true}
+                        readOnly={isReadOnly}
                         onEdit={(matchToEdit) => {
-                          if (!hasPlaceholder) {
+                          if (!isReadOnly && !hasPlaceholder) {
                             onEditMatchScore(matchToEdit);
                           }
                         }}
@@ -255,8 +259,9 @@ export const TournamentPlayoffBracket: React.FC<TournamentPlayoffBracketProps> =
                       <MatchCard
                         match={m}
                         isPlayoff={true}
+                        readOnly={isReadOnly}
                         onEdit={(matchToEdit) => {
-                          if (!hasPlaceholder) {
+                          if (!isReadOnly && !hasPlaceholder) {
                             onEditMatchScore(matchToEdit);
                           }
                         }}
@@ -297,8 +302,9 @@ export const TournamentPlayoffBracket: React.FC<TournamentPlayoffBracketProps> =
                       <MatchCard
                         match={m}
                         isPlayoff={true}
+                        readOnly={isReadOnly}
                         onEdit={(matchToEdit) => {
-                          if (!hasPlaceholder) {
+                          if (!isReadOnly && !hasPlaceholder) {
                             onEditMatchScore(matchToEdit);
                           }
                         }}

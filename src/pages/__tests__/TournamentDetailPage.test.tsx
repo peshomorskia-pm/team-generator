@@ -647,5 +647,120 @@ describe('TournamentDetailPage Integration Tests', () => {
     expect(matchWithAlpha.team1.players).toHaveLength(1);
     expect(matchWithAlpha.team1.players[0].name).toBe('Иван');
   });
+
+  describe('Completed Tournament Lockdown', () => {
+    it('TDP-LOCK-01: suppresses header edit button and quick status switcher for completed tournament', () => {
+      vi.spyOn(useTournamentsModule, 'useTournaments').mockReturnValue({
+        tournaments: [{ ...dummyTournament, status: 'completed' }],
+        loading: false,
+        error: null,
+        fetchTournaments: vi.fn(),
+        createTournament: vi.fn(),
+        updateTournament: mockUpdateTournament,
+        deleteTournament: mockDeleteTournament,
+        saveTournamentDraft: vi.fn(),
+      });
+
+      renderComponent();
+
+      expect(screen.queryByRole('button', { name: /редактирай/i })).not.toBeInTheDocument();
+      expect(screen.queryByText(/бърза смяна на статус/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Чернова' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'В ход' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Приключил' })).not.toBeInTheDocument();
+    });
+
+    it('TDP-LOCK-02: retains delete button as active and functional for completed tournament', async () => {
+      const user = userEvent.setup();
+      vi.spyOn(useTournamentsModule, 'useTournaments').mockReturnValue({
+        tournaments: [{ ...dummyTournament, status: 'completed' }],
+        loading: false,
+        error: null,
+        fetchTournaments: vi.fn(),
+        createTournament: vi.fn(),
+        updateTournament: mockUpdateTournament,
+        deleteTournament: mockDeleteTournament,
+        saveTournamentDraft: vi.fn(),
+      });
+
+      renderComponent();
+
+      const deleteBtn = screen.getByRole('button', { name: /изтрий турнир/i });
+      expect(deleteBtn).toBeInTheDocument();
+      await user.click(deleteBtn);
+
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getByText(/сигурни ли сте, че искате да изтриете турнира/i)).toBeInTheDocument();
+    });
+
+    it('TDP-LOCK-03: renders group and playoff matches in readOnly mode with zero edit buttons', () => {
+      const playoffMatch: MatchDetail = {
+        id: 'p-final',
+        match_format: 'doubles',
+        team_1_score: 6,
+        team_2_score: 4,
+        played_at: '2026-04-18T16:00:00Z',
+        team_1_name: 'Отбор Алфа',
+        team_2_name: 'Отбор Бета',
+        group_name: 'Финал',
+        round: 2,
+        tournament_id: 't-1',
+        created_at: '2026-04-18T16:00:00Z',
+        updated_at: '2026-04-18T16:00:00Z',
+        match_players: [],
+      };
+
+      vi.spyOn(useTournamentsModule, 'useTournaments').mockReturnValue({
+        tournaments: [{ ...dummyTournament, status: 'completed' }],
+        loading: false,
+        error: null,
+        fetchTournaments: vi.fn(),
+        createTournament: vi.fn(),
+        updateTournament: mockUpdateTournament,
+        deleteTournament: mockDeleteTournament,
+        saveTournamentDraft: vi.fn(),
+      });
+
+      vi.spyOn(useMatchesModule, 'useMatches').mockReturnValue({
+        matches: [...dummyMatches, playoffMatch],
+        loading: false,
+        error: null,
+        alert: null,
+        fetchMatches: vi.fn(),
+        createMatch: vi.fn(),
+        updateMatch: mockUpdateMatch,
+        deleteMatch: mockDeleteMatch,
+        bulkCreateMatches: vi.fn(),
+        clearAlert: vi.fn(),
+      });
+
+      renderComponent();
+
+      expect(screen.queryAllByRole('button', { name: /редактирай/i })).toHaveLength(0);
+    });
+
+    it('TDP-LOCK-04: disables playoff finalists selector buttons when tournament is completed', () => {
+      vi.spyOn(useTournamentsModule, 'useTournaments').mockReturnValue({
+        tournaments: [{ ...dummyTournament, status: 'completed' }],
+        loading: false,
+        error: null,
+        fetchTournaments: vi.fn(),
+        createTournament: vi.fn(),
+        updateTournament: mockUpdateTournament,
+        deleteTournament: mockDeleteTournament,
+        saveTournamentDraft: vi.fn(),
+      });
+
+      renderComponent();
+
+      const selector = screen.getByTestId('playoff-finalists-selector');
+      expect(selector).toBeInTheDocument();
+      const buttons = within(selector).getAllByRole('button');
+      for (const btn of buttons) {
+        expect(btn).toBeDisabled();
+      }
+    });
+  });
 });
+
 

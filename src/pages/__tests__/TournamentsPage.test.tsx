@@ -215,8 +215,8 @@ describe('TournamentsPage', () => {
 
   it('opens edit modal and submits updated tournament', async () => {
     updateTournamentMock.mockResolvedValueOnce({
-      ...mockTournaments[0],
-      title: 'Обновена Зима',
+      ...mockTournaments[1],
+      title: 'Обновена Пролет',
     });
 
     renderComponent();
@@ -225,10 +225,10 @@ describe('TournamentsPage', () => {
     fireEvent.click(editButtons[0]);
 
     expect(screen.getByRole('heading', { name: 'Редактиране на турнир' })).toBeInTheDocument();
-    expect(screen.getByLabelText(/име на турнира/i)).toHaveValue('Турнир Зима');
+    expect(screen.getByLabelText(/име на турнира/i)).toHaveValue('Турнир Пролет');
 
     fireEvent.change(screen.getByLabelText(/име на турнира/i), {
-      target: { value: 'Обновена Зима' },
+      target: { value: 'Обновена Пролет' },
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Запази' }));
@@ -236,9 +236,9 @@ describe('TournamentsPage', () => {
     await waitFor(() => {
       expect(updateTournamentMock).toHaveBeenCalledTimes(1);
       expect(updateTournamentMock).toHaveBeenCalledWith(
-        't-1',
+        't-2',
         expect.objectContaining({
-          title: 'Обновена Зима',
+          title: 'Обновена Пролет',
         })
       );
     });

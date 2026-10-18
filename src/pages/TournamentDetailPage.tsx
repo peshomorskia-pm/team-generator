@@ -91,6 +91,8 @@ export const TournamentDetailPage: React.FC = () => {
     [tournaments, id]
   );
 
+  const isCompleted = tournament?.status === 'completed';
+
   const [bulkAlertMessage, setBulkAlertMessage] = useState<string | null>(() => {
     if (locationState?.fromBulkCreate) {
       const count = locationState.matchCount ?? 0;
@@ -330,7 +332,7 @@ export const TournamentDetailPage: React.FC = () => {
 
   // Tournament edit / delete handlers
   const handleEditTournamentSave = async (data: UpdateTournamentInput) => {
-    if (!tournament) return;
+    if (!tournament || isCompleted) return;
     await updateTournament(tournament.id, data);
   };
 
@@ -347,7 +349,7 @@ export const TournamentDetailPage: React.FC = () => {
     team1Score: number | null,
     team2Score: number | null
   ) => {
-    if (!editingMatch) return;
+    if (!editingMatch || isCompleted) return;
     const t1Players = editingMatch.match_players
       .filter((p) => p.team_side === 'team_1')
       .map((p) => ({
@@ -548,61 +550,65 @@ export const TournamentDetailPage: React.FC = () => {
           {/* Right Actions: Quick Status & Buttons */}
           <div className="flex flex-col sm:flex-row md:flex-col items-start sm:items-center md:items-end gap-3 shrink-0">
             {/* Quick Status Segmented Control */}
-            <div className="space-y-1">
-              <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400 block md:text-right">
-                Бърза смяна на статус:
-              </span>
-              <div className="flex items-center rounded-xl bg-gray-100 dark:bg-gray-700/60 p-1 border border-gray-200 dark:border-gray-600">
-                <button
-                  type="button"
-                  onClick={() => handleStatusChange('draft')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    tournament.status === 'draft'
-                      ? 'bg-white dark:bg-gray-800 text-amber-600 dark:text-amber-400 shadow-xs'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                  aria-pressed={tournament.status === 'draft'}
-                >
-                  Чернова
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleStatusChange('in_progress')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    tournament.status === 'in_progress'
-                      ? 'bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-xs'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                  aria-pressed={tournament.status === 'in_progress'}
-                >
-                  В ход
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleStatusChange('completed')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    tournament.status === 'completed'
-                      ? 'bg-white dark:bg-gray-800 text-slate-700 dark:text-slate-300 shadow-xs'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                  aria-pressed={tournament.status === 'completed'}
-                >
-                  Приключил
-                </button>
+            {!isCompleted && (
+              <div className="space-y-1">
+                <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400 block md:text-right">
+                  Бърза смяна на статус:
+                </span>
+                <div className="flex items-center rounded-xl bg-gray-100 dark:bg-gray-700/60 p-1 border border-gray-200 dark:border-gray-600">
+                  <button
+                    type="button"
+                    onClick={() => handleStatusChange('draft')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      tournament.status === 'draft'
+                        ? 'bg-white dark:bg-gray-800 text-amber-600 dark:text-amber-400 shadow-xs'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                    aria-pressed={tournament.status === 'draft'}
+                  >
+                    Чернова
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleStatusChange('in_progress')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      tournament.status === 'in_progress'
+                        ? 'bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                    aria-pressed={tournament.status === 'in_progress'}
+                  >
+                    В ход
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleStatusChange('completed')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      tournament.status === 'completed'
+                        ? 'bg-white dark:bg-gray-800 text-slate-700 dark:text-slate-300 shadow-xs'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                    aria-pressed={tournament.status === 'completed'}
+                  >
+                    Приключил
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Edit / Delete Buttons */}
             <div className="flex items-center gap-2 mt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditTournamentOpen(true)}
-                className="flex items-center gap-1.5"
-              >
-                <Edit className="w-3.5 h-3.5" />
-                <span>Редактирай</span>
-              </Button>
+              {!isCompleted && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditTournamentOpen(true)}
+                  className="flex items-center gap-1.5"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  <span>Редактирай</span>
+                </Button>
+              )}
               <button
                 type="button"
                 onClick={() => setIsDeleteTournamentOpen(true)}
@@ -647,7 +653,7 @@ export const TournamentDetailPage: React.FC = () => {
                   totalTeams={totalTeamsCount}
                   selectedCount={selectedFinalistsCount}
                   onChange={handleFinalistsCountChange}
-                  disabled={playoffMatches.length > 0}
+                  disabled={isCompleted || playoffMatches.length > 0}
                 />
               )}
 
@@ -678,9 +684,12 @@ export const TournamentDetailPage: React.FC = () => {
               groupMatches={groupMatches}
               tree={tournament.draft_state?.playoffs?.tree ?? null}
               onGeneratePlayoffs={handleGeneratePlayoffs}
-              onEditMatchScore={(match) => setEditingMatch(match)}
+              onEditMatchScore={(match) => {
+                if (!isCompleted) setEditingMatch(match);
+              }}
               onCompleteTournament={handleCompleteTournament}
               isGenerating={isGeneratingPlayoffs}
+              readOnly={isCompleted}
             />
           </div>
 
@@ -790,7 +799,10 @@ export const TournamentDetailPage: React.FC = () => {
                   <MatchCard
                     key={m.id}
                     match={m}
-                    onEdit={(match) => setEditingMatch(match)}
+                    readOnly={isCompleted}
+                    onEdit={(match) => {
+                      if (!isCompleted) setEditingMatch(match);
+                    }}
                     hideDelete={true}
                   />
                 ))}

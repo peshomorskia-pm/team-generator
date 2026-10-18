@@ -284,4 +284,72 @@ describe('TournamentPlayoffBracket Component', () => {
     expect(screen.getByText('Полуфинал')).toBeInTheDocument();
     expect(screen.getByText('🏆 Финал')).toBeInTheDocument();
   });
+
+  describe('Playoff Bracket Lockdown', () => {
+    const finalMatch: MatchDetail = {
+      id: 'p-final',
+      match_format: 'doubles',
+      team_1_score: 6,
+      team_2_score: 4,
+      played_at: '2026-04-18T15:00:00Z',
+      team_1_name: 'Отбор Шампиони',
+      team_2_name: 'Отбор Финалисти',
+      group_name: 'Финал',
+      round: 2,
+      tournament_id: 't-1',
+      created_at: '2026-04-18T10:00:00Z',
+      updated_at: '2026-04-18T10:00:00Z',
+      match_players: [],
+    };
+
+    it('BRK-LOCK-01: suppresses edit buttons and complete button when tournament.status is completed', () => {
+      const handleEdit = vi.fn();
+      const handleComplete = vi.fn();
+
+      render(
+        <TournamentPlayoffBracket
+          tournament={{ ...dummyTournament, status: 'completed' }}
+          playoffMatches={[finalMatch]}
+          groupMatches={[completedGroupMatch]}
+          onGeneratePlayoffs={vi.fn()}
+          onEditMatchScore={handleEdit}
+          onCompleteTournament={handleComplete}
+        />
+      );
+
+      // Assert no edit buttons rendered anywhere in the bracket
+      const editButtons = screen.queryAllByRole('button', { name: /редактирай/i });
+      expect(editButtons).toHaveLength(0);
+
+      // Champion banner displays champion team
+      expect(screen.getByTestId('playoff-champion-banner')).toBeInTheDocument();
+      expect(screen.getByText('🏆 Отбор Шампиони')).toBeInTheDocument();
+
+      // Assert complete tournament button is suppressed
+      expect(screen.queryByTestId('mark-tournament-completed-btn')).not.toBeInTheDocument();
+    });
+
+    it('BRK-LOCK-02: suppresses edit buttons when explicit readOnly={true} prop is passed', () => {
+      const handleEdit = vi.fn();
+
+      render(
+        <TournamentPlayoffBracket
+          tournament={{ ...dummyTournament, status: 'in_progress' }}
+          playoffMatches={[finalMatch]}
+          groupMatches={[completedGroupMatch]}
+          onGeneratePlayoffs={vi.fn()}
+          onEditMatchScore={handleEdit}
+          readOnly={true}
+        />
+      );
+
+      // Assert zero edit buttons rendered
+      const editButtons = screen.queryAllByRole('button', { name: /редактирай/i });
+      expect(editButtons).toHaveLength(0);
+
+      // Assert complete tournament button is also suppressed under readOnly
+      expect(screen.queryByTestId('mark-tournament-completed-btn')).not.toBeInTheDocument();
+    });
+  });
 });
+

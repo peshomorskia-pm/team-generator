@@ -32,6 +32,6 @@ Tournament organizers required the flexibility to configure how many teams advan
    - **Streamlined Match Cards:** Suppress redundant format (`По двойки`) and round (`Кръг X`) badges on playoff cards while highlighting stage badges (`🏆 Финал`).
 
 ## Consequences
-- **Positive:** Full flexibility for tournament organizers with mathematically sound qualification logic, player roster visibility, and clean Bulgarian UI localization.
+- **Positive:** Full flexibility for tournament organizers with mathematically sound qualification logic, player roster visibility, clean Bulgarian UI localization, and robust lifecycle immutability ("Само триене": completed tournaments are fully locked against edits while administrative deletion remains preserved).
 - **Negative:** Slightly increased state complexity in tournament matching workflows, managed cleanly via immutable utility helpers and React hooks.
 

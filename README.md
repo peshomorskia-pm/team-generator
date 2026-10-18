@@ -4,7 +4,7 @@
 [![Vercel Status](https://img.shields.io/badge/Hosted%20On-Vercel-black?logo=vercel)](https://team-generator-psi.vercel.app)
 [![Database](https://img.shields.io/badge/Database-Supabase%20Cloud-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
 
-A scalable Multi-Page Application (SPA) with a responsive App Shell, client-side routing, and light/dark theme support for randomly assigning and balancing players into competitive teams. Built with **React 19**, **TypeScript**, **Vite**, **Tailwind CSS**, **React Router v7**, **Vitest** (739 tests across 60 test files, 100% pass rate), **happy-dom**, and **React Testing Library**, alongside **Supabase** backend integration.
+A scalable Multi-Page Application (SPA) with a responsive App Shell, client-side routing, and light/dark theme support for randomly assigning and balancing players into competitive teams. Built with **React 19**, **TypeScript**, **Vite**, **Tailwind CSS**, **React Router v7**, **Vitest** (750 tests across 60 test files, 100% pass rate), **happy-dom**, and **React Testing Library**, alongside **Supabase** backend integration.
 
 * **Live Production Application:** [https://team-generator-psi.vercel.app](https://team-generator-psi.vercel.app)
 
@@ -172,7 +172,7 @@ npx vitest --ui
 
 ### Mandatory Quality Gates
 Before any pull request can be approved and merged into `dev`:
-1. **`npm test`**: 100% test pass rate across all suites (295/295 tests across 36 files passing).
+1. **`npm test`**: 100% test pass rate across all suites (750/750 tests across 60 files passing).
 2. **`npm run test:coverage`**: >90% overall line and statement coverage.
 3. **`npm run typecheck`**: Zero TypeScript static compilation errors (`tsc --noEmit`).
 4. **`npm run lint`**: Zero ESLint warnings or errors (`eslint src`).
