@@ -112,21 +112,6 @@ export const TournamentPlayoffBracket: React.FC<TournamentPlayoffBracketProps> =
             </span>
           )}
         </div>
-
-        {!hasGeneratedMatches && (
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            onClick={handleGenerateClick}
-            disabled={isGenerating}
-            data-testid="generate-playoffs-btn"
-            className="flex items-center gap-2 shadow-xs"
-          >
-            <Trophy className="w-4 h-4" />
-            <span>🏆 Генерирай елиминации</span>
-          </Button>
-        )}
       </div>
 
       {/* Champion Banner */}

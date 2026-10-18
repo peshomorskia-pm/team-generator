@@ -49,7 +49,7 @@ describe('TournamentPlayoffBracket Component', () => {
     match_players: [],
   };
 
-  it('renders CTA empty state when playoffMatches is empty', () => {
+  it('renders exactly one CTA generate button in empty state when playoffMatches is empty', () => {
     render(
       <TournamentPlayoffBracket
         tournament={dummyTournament}
@@ -63,7 +63,32 @@ describe('TournamentPlayoffBracket Component', () => {
     expect(
       screen.getByText('Елиминационната схема все още не е генерирана')
     ).toBeInTheDocument();
+
+    // Assert exactly one generate button exists across the entire rendered component
+    const generateButtons = screen.getAllByRole('button', { name: /генерирай елиминации/i });
+    expect(generateButtons).toHaveLength(1);
+
+    // Assert empty state CTA is present
     expect(screen.getByTestId('generate-playoffs-cta-btn')).toBeInTheDocument();
+
+    // Assert duplicate header button is completely absent
+    expect(screen.queryByTestId('generate-playoffs-btn')).not.toBeInTheDocument();
+  });
+
+  it('renders zero generate buttons when playoffMatches exist', () => {
+    render(
+      <TournamentPlayoffBracket
+        tournament={dummyTournament}
+        playoffMatches={[completedGroupMatch]}
+        groupMatches={[completedGroupMatch]}
+        onGeneratePlayoffs={vi.fn()}
+        onEditMatchScore={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByTestId('generate-playoffs-btn')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('generate-playoffs-cta-btn')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /генерирай елиминации/i })).not.toBeInTheDocument();
   });
 
   it('shows warning modal on generate click when group matches remain unplayed', () => {
