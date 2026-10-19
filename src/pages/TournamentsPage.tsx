@@ -319,7 +319,7 @@ export const TournamentsPage: React.FC = () => {
       {deletingTournament && (
         <DeleteTournamentModal
           isOpen={Boolean(deletingTournament)}
-          tournamentTitle={deletingTournament.title}
+          tournament={deletingTournament}
           onClose={() => setDeletingTournament(null)}
           onConfirm={handleDeleteConfirm}
         />

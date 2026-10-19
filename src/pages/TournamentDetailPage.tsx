@@ -823,10 +823,10 @@ export const TournamentDetailPage: React.FC = () => {
       )}
 
       {/* Delete Tournament Modal */}
-      {isDeleteTournamentOpen && (
+      {isDeleteTournamentOpen && tournament && (
         <DeleteTournamentModal
           isOpen={isDeleteTournamentOpen}
-          tournamentTitle={tournament.title}
+          tournament={tournament}
           onClose={() => setIsDeleteTournamentOpen(false)}
           onConfirm={handleDeleteTournamentConfirm}
         />

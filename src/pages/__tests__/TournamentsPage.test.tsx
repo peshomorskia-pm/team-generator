@@ -253,16 +253,44 @@ describe('TournamentsPage', () => {
     fireEvent.click(deleteButtons[0]);
 
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByRole('heading', { name: 'Изтриване на турнир' })).toBeInTheDocument();
-    expect(within(dialog).getByText('Турнир Зима')).toBeInTheDocument();
+    expect(within(dialog).getByRole('heading', { name: 'Необратимо изтриване на турнир' })).toBeInTheDocument();
+    expect(within(dialog).getByText(/⚠️ Внимание: Този турнир съдържа записани мачове и официални резултати/i)).toBeInTheDocument();
 
-    // Confirm delete in modal
-    const confirmDeleteBtn = within(dialog).getByRole('button', { name: 'Изтриване' });
+    const confirmDeleteBtn = within(dialog).getByRole('button', { name: /🗑️ Изтрий безвъзвратно/i });
+    expect(confirmDeleteBtn).toBeDisabled();
+
+    const input = within(dialog).getByPlaceholderText('Въведете името на турнира тук...');
+    fireEvent.change(input, { target: { value: 'Турнир Зима' } });
+    expect(confirmDeleteBtn).toBeEnabled();
+
     fireEvent.click(confirmDeleteBtn);
 
     await waitFor(() => {
       expect(deleteTournamentMock).toHaveBeenCalledTimes(1);
       expect(deleteTournamentMock).toHaveBeenCalledWith('t-1');
+    });
+  });
+
+  it('opens draft delete confirmation modal and immediately deletes draft tournament upon confirmation', async () => {
+    deleteTournamentMock.mockResolvedValueOnce(undefined);
+
+    renderComponent();
+
+    const deleteButtons = screen.getAllByRole('button', { name: 'Изтриване' });
+    // mockTournaments[2] is 't-3' (status: 'draft')
+    fireEvent.click(deleteButtons[2]);
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Изтриване на чернова' })).toBeInTheDocument();
+
+    const confirmDeleteBtn = within(dialog).getByRole('button', { name: 'Изтрий' });
+    expect(confirmDeleteBtn).toBeEnabled();
+
+    fireEvent.click(confirmDeleteBtn);
+
+    await waitFor(() => {
+      expect(deleteTournamentMock).toHaveBeenCalledTimes(1);
+      expect(deleteTournamentMock).toHaveBeenCalledWith('t-3');
     });
   });
 });
