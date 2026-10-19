@@ -185,137 +185,151 @@ export const TournamentPlayoffBracket: React.FC<TournamentPlayoffBracketProps> =
       ) : (
         /* Multi-Stage Bracket Columns */
         <div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start"
-          data-testid="playoffs-bracket-columns"
+          className="overflow-x-auto pb-4 scrollbar-thin"
+          data-testid="playoffs-bracket-scroll-container"
         >
-          {/* Quarterfinals Column */}
-          {qfMatches.length > 0 && (
-            <div className="space-y-4" data-testid="qf-column">
-              <div className="flex items-center justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
-                  <span>1/4-финали</span>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300">
-                    {qfMatches.length}
-                  </span>
-                </h3>
+          <div
+            className="flex flex-col md:flex-row gap-6 items-start min-w-full"
+            data-testid="playoffs-bracket-columns"
+          >
+            {/* Quarterfinals Column */}
+            {qfMatches.length > 0 && (
+              <div
+                className="w-full md:w-[340px] md:min-w-[320px] md:flex-1 shrink-0 flex flex-col gap-4"
+                data-testid="qf-column"
+              >
+                <div className="flex items-center justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
+                  <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                    <span>1/4-финали</span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300">
+                      {qfMatches.length}
+                    </span>
+                  </h3>
+                </div>
+                <div className="space-y-4">
+                  {qfMatches.map((m) => {
+                    const hasPlaceholder =
+                      isPlaceholderTeam(m.team_1_name) || isPlaceholderTeam(m.team_2_name);
+                    return (
+                      <div
+                        key={m.id}
+                        className={
+                          hasPlaceholder
+                            ? 'opacity-85 border border-dashed border-gray-300 dark:border-slate-600 rounded-2xl'
+                            : ''
+                        }
+                        data-testid={`bracket-match-${m.id}`}
+                      >
+                        <MatchCard
+                          match={m}
+                          isPlayoff={true}
+                          readOnly={isReadOnly}
+                          onEdit={(matchToEdit) => {
+                            if (!isReadOnly && !hasPlaceholder) {
+                              onEditMatchScore(matchToEdit);
+                            }
+                          }}
+                          hideDelete={true}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="space-y-4">
-                {qfMatches.map((m) => {
-                  const hasPlaceholder =
-                    isPlaceholderTeam(m.team_1_name) || isPlaceholderTeam(m.team_2_name);
-                  return (
-                    <div
-                      key={m.id}
-                      className={
-                        hasPlaceholder
-                          ? 'opacity-85 border border-dashed border-gray-300 dark:border-slate-600 rounded-2xl'
-                          : ''
-                      }
-                      data-testid={`bracket-match-${m.id}`}
-                    >
-                      <MatchCard
-                        match={m}
-                        isPlayoff={true}
-                        readOnly={isReadOnly}
-                        onEdit={(matchToEdit) => {
-                          if (!isReadOnly && !hasPlaceholder) {
-                            onEditMatchScore(matchToEdit);
-                          }
-                        }}
-                        hideDelete={true}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+            )}
 
-          {/* Semifinals Column */}
-          {sfMatches.length > 0 && (
-            <div className="space-y-4" data-testid="sf-column">
-              <div className="flex items-center justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
-                  <span>Полуфинали</span>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300">
-                    {sfMatches.length}
-                  </span>
-                </h3>
+            {/* Semifinals Column */}
+            {sfMatches.length > 0 && (
+              <div
+                className="w-full md:w-[340px] md:min-w-[320px] md:flex-1 shrink-0 flex flex-col gap-4"
+                data-testid="sf-column"
+              >
+                <div className="flex items-center justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
+                  <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                    <span>Полуфинали</span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300">
+                      {sfMatches.length}
+                    </span>
+                  </h3>
+                </div>
+                <div className="space-y-4">
+                  {sfMatches.map((m) => {
+                    const hasPlaceholder =
+                      isPlaceholderTeam(m.team_1_name) || isPlaceholderTeam(m.team_2_name);
+                    return (
+                      <div
+                        key={m.id}
+                        className={
+                          hasPlaceholder
+                            ? 'opacity-85 border border-dashed border-gray-300 dark:border-slate-600 rounded-2xl'
+                            : ''
+                        }
+                        data-testid={`bracket-match-${m.id}`}
+                      >
+                        <MatchCard
+                          match={m}
+                          isPlayoff={true}
+                          readOnly={isReadOnly}
+                          onEdit={(matchToEdit) => {
+                            if (!isReadOnly && !hasPlaceholder) {
+                              onEditMatchScore(matchToEdit);
+                            }
+                          }}
+                          hideDelete={true}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="space-y-4">
-                {sfMatches.map((m) => {
-                  const hasPlaceholder =
-                    isPlaceholderTeam(m.team_1_name) || isPlaceholderTeam(m.team_2_name);
-                  return (
-                    <div
-                      key={m.id}
-                      className={
-                        hasPlaceholder
-                          ? 'opacity-85 border border-dashed border-gray-300 dark:border-slate-600 rounded-2xl'
-                          : ''
-                      }
-                      data-testid={`bracket-match-${m.id}`}
-                    >
-                      <MatchCard
-                        match={m}
-                        isPlayoff={true}
-                        readOnly={isReadOnly}
-                        onEdit={(matchToEdit) => {
-                          if (!isReadOnly && !hasPlaceholder) {
-                            onEditMatchScore(matchToEdit);
-                          }
-                        }}
-                        hideDelete={true}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+            )}
 
-          {/* Final Column */}
-          {finalMatches.length > 0 && (
-            <div className="space-y-4" data-testid="final-column">
-              <div className="flex items-center justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
-                  <span>Финал</span>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400">
-                    Трофей 🏆
-                  </span>
-                </h3>
+            {/* Final Column */}
+            {finalMatches.length > 0 && (
+              <div
+                className="w-full md:w-[340px] md:min-w-[320px] md:flex-1 shrink-0 flex flex-col gap-4"
+                data-testid="final-column"
+              >
+                <div className="flex items-center justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
+                  <h3 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                    <span>Финал</span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400">
+                      Трофей 🏆
+                    </span>
+                  </h3>
+                </div>
+                <div className="space-y-4">
+                  {finalMatches.map((m) => {
+                    const hasPlaceholder =
+                      isPlaceholderTeam(m.team_1_name) || isPlaceholderTeam(m.team_2_name);
+                    return (
+                      <div
+                        key={m.id}
+                        className={
+                          hasPlaceholder
+                            ? 'opacity-85 border border-dashed border-gray-300 dark:border-slate-600 rounded-2xl'
+                            : ''
+                        }
+                        data-testid={`bracket-match-${m.id}`}
+                      >
+                        <MatchCard
+                          match={m}
+                          isPlayoff={true}
+                          readOnly={isReadOnly}
+                          onEdit={(matchToEdit) => {
+                            if (!isReadOnly && !hasPlaceholder) {
+                              onEditMatchScore(matchToEdit);
+                            }
+                          }}
+                          hideDelete={true}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="space-y-4">
-                {finalMatches.map((m) => {
-                  const hasPlaceholder =
-                    isPlaceholderTeam(m.team_1_name) || isPlaceholderTeam(m.team_2_name);
-                  return (
-                    <div
-                      key={m.id}
-                      className={
-                        hasPlaceholder
-                          ? 'opacity-85 border border-dashed border-gray-300 dark:border-slate-600 rounded-2xl'
-                          : ''
-                      }
-                      data-testid={`bracket-match-${m.id}`}
-                    >
-                      <MatchCard
-                        match={m}
-                        isPlayoff={true}
-                        readOnly={isReadOnly}
-                        onEdit={(matchToEdit) => {
-                          if (!isReadOnly && !hasPlaceholder) {
-                            onEditMatchScore(matchToEdit);
-                          }
-                        }}
-                        hideDelete={true}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
 

@@ -351,5 +351,74 @@ describe('TournamentPlayoffBracket Component', () => {
       expect(screen.queryByTestId('mark-tournament-completed-btn')).not.toBeInTheDocument();
     });
   });
+
+  describe('Bracket Column Constraints & Horizontal Scrolling', () => {
+    const playoffMatches: MatchDetail[] = [
+      {
+        id: 'p-sf-1',
+        match_format: 'doubles',
+        team_1_score: 6,
+        team_2_score: 2,
+        played_at: '2026-04-18T13:00:00Z',
+        team_1_name: 'Отбор Алфа',
+        team_2_name: 'Отбор Бета',
+        group_name: 'Полуфинал',
+        round: 1,
+        tournament_id: 't-1',
+        created_at: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+        match_players: [],
+      },
+      {
+        id: 'p-final',
+        match_format: 'doubles',
+        team_1_score: null,
+        team_2_score: null,
+        played_at: '2026-04-18T15:00:00Z',
+        team_1_name: 'Отбор Алфа',
+        team_2_name: 'Отбор Гама',
+        group_name: 'Финал',
+        round: 2,
+        tournament_id: 't-1',
+        created_at: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+        match_players: [],
+      },
+    ];
+
+    it('BRK-SCR-01: renders outer scroll container with horizontal scroll and padding classes', () => {
+      render(
+        <TournamentPlayoffBracket
+          tournament={dummyTournament}
+          playoffMatches={playoffMatches}
+          groupMatches={[completedGroupMatch]}
+          onGeneratePlayoffs={vi.fn()}
+          onEditMatchScore={vi.fn()}
+        />
+      );
+
+      const scrollContainer = screen.getByTestId('playoffs-bracket-scroll-container');
+      expect(scrollContainer).toBeInTheDocument();
+      expect(scrollContainer).toHaveClass('overflow-x-auto', 'pb-4');
+    });
+
+    it('BRK-COL-01: applies width and shrink constraints to stage columns', () => {
+      render(
+        <TournamentPlayoffBracket
+          tournament={dummyTournament}
+          playoffMatches={playoffMatches}
+          groupMatches={[completedGroupMatch]}
+          onGeneratePlayoffs={vi.fn()}
+          onEditMatchScore={vi.fn()}
+        />
+      );
+
+      const sfColumn = screen.getByTestId('sf-column');
+      const finalColumn = screen.getByTestId('final-column');
+
+      expect(sfColumn).toHaveClass('md:min-w-[320px]', 'shrink-0');
+      expect(finalColumn).toHaveClass('md:min-w-[320px]', 'shrink-0');
+    });
+  });
 });
 

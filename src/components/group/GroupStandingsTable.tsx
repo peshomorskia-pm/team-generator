@@ -156,7 +156,8 @@ export const GroupStandingsTable: React.FC<GroupStandingsTableProps> = ({
                         </div>
                         {rosterText && (
                           <div
-                            className="text-xs text-slate-500 dark:text-slate-400 font-normal truncate mt-0.5"
+                            className="text-xs text-slate-500 dark:text-slate-400 font-normal line-clamp-2 break-words mt-0.5"
+                            title={rosterText}
                             data-testid={`team-roster-${row.rank}`}
                           >
                             {rosterText}
