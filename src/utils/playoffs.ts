@@ -176,6 +176,281 @@ function compareNormalized(
   return a.teamName.localeCompare(b.teamName, 'bg');
 }
 
+/**
+ * Safeguard against same-group pairings in initial round matches.
+ * Performs swaps between pairing opponents where valid cross-group combinations exist.
+ */
+function eliminateSameGroupConflicts(pairings: PlayoffPairing[]): void {
+  for (let i = 0; i < pairings.length; i++) {
+    const p1 = pairings[i];
+    if (
+      p1.team1.groupOrigin &&
+      p1.team2.groupOrigin &&
+      p1.team1.groupOrigin === p1.team2.groupOrigin
+    ) {
+      for (let j = 0; j < pairings.length; j++) {
+        if (i === j) continue;
+        const p2 = pairings[j];
+        if (
+          p1.team1.groupOrigin !== p2.team2.groupOrigin &&
+          p2.team1.groupOrigin !== p1.team2.groupOrigin
+        ) {
+          const temp = p1.team2;
+          p1.team2 = p2.team2;
+          p2.team2 = temp;
+          break;
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Ensures higher-seeded team (smaller seed number) is in team1 slot for each initial round match.
+ */
+function ensureHigherSeedInTeam1(pairings: PlayoffPairing[]): void {
+  for (const p of pairings) {
+    if (p.team1.seed > 0 && p.team2.seed > 0 && p.team1.seed > p.team2.seed) {
+      const temp = p.team1;
+      p.team1 = p.team2;
+      p.team2 = temp;
+    }
+  }
+}
+
+/**
+ * Resolves deterministic cross-group playoff pairings for Round 1 of the bracket.
+ * Guarantees that teams qualifying from the same group are separated into opposite
+ * halves of the bracket whenever possible.
+ *
+ * @param qualifiers Sorted list of playoff qualifiers (seeds 1 to K)
+ * @param finalistsCount Number of playoff spots K in {2, 4, 8}
+ * @param groupCount Total number of tournament groups G
+ * @returns Array of PlayoffPairing objects for Round 1
+ */
+export function buildPlayoffPairings(
+  qualifiers: PlayoffQualifier[],
+  finalistsCount: PlayoffFinalistsCount | number,
+  groupCount?: number
+): PlayoffPairing[] {
+  const K = finalistsCount as PlayoffFinalistsCount;
+  if (!qualifiers || qualifiers.length === 0 || K < 2) {
+    return [];
+  }
+
+  const distinctGroups = new Set(
+    qualifiers.map((q) => q.groupOrigin).filter((origin) => Boolean(origin && origin.trim()))
+  );
+  const G = groupCount && groupCount > 0 ? groupCount : (distinctGroups.size || 1);
+
+  const getSeed = (s: number): PlayoffQualifier =>
+    qualifiers.find((q) => q.seed === s) || {
+      teamId: `tbd-seed-${s}`,
+      teamName: `Поставено лице ${s}`,
+      seed: s,
+      isWildcard: false,
+      groupOrigin: '',
+      rankInGroup: 1,
+      played: 0,
+      pointsPerMatch: 0,
+      gameDiffPerMatch: 0,
+      gamesWonPerMatch: 0,
+    };
+
+  const pairings: PlayoffPairing[] = [];
+
+  if (K === 2) {
+    pairings.push({
+      matchIndex: 0,
+      stage: 'final',
+      team1: getSeed(1),
+      team2: getSeed(2),
+    });
+    return pairings;
+  }
+
+  if (K === 4) {
+    if (G === 2) {
+      // 2 Groups, 4 Finalists (AC-1)
+      const w1 = getSeed(1);
+      const w2 = getSeed(2);
+      let ra = w1.groupOrigin
+        ? qualifiers.find((q) => q.groupOrigin === w1.groupOrigin && q.seed !== w1.seed)
+        : undefined;
+      let rb = w2.groupOrigin
+        ? qualifiers.find(
+            (q) => q.groupOrigin === w2.groupOrigin && q.seed !== w2.seed && q.teamId !== ra?.teamId
+          )
+        : undefined;
+      if (!ra) ra = getSeed(3);
+      if (!rb) rb = getSeed(4);
+
+      pairings.push({
+        matchIndex: 0,
+        stage: 'sf',
+        team1: w1,
+        team2: rb,
+      });
+      pairings.push({
+        matchIndex: 1,
+        stage: 'sf',
+        team1: w2,
+        team2: ra,
+      });
+    } else if (G === 3) {
+      // 3 Groups, 4 Finalists (1 Wildcard) (AC-3)
+      const w1 = getSeed(1);
+      const w2 = getSeed(2);
+      const w3 = getSeed(3);
+      const wc = qualifiers.find((q) => q.isWildcard) ?? getSeed(4);
+
+      if (wc.groupOrigin && wc.groupOrigin === w1.groupOrigin) {
+        // Branch A: Wildcard is from Seed 1's group -> SF1: W1 vs W3, SF2: W2 vs WC
+        pairings.push({
+          matchIndex: 0,
+          stage: 'sf',
+          team1: w1,
+          team2: w3,
+        });
+        pairings.push({
+          matchIndex: 1,
+          stage: 'sf',
+          team1: w2,
+          team2: wc,
+        });
+      } else {
+        // Branch B: No conflict with Seed 1 -> SF1: W1 vs WC, SF2: W2 vs W3
+        pairings.push({
+          matchIndex: 0,
+          stage: 'sf',
+          team1: w1,
+          team2: wc,
+        });
+        pairings.push({
+          matchIndex: 1,
+          stage: 'sf',
+          team1: w2,
+          team2: w3,
+        });
+      }
+    } else {
+      // G >= 4 or G === 1
+      pairings.push({
+        matchIndex: 0,
+        stage: 'sf',
+        team1: getSeed(1),
+        team2: getSeed(4),
+      });
+      pairings.push({
+        matchIndex: 1,
+        stage: 'sf',
+        team1: getSeed(2),
+        team2: getSeed(3),
+      });
+    }
+
+    eliminateSameGroupConflicts(pairings);
+    ensureHigherSeedInTeam1(pairings);
+    return pairings;
+  }
+
+  if (K === 8) {
+    if (G === 4) {
+      // 4 Groups, 8 Finalists (AC-2)
+      const w1 = getSeed(1);
+      const w2 = getSeed(2);
+      const w3 = getSeed(3);
+      const w4 = getSeed(4);
+
+      const findRunnerUp = (
+        groupOrigin: string,
+        fallbackSeed: number,
+        excludedIds: Set<string>
+      ) => {
+        if (!groupOrigin) return getSeed(fallbackSeed);
+        return (
+          qualifiers.find(
+            (q) => q.groupOrigin === groupOrigin && q.seed > 4 && !excludedIds.has(q.teamId)
+          ) ||
+          qualifiers.find(
+            (q) => q.groupOrigin === groupOrigin && q.rankInGroup > 1 && !excludedIds.has(q.teamId)
+          ) ||
+          getSeed(fallbackSeed)
+        );
+      };
+
+      const usedIds = new Set<string>([w1.teamId, w2.teamId, w3.teamId, w4.teamId]);
+      const ra = findRunnerUp(w1.groupOrigin, 8, usedIds);
+      usedIds.add(ra.teamId);
+      const rb = findRunnerUp(w2.groupOrigin, 7, usedIds);
+      usedIds.add(rb.teamId);
+      const rc = findRunnerUp(w3.groupOrigin, 6, usedIds);
+      usedIds.add(rc.teamId);
+      const rd = findRunnerUp(w4.groupOrigin, 5, usedIds);
+
+      // Top Half: QF1 (A1 vs B2), QF2 (C1 vs D2)
+      pairings.push({
+        matchIndex: 0,
+        stage: 'qf',
+        team1: w1,
+        team2: rb,
+      });
+      pairings.push({
+        matchIndex: 1,
+        stage: 'qf',
+        team1: w3,
+        team2: rd,
+      });
+
+      // Bottom Half: QF3 (B1 vs A2), QF4 (D1 vs C2)
+      pairings.push({
+        matchIndex: 2,
+        stage: 'qf',
+        team1: w2,
+        team2: ra,
+      });
+      pairings.push({
+        matchIndex: 3,
+        stage: 'qf',
+        team1: w4,
+        team2: rc,
+      });
+    } else {
+      // Fallback K=8: Standard seeded pairings
+      pairings.push({
+        matchIndex: 0,
+        stage: 'qf',
+        team1: getSeed(1),
+        team2: getSeed(8),
+      });
+      pairings.push({
+        matchIndex: 1,
+        stage: 'qf',
+        team1: getSeed(4),
+        team2: getSeed(5),
+      });
+      pairings.push({
+        matchIndex: 2,
+        stage: 'qf',
+        team1: getSeed(2),
+        team2: getSeed(7),
+      });
+      pairings.push({
+        matchIndex: 3,
+        stage: 'qf',
+        team1: getSeed(3),
+        team2: getSeed(6),
+      });
+    }
+
+    eliminateSameGroupConflicts(pairings);
+    ensureHigherSeedInTeam1(pairings);
+    return pairings;
+  }
+
+  return pairings;
+}
+
 interface RankedCandidate {
   groupName: string;
   rankInGroup: number;
@@ -324,68 +599,7 @@ export function resolvePlayoffTeams(
     }
   }
 
-  // Bracket pairings
-  const pairings: PlayoffPairing[] = [];
-  const getSeed = (s: number): PlayoffQualifier =>
-    allQualifiers.find((q) => q.seed === s) || {
-      teamId: `tbd-seed-${s}`,
-      teamName: `Поставено лице ${s}`,
-      seed: s,
-      isWildcard: false,
-      groupOrigin: '',
-      rankInGroup: 1,
-      played: 0,
-      pointsPerMatch: 0,
-      gameDiffPerMatch: 0,
-      gamesWonPerMatch: 0,
-    };
-
-  if (K === 2) {
-    pairings.push({
-      matchIndex: 0,
-      stage: 'final',
-      team1: getSeed(1),
-      team2: getSeed(2),
-    });
-  } else if (K === 4) {
-    pairings.push({
-      matchIndex: 0,
-      stage: 'sf',
-      team1: getSeed(1),
-      team2: getSeed(4),
-    });
-    pairings.push({
-      matchIndex: 1,
-      stage: 'sf',
-      team1: getSeed(2),
-      team2: getSeed(3),
-    });
-  } else if (K === 8) {
-    pairings.push({
-      matchIndex: 0,
-      stage: 'qf',
-      team1: getSeed(1),
-      team2: getSeed(8),
-    });
-    pairings.push({
-      matchIndex: 1,
-      stage: 'qf',
-      team1: getSeed(4),
-      team2: getSeed(5),
-    });
-    pairings.push({
-      matchIndex: 2,
-      stage: 'qf',
-      team1: getSeed(2),
-      team2: getSeed(7),
-    });
-    pairings.push({
-      matchIndex: 3,
-      stage: 'qf',
-      team1: getSeed(3),
-      team2: getSeed(6),
-    });
-  }
+  const pairings = buildPlayoffPairings(allQualifiers, K, G);
 
   return {
     finalistsCount: K,
@@ -570,55 +784,26 @@ export function generatePlayoffMatches(
     };
   };
 
-  const getQualifierBySeed = (seed: number): PlayoffQualifier | undefined =>
-    params.qualifiers.find((q) => q.seed === seed);
-
+  const pairings = buildPlayoffPairings(params.qualifiers, K, params.groupCount);
   const matches: TournamentMatch[] = [];
 
   for (const node of nodes) {
     let team1: Team;
     let team2: Team;
 
-    if (K === 2) {
-      team1 = getTeamObj(getQualifierBySeed(1));
-      team2 = getTeamObj(getQualifierBySeed(2));
-    } else if (K === 4) {
-      if (node.nodeId === 'sf-1') {
-        team1 = getTeamObj(getQualifierBySeed(1));
-        team2 = getTeamObj(getQualifierBySeed(4));
-      } else if (node.nodeId === 'sf-2') {
-        team1 = getTeamObj(getQualifierBySeed(2));
-        team2 = getTeamObj(getQualifierBySeed(3));
-      } else {
-        // Final
-        team1 = { id: 'tbd-sf-1', name: 'Победител от Полуфинал 1', players: [] };
-        team2 = { id: 'tbd-sf-2', name: 'Победител от Полуфинал 2', players: [] };
-      }
+    if (node.round === 1) {
+      const pairing = pairings.find(
+        (p) => p.stage === node.stage && p.matchIndex === node.matchIndex
+      );
+      team1 = getTeamObj(pairing?.team1);
+      team2 = getTeamObj(pairing?.team2);
     } else {
-      // K === 8
-      if (node.nodeId === 'qf-1') {
-        team1 = getTeamObj(getQualifierBySeed(1));
-        team2 = getTeamObj(getQualifierBySeed(8));
-      } else if (node.nodeId === 'qf-2') {
-        team1 = getTeamObj(getQualifierBySeed(4));
-        team2 = getTeamObj(getQualifierBySeed(5));
-      } else if (node.nodeId === 'qf-3') {
-        team1 = getTeamObj(getQualifierBySeed(2));
-        team2 = getTeamObj(getQualifierBySeed(7));
-      } else if (node.nodeId === 'qf-4') {
-        team1 = getTeamObj(getQualifierBySeed(3));
-        team2 = getTeamObj(getQualifierBySeed(6));
-      } else if (node.nodeId === 'sf-1') {
-        team1 = { id: 'tbd-qf-1', name: 'Победител от 1/4-финал 1', players: [] };
-        team2 = { id: 'tbd-qf-2', name: 'Победител от 1/4-финал 2', players: [] };
-      } else if (node.nodeId === 'sf-2') {
-        team1 = { id: 'tbd-qf-3', name: 'Победител от 1/4-финал 3', players: [] };
-        team2 = { id: 'tbd-qf-4', name: 'Победител от 1/4-финал 4', players: [] };
-      } else {
-        // Final
-        team1 = { id: 'tbd-sf-1', name: 'Победител от Полуфинал 1', players: [] };
-        team2 = { id: 'tbd-sf-2', name: 'Победител от Полуфинал 2', players: [] };
-      }
+      // Downstream feeder placeholders
+      const feeder1Index = node.feederNodeIds ? Number(node.feederNodeIds[0].split('-')[1]) || 1 : 1;
+      const feeder2Index = node.feederNodeIds ? Number(node.feederNodeIds[1].split('-')[1]) || 2 : 2;
+      const feederLabel = node.stage === 'final' ? 'Полуфинал' : '1/4-финал';
+      team1 = { id: `tbd-${node.feederNodeIds?.[0] || '1'}`, name: `Победител от ${feederLabel} ${feeder1Index}`, players: [] };
+      team2 = { id: `tbd-${node.feederNodeIds?.[1] || '2'}`, name: `Победител от ${feederLabel} ${feeder2Index}`, players: [] };
     }
 
     matches.push({

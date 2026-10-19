@@ -8,10 +8,12 @@ import {
   generatePlayoffMatches,
   propagatePlayoffWinner,
   extractTournamentTeams,
+  buildPlayoffPairings,
 } from '../playoffs';
 import type { GroupStanding } from '../../types/standings';
 import type { Team } from '../../types';
 import type { MatchDetail } from '../../types/matches';
+import type { PlayoffQualifier } from '../../types/playoffs';
 
 describe('playoffs utility engine', () => {
   describe('getAvailableFinalistOptions', () => {
@@ -881,6 +883,573 @@ describe('playoffs utility engine', () => {
       expect(sf2?.team2.players.length).toBeGreaterThan(0);
       expect(sf2?.team1.players[0].name).toBe('Играч 2');
       expect(sf2?.team2.players[0].name).toBe('Играч 3');
+    });
+  });
+
+  describe('cross-group playoff bracket pairings & blueprints', () => {
+    it('Blueprint 1: prevents same-group rematches when G=2, K=4 with inverted runner-up rankings (User Defect)', () => {
+      // Group A: Team 1 (A1) and Team 5 (A2)
+      // Group B: Team 3 (B1) and Team 2 (B2)
+      // Group B runner-up (Team 2) outperforms Group A runner-up (Team 5)
+      // Resulting in Seeds: 1=Team 1 (A1), 2=Team 3 (B1), 3=Team 2 (B2), 4=Team 5 (A2)
+      const mockStandings: GroupStanding[] = [
+        {
+          groupId: 'g-a',
+          groupName: 'Група А',
+          rows: [
+            {
+              rank: 1,
+              teamId: 'team-1',
+              teamName: 'Отбор 1',
+              played: 2,
+              won: 2,
+              lost: 0,
+              gamesWon: 12,
+              gamesLost: 4,
+              gameDiff: 8,
+              points: 2,
+            },
+            {
+              rank: 2,
+              teamId: 'team-5',
+              teamName: 'Отбор 5',
+              played: 2,
+              won: 1,
+              lost: 1,
+              gamesWon: 8,
+              gamesLost: 6,
+              gameDiff: 2,
+              points: 1,
+            },
+          ],
+        },
+        {
+          groupId: 'g-b',
+          groupName: 'Група Б',
+          rows: [
+            {
+              rank: 1,
+              teamId: 'team-3',
+              teamName: 'Отбор 3',
+              played: 2,
+              won: 2,
+              lost: 0,
+              gamesWon: 12,
+              gamesLost: 6,
+              gameDiff: 6,
+              points: 2,
+            },
+            {
+              rank: 2,
+              teamId: 'team-2',
+              teamName: 'Отбор 2',
+              played: 2,
+              won: 1,
+              lost: 1,
+              gamesWon: 10,
+              gamesLost: 6,
+              gameDiff: 4,
+              points: 1,
+            },
+          ],
+        },
+      ];
+
+      const res = resolvePlayoffTeams(mockStandings, 4);
+
+      expect(res.qualifiers).toHaveLength(4);
+      expect(res.qualifiers[0].teamId).toBe('team-1'); // Seed 1: A1
+      expect(res.qualifiers[1].teamId).toBe('team-3'); // Seed 2: B1
+      expect(res.qualifiers[2].teamId).toBe('team-2'); // Seed 3: B2 (runner-up with +4 gd)
+      expect(res.qualifiers[3].teamId).toBe('team-5'); // Seed 4: A2 (runner-up with +2 gd)
+
+      expect(res.pairings).toHaveLength(2);
+
+      const sf1 = res.pairings[0];
+      const sf2 = res.pairings[1];
+
+      expect(sf1.stage).toBe('sf');
+      expect(sf1.matchIndex).toBe(0);
+      expect(sf1.team1.teamId).toBe('team-1');
+      expect(sf1.team2.teamId).toBe('team-2');
+      expect(sf1.team1.groupOrigin).not.toBe(sf1.team2.groupOrigin);
+
+      expect(sf2.stage).toBe('sf');
+      expect(sf2.matchIndex).toBe(1);
+      expect(sf2.team1.teamId).toBe('team-3');
+      expect(sf2.team2.teamId).toBe('team-5');
+      expect(sf2.team1.groupOrigin).not.toBe(sf2.team2.groupOrigin);
+
+      // Verify same-group teams are in opposite semifinals (different bracket halves)
+      expect(sf1.team1.groupOrigin).toBe('Група А');
+      expect(sf1.team2.groupOrigin).toBe('Група Б');
+      expect(sf2.team1.groupOrigin).toBe('Група Б');
+      expect(sf2.team2.groupOrigin).toBe('Група А');
+
+      // Verify higher seed is in team1
+      expect(sf1.team1.seed).toBeLessThan(sf1.team2.seed);
+      expect(sf2.team1.seed).toBeLessThan(sf2.team2.seed);
+    });
+
+    it('Blueprint 2: separates same-group teams into opposite bracket halves when G=4, K=8', () => {
+      const qualifiers: PlayoffQualifier[] = [
+        // 4 Group Winners: Seeds 1 to 4
+        {
+          teamId: 'team-a1',
+          teamName: 'Отбор А1',
+          seed: 1,
+          isWildcard: false,
+          groupOrigin: 'Група А',
+          rankInGroup: 1,
+          played: 3,
+          pointsPerMatch: 1,
+          gameDiffPerMatch: 3,
+          gamesWonPerMatch: 6,
+        },
+        {
+          teamId: 'team-b1',
+          teamName: 'Отбор Б1',
+          seed: 2,
+          isWildcard: false,
+          groupOrigin: 'Група Б',
+          rankInGroup: 1,
+          played: 3,
+          pointsPerMatch: 1,
+          gameDiffPerMatch: 2.5,
+          gamesWonPerMatch: 6,
+        },
+        {
+          teamId: 'team-c1',
+          teamName: 'Отбор В1',
+          seed: 3,
+          isWildcard: false,
+          groupOrigin: 'Група В',
+          rankInGroup: 1,
+          played: 3,
+          pointsPerMatch: 1,
+          gameDiffPerMatch: 2,
+          gamesWonPerMatch: 6,
+        },
+        {
+          teamId: 'team-d1',
+          teamName: 'Отбор Г1',
+          seed: 4,
+          isWildcard: false,
+          groupOrigin: 'Група Г',
+          rankInGroup: 1,
+          played: 3,
+          pointsPerMatch: 1,
+          gameDiffPerMatch: 1.5,
+          gamesWonPerMatch: 6,
+        },
+        // 4 Runners-up: Seeds 5 to 8
+        {
+          teamId: 'team-a2',
+          teamName: 'Отбор А2',
+          seed: 5,
+          isWildcard: false,
+          groupOrigin: 'Група А',
+          rankInGroup: 2,
+          played: 3,
+          pointsPerMatch: 0.67,
+          gameDiffPerMatch: 1,
+          gamesWonPerMatch: 4,
+        },
+        {
+          teamId: 'team-b2',
+          teamName: 'Отбор Б2',
+          seed: 6,
+          isWildcard: false,
+          groupOrigin: 'Група Б',
+          rankInGroup: 2,
+          played: 3,
+          pointsPerMatch: 0.67,
+          gameDiffPerMatch: 0.8,
+          gamesWonPerMatch: 4,
+        },
+        {
+          teamId: 'team-c2',
+          teamName: 'Отбор В2',
+          seed: 7,
+          isWildcard: false,
+          groupOrigin: 'Група В',
+          rankInGroup: 2,
+          played: 3,
+          pointsPerMatch: 0.67,
+          gameDiffPerMatch: 0.5,
+          gamesWonPerMatch: 4,
+        },
+        {
+          teamId: 'team-d2',
+          teamName: 'Отбор Г2',
+          seed: 8,
+          isWildcard: false,
+          groupOrigin: 'Група Г',
+          rankInGroup: 2,
+          played: 3,
+          pointsPerMatch: 0.67,
+          gameDiffPerMatch: 0.2,
+          gamesWonPerMatch: 4,
+        },
+      ];
+
+      const pairings = buildPlayoffPairings(qualifiers, 8, 4);
+
+      expect(pairings).toHaveLength(4);
+
+      // QF1 (matchIndex 0): A1 vs B2
+      expect(pairings[0].matchIndex).toBe(0);
+      expect(pairings[0].team1.teamId).toBe('team-a1');
+      expect(pairings[0].team2.teamId).toBe('team-b2');
+
+      // QF2 (matchIndex 1): C1 vs D2
+      expect(pairings[1].matchIndex).toBe(1);
+      expect(pairings[1].team1.teamId).toBe('team-c1');
+      expect(pairings[1].team2.teamId).toBe('team-d2');
+
+      // QF3 (matchIndex 2): B1 vs A2
+      expect(pairings[2].matchIndex).toBe(2);
+      expect(pairings[2].team1.teamId).toBe('team-b1');
+      expect(pairings[2].team2.teamId).toBe('team-a2');
+
+      // QF4 (matchIndex 3): D1 vs C2
+      expect(pairings[3].matchIndex).toBe(3);
+      expect(pairings[3].team1.teamId).toBe('team-d1');
+      expect(pairings[3].team2.teamId).toBe('team-c2');
+
+      // Top Half: QF1 and QF2 (indices 0 and 1)
+      const topHalfGroups = [
+        pairings[0].team1.groupOrigin,
+        pairings[0].team2.groupOrigin,
+        pairings[1].team1.groupOrigin,
+        pairings[1].team2.groupOrigin,
+      ];
+      // Bottom Half: QF3 and QF4 (indices 2 and 3)
+      const bottomHalfGroups = [
+        pairings[2].team1.groupOrigin,
+        pairings[2].team2.groupOrigin,
+        pairings[3].team1.groupOrigin,
+        pairings[3].team2.groupOrigin,
+      ];
+
+      // Top Half contains exactly one team from each of the 4 groups
+      expect(new Set(topHalfGroups).size).toBe(4);
+      expect(new Set(bottomHalfGroups).size).toBe(4);
+
+      // For every group, winner is in Top Half iff runner-up is in Bottom Half
+      const groups = ['Група А', 'Група Б', 'Група В', 'Група Г'];
+      for (const g of groups) {
+        const inTop = topHalfGroups.filter((orig) => orig === g).length;
+        const inBottom = bottomHalfGroups.filter((orig) => orig === g).length;
+        expect(inTop).toBe(1);
+        expect(inBottom).toBe(1);
+      }
+
+      // Verify higher seed is in team1 for all QFs
+      for (const p of pairings) {
+        expect(p.team1.seed).toBeLessThan(p.team2.seed);
+      }
+    });
+
+    it('Blueprint 3: separates wildcard from Seed 1 group in G=3, K=4 (Branch A swap)', () => {
+      const qualifiers: PlayoffQualifier[] = [
+        {
+          teamId: 'team-a1',
+          teamName: 'Отбор А1',
+          seed: 1,
+          isWildcard: false,
+          groupOrigin: 'Група А',
+          rankInGroup: 1,
+          played: 2,
+          pointsPerMatch: 1,
+          gameDiffPerMatch: 4,
+          gamesWonPerMatch: 6,
+        },
+        {
+          teamId: 'team-b1',
+          teamName: 'Отбор Б1',
+          seed: 2,
+          isWildcard: false,
+          groupOrigin: 'Група Б',
+          rankInGroup: 1,
+          played: 2,
+          pointsPerMatch: 1,
+          gameDiffPerMatch: 3,
+          gamesWonPerMatch: 6,
+        },
+        {
+          teamId: 'team-c1',
+          teamName: 'Отбор В1',
+          seed: 3,
+          isWildcard: false,
+          groupOrigin: 'Група В',
+          rankInGroup: 1,
+          played: 2,
+          pointsPerMatch: 1,
+          gameDiffPerMatch: 2,
+          gamesWonPerMatch: 6,
+        },
+        {
+          teamId: 'team-a2',
+          teamName: 'Отбор А2',
+          seed: 4,
+          isWildcard: true,
+          groupOrigin: 'Група А', // Wildcard from Seed 1 group!
+          rankInGroup: 2,
+          played: 2,
+          pointsPerMatch: 0.5,
+          gameDiffPerMatch: 1,
+          gamesWonPerMatch: 4,
+        },
+      ];
+
+      const pairings = buildPlayoffPairings(qualifiers, 4, 3);
+
+      expect(pairings).toHaveLength(2);
+
+      // SF1: W1 (A1) vs W3 (C1)
+      expect(pairings[0].matchIndex).toBe(0);
+      expect(pairings[0].team1.teamId).toBe('team-a1');
+      expect(pairings[0].team2.teamId).toBe('team-c1');
+      expect(pairings[0].team1.groupOrigin).not.toBe(pairings[0].team2.groupOrigin);
+
+      // SF2: W2 (B1) vs WC (A2)
+      expect(pairings[1].matchIndex).toBe(1);
+      expect(pairings[1].team1.teamId).toBe('team-b1');
+      expect(pairings[1].team2.teamId).toBe('team-a2');
+      expect(pairings[1].team1.groupOrigin).not.toBe(pairings[1].team2.groupOrigin);
+
+      // Team A1 and Team A2 must not play each other in semifinals
+      expect(pairings[0].team2.teamId).not.toBe('team-a2');
+      expect(pairings[1].team1.teamId).not.toBe('team-a1');
+
+      // Higher seed in team1
+      expect(pairings[0].team1.seed).toBeLessThan(pairings[0].team2.seed);
+      expect(pairings[1].team1.seed).toBeLessThan(pairings[1].team2.seed);
+    });
+
+    it('Blueprint 4: handles wildcard from Seed 2 group in G=3, K=4 (Branch B standard)', () => {
+      const qualifiers: PlayoffQualifier[] = [
+        {
+          teamId: 'team-a1',
+          teamName: 'Отбор А1',
+          seed: 1,
+          isWildcard: false,
+          groupOrigin: 'Група А',
+          rankInGroup: 1,
+          played: 2,
+          pointsPerMatch: 1,
+          gameDiffPerMatch: 4,
+          gamesWonPerMatch: 6,
+        },
+        {
+          teamId: 'team-b1',
+          teamName: 'Отбор Б1',
+          seed: 2,
+          isWildcard: false,
+          groupOrigin: 'Група Б',
+          rankInGroup: 1,
+          played: 2,
+          pointsPerMatch: 1,
+          gameDiffPerMatch: 3,
+          gamesWonPerMatch: 6,
+        },
+        {
+          teamId: 'team-c1',
+          teamName: 'Отбор В1',
+          seed: 3,
+          isWildcard: false,
+          groupOrigin: 'Група В',
+          rankInGroup: 1,
+          played: 2,
+          pointsPerMatch: 1,
+          gameDiffPerMatch: 2,
+          gamesWonPerMatch: 6,
+        },
+        {
+          teamId: 'team-b2',
+          teamName: 'Отбор Б2',
+          seed: 4,
+          isWildcard: true,
+          groupOrigin: 'Група Б', // Wildcard from Seed 2 group!
+          rankInGroup: 2,
+          played: 2,
+          pointsPerMatch: 0.5,
+          gameDiffPerMatch: 1,
+          gamesWonPerMatch: 4,
+        },
+      ];
+
+      const pairings = buildPlayoffPairings(qualifiers, 4, 3);
+
+      expect(pairings).toHaveLength(2);
+
+      // SF1: W1 (A1) vs WC (B2)
+      expect(pairings[0].matchIndex).toBe(0);
+      expect(pairings[0].team1.teamId).toBe('team-a1');
+      expect(pairings[0].team2.teamId).toBe('team-b2');
+      expect(pairings[0].team1.groupOrigin).not.toBe(pairings[0].team2.groupOrigin);
+
+      // SF2: W2 (B1) vs W3 (C1)
+      expect(pairings[1].matchIndex).toBe(1);
+      expect(pairings[1].team1.teamId).toBe('team-b1');
+      expect(pairings[1].team2.teamId).toBe('team-c1');
+      expect(pairings[1].team1.groupOrigin).not.toBe(pairings[1].team2.groupOrigin);
+
+      // Higher seed in team1
+      expect(pairings[0].team1.seed).toBeLessThan(pairings[0].team2.seed);
+      expect(pairings[1].team1.seed).toBeLessThan(pairings[1].team2.seed);
+    });
+
+    it('Blueprint 5: verifies SSOT synchronization between resolvePlayoffTeams and generatePlayoffMatches', () => {
+      // Test K=4
+      const standingsK4: GroupStanding[] = [
+        {
+          groupId: 'g-1',
+          groupName: 'Група 1',
+          rows: [
+            {
+              rank: 1,
+              teamId: 't-g1-1',
+              teamName: 'Отбор Г1-1',
+              played: 2,
+              won: 2,
+              lost: 0,
+              gamesWon: 12,
+              gamesLost: 2,
+              gameDiff: 10,
+              points: 2,
+            },
+            {
+              rank: 2,
+              teamId: 't-g1-2',
+              teamName: 'Отбор Г1-2',
+              played: 2,
+              won: 1,
+              lost: 1,
+              gamesWon: 8,
+              gamesLost: 8,
+              gameDiff: 0,
+              points: 1,
+            },
+          ],
+        },
+        {
+          groupId: 'g-2',
+          groupName: 'Група 2',
+          rows: [
+            {
+              rank: 1,
+              teamId: 't-g2-1',
+              teamName: 'Отбор Г2-1',
+              played: 2,
+              won: 2,
+              lost: 0,
+              gamesWon: 12,
+              gamesLost: 4,
+              gameDiff: 8,
+              points: 2,
+            },
+            {
+              rank: 2,
+              teamId: 't-g2-2',
+              teamName: 'Отбор Г2-2',
+              played: 2,
+              won: 1,
+              lost: 1,
+              gamesWon: 9,
+              gamesLost: 7,
+              gameDiff: 2,
+              points: 1,
+            },
+          ],
+        },
+      ];
+
+      const resolutionK4 = resolvePlayoffTeams(standingsK4, 4);
+      const teamsK4: Team[] = resolutionK4.qualifiers.map((q) => ({
+        id: q.teamId,
+        name: q.teamName,
+        players: [{ id: `p-${q.teamId}`, name: `Играч ${q.teamName}` }],
+      }));
+
+      const { matches: matchesK4 } = generatePlayoffMatches({
+        tournamentId: 'tourn-k4',
+        format: 'singles',
+        qualifiers: resolutionK4.qualifiers,
+        teams: teamsK4,
+        finalistsCount: 4,
+        groupCount: standingsK4.length,
+      });
+
+      // Assert Round 1 matches in matchesK4 exactly match resolutionK4.pairings
+      for (const pairing of resolutionK4.pairings) {
+        const round1Match = matchesK4.find(
+          (m) =>
+            m.groupId === pairing.stage &&
+            (m.team1.id === pairing.team1.teamId || m.team2.id === pairing.team2.teamId)
+        );
+        expect(round1Match).toBeDefined();
+        expect(round1Match?.team1.id).toBe(pairing.team1.teamId);
+        expect(round1Match?.team2.id).toBe(pairing.team2.teamId);
+      }
+
+      // Test K=8
+      const standingsK8: GroupStanding[] = ['А', 'Б', 'В', 'Г'].map((letter, gIdx) => ({
+        groupId: `g-${letter}`,
+        groupName: `Група ${letter}`,
+        rows: [
+          {
+            rank: 1,
+            teamId: `t-${letter}1`,
+            teamName: `Отбор ${letter}1`,
+            played: 3,
+            won: 3,
+            lost: 0,
+            gamesWon: 18,
+            gamesLost: 6,
+            gameDiff: 12 - gIdx,
+            points: 3,
+          },
+          {
+            rank: 2,
+            teamId: `t-${letter}2`,
+            teamName: `Отбор ${letter}2`,
+            played: 3,
+            won: 2,
+            lost: 1,
+            gamesWon: 14,
+            gamesLost: 10,
+            gameDiff: 4 - gIdx,
+            points: 2,
+          },
+        ],
+      }));
+
+      const resolutionK8 = resolvePlayoffTeams(standingsK8, 8);
+      const teamsK8: Team[] = resolutionK8.qualifiers.map((q) => ({
+        id: q.teamId,
+        name: q.teamName,
+        players: [{ id: `p-${q.teamId}`, name: `Играч ${q.teamName}` }],
+      }));
+
+      const { matches: matchesK8 } = generatePlayoffMatches({
+        tournamentId: 'tourn-k8',
+        format: 'singles',
+        qualifiers: resolutionK8.qualifiers,
+        teams: teamsK8,
+        finalistsCount: 8,
+        groupCount: standingsK8.length,
+      });
+
+      for (const pairing of resolutionK8.pairings) {
+        const round1Match = matchesK8.find(
+          (m) => m.groupId === pairing.stage && m.team1.id === pairing.team1.teamId
+        );
+        expect(round1Match).toBeDefined();
+        expect(round1Match?.team1.id).toBe(pairing.team1.teamId);
+        expect(round1Match?.team2.id).toBe(pairing.team2.teamId);
+      }
     });
   });
 });

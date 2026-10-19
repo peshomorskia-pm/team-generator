@@ -59,4 +59,5 @@ export interface GeneratePlayoffMatchesParams {
   format: MatchFormat;
   qualifiers: PlayoffQualifier[];
   teams: Team[];
+  groupCount?: number;
 }
