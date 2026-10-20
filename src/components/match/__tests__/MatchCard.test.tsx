@@ -341,19 +341,40 @@ describe('MatchCard Component', () => {
       expect(screen.getByText('Полуфинал')).toBeInTheDocument();
     });
 
-    it('MC-PLY-02: automatically detects playoff from group_name without explicit prop', () => {
-      const match: MatchDetail = {
+    it('MC-PLY-02: renders standard 7-column layout preserving format badge when isPlayoff prop is omitted, even for playoff stage', () => {
+      const match: MatchDetail & { stage?: string } = {
         ...sampleMatch,
         match_format: 'doubles',
-        group_name: '1/4-финал',
-        round: 1,
+        group_name: 'Полуфинал',
+        stage: 'semifinal',
+        round: 2,
       };
 
       render(<MatchCard match={match} onEdit={vi.fn()} />);
 
+      // Standard layout preserves format badge and stage badge
+      expect(screen.getByText('По двойки')).toBeInTheDocument();
+      expect(screen.getByText('Полуфинал')).toBeInTheDocument();
+      // Stacked playoff container is NOT rendered
+      expect(screen.queryByTestId('match-card-stacked-layout')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('playoff-team-row-1')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('playoff-team-row-2')).not.toBeInTheDocument();
+    });
+
+    it('MC-PLY-04: renders stacked 2-row layout when isPlayoff={true} is explicitly passed for playoff match', () => {
+      const match: MatchDetail & { stage?: string } = {
+        ...sampleMatch,
+        match_format: 'doubles',
+        group_name: 'Полуфинал',
+        stage: 'semifinal',
+      };
+
+      render(<MatchCard match={match} onEdit={vi.fn()} isPlayoff={true} />);
+
+      expect(screen.getByTestId('match-card-stacked-layout')).toBeInTheDocument();
+      expect(screen.getByTestId('playoff-team-row-1')).toBeInTheDocument();
+      expect(screen.getByTestId('playoff-team-row-2')).toBeInTheDocument();
       expect(screen.queryByText('По двойки')).not.toBeInTheDocument();
-      expect(screen.queryByText(/Кръг 1/)).not.toBeInTheDocument();
-      expect(screen.getByText('1/4-финал')).toBeInTheDocument();
     });
 
     it('MC-PLY-03: renders trophy badge for Final stage', () => {
@@ -522,7 +543,7 @@ describe('MatchCard Component', () => {
       expect(screen.getByText('Статус: Предстоящ')).toBeInTheDocument();
     });
 
-    it('MC-BADGE-01: constrains playoff player badges with max-w-[120px], truncate, and title tooltip', () => {
+    it('MC-BADGE-01: constrains playoff player badges with max-w-[180px] sm:max-w-[200px], truncate, and title tooltip', () => {
       const longNameMatch: MatchDetail = {
         ...sampleMatch,
         match_players: [
@@ -543,11 +564,11 @@ describe('MatchCard Component', () => {
 
       const badge = screen.getByTestId('player-badge-mp-long-1');
       expect(badge).toBeInTheDocument();
-      expect(badge).toHaveClass('max-w-[120px]', 'truncate');
+      expect(badge).toHaveClass('max-w-[180px]', 'sm:max-w-[200px]', 'truncate');
       expect(badge).toHaveAttribute('title', 'Константин Константинополски');
     });
 
-    it('MC-BADGE-02: constrains regular group match player badges with max-w-[120px], truncate, and title tooltip', () => {
+    it('MC-BADGE-02: constrains regular group match player badges with max-w-[180px] sm:max-w-[200px], truncate, and title tooltip', () => {
       const longNameMatch: MatchDetail = {
         ...sampleMatch,
         group_name: 'Група А',
@@ -569,7 +590,7 @@ describe('MatchCard Component', () => {
 
       const badge = screen.getByTestId('player-badge-mp-long-2');
       expect(badge).toBeInTheDocument();
-      expect(badge).toHaveClass('max-w-[120px]', 'truncate');
+      expect(badge).toHaveClass('max-w-[180px]', 'sm:max-w-[200px]', 'truncate');
       expect(badge).toHaveAttribute('title', 'Александър Александров-Велики');
     });
   });

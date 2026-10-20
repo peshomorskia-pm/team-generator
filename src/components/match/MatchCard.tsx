@@ -5,7 +5,6 @@ import type { MatchDetail, MatchPlayerDetail } from '../../types/matches';
 
 import { resolveMatchFormat } from '../../utils/eloRecalculation';
 import { getMatchOutcome } from '../../utils/standings';
-import { isPlayoffMatch } from '../../utils/playoffs';
 
 export interface MatchCardProps {
   match: MatchDetail;
@@ -49,7 +48,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
     year: 'numeric',
   });
 
-  const effectiveIsPlayoff = isPlayoff !== undefined ? isPlayoff : isPlayoffMatch(match);
+  const effectiveIsPlayoff = Boolean(isPlayoff);
   const matchRecord = match as unknown as Record<string, unknown>;
   const effectiveCourt = court ?? (typeof matchRecord.court === 'string' ? matchRecord.court : undefined);
   const effectiveMatchNumber =
@@ -69,7 +68,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         key={p.id || `${name}-${p.team_side}`}
         title={name}
         data-testid={`player-badge-${p.id || name}`}
-        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium max-w-[120px] truncate shrink-0 ${
+        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium max-w-[180px] sm:max-w-[200px] truncate shrink-0 ${
           isGuest
             ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40'
             : 'bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-200'
