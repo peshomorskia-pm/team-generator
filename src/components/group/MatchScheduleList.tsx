@@ -9,6 +9,7 @@ export interface MatchScheduleListProps {
   onClear?: () => void;
   onSaveAllMatches?: () => Promise<void> | void;
   isSavingMatches?: boolean;
+  saveLabel?: string;
 }
 
 export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
@@ -17,6 +18,7 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
   onClear,
   onSaveAllMatches,
   isSavingMatches = false,
+  saveLabel,
 }) => {
   const [isCopied, setIsCopied] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -70,8 +72,8 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
               id="saveAllMatchesBtn"
               onClick={onSaveAllMatches}
               disabled={isSavingMatches}
-              title={isSavingMatches ? 'Записване...' : 'Запиши всички мачове'}
-              aria-label={isSavingMatches ? 'Записване...' : 'Запиши всички мачове'}
+              title={isSavingMatches ? 'Записване...' : (saveLabel || 'Запиши всички мачове')}
+              aria-label={isSavingMatches ? 'Записване...' : (saveLabel || 'Запиши всички мачове')}
               className={`text-sm font-semibold flex items-center px-4 py-1.5 rounded-lg shadow-sm border transition-colors ${
                 isSavingMatches
                   ? 'bg-indigo-400 dark:bg-indigo-600/70 border-indigo-400 text-white cursor-not-allowed opacity-80'
@@ -85,8 +87,8 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
                 </>
               ) : (
                 <>
-                  <Zap className="w-4 h-4 mr-1.5 fill-current" />
-                  <span>⚡ Запиши всички мачове</span>
+                  {!saveLabel && <Zap className="w-4 h-4 mr-1.5 fill-current" />}
+                  <span>{saveLabel || '⚡ Запиши всички мачове'}</span>
                 </>
               )}
             </button>

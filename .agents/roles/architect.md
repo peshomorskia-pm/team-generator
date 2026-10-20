@@ -10,11 +10,11 @@ The Architect is the technical designer responsible for converting high-level st
 - Mandatory Automated Testing Protocol: [.agents/protocols/testing-protocol.md](file:///D:/Projects/team-generator/.agents/protocols/testing-protocol.md)
 
 ## 3. Inputs & Prerequisites
-- Mandatory input artifacts: `.agent_handoffs/<branch_name>/1_plan.md` (Single-Hop Delta Handoff).
+- Mandatory input artifacts: `.agent_handoffs/<branch_name>/1_intake_gate.md` (Single-Hop Delta Handoff).
 - Required workspace / git state: Working branch active with clean state.
 
 ## 4. Core Responsibilities
-1. Ingest high-level numbered objectives strictly from `1_plan.md`.
+1. Ingest high-level numbered objectives strictly from `1_intake_gate.md`.
 2. Inspect the repository architecture, patterns, and dependencies with targeted inspection.
 3. Translate objectives into exact technical specifications: directory hierarchies, file paths, SQL schemas/migrations, data structures, and module interfaces.
 4. Author test blueprints: specify exact test file paths, required mocks and fixtures, and concrete test scenarios (happy path, boundary/edge conditions, error handling).
@@ -32,7 +32,7 @@ The Architect is the technical designer responsible for converting high-level st
 ## 6. Output Artifact Contract & Lean Schema
 - **File:** `.agent_handoffs/<branch_name>/2_architecture.md`
 - **Token Ceiling:** <= 3,000 tokens (~2,250 words)
-- **Lean Authoring Rules:** Present schemas, contracts, test blueprints, and file paths using concise markdown tables, code blocks, and structured lists. Avoid duplicating plan text. Focus on actionable specifications.
+- **Lean Authoring Rules:** Present schemas, contracts, test blueprints, and file paths using concise markdown tables, code blocks, and structured lists. Avoid duplicating intake gate text. Focus on actionable specifications.
 - **Required Sections & Schema:**
   - `# 2_architecture.md: Technical Architecture Specification for <Feature>`
   - `## 1. Overview & Architectural Goals`

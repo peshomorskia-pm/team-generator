@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, ChevronDown, Ban, CheckSquare, Square } from 'lucide-react';
 import type { PlayerRow } from '../../types/database.types';
+import { sortPlayersByName } from '../../utils/playerSort';
 
 export interface ComboboxPlayer {
   id: string;
@@ -48,8 +49,9 @@ export const PlayerCombobox: React.FC<PlayerComboboxProps> = ({
 
   const filteredPlayers = useMemo(() => {
     const trimmed = query.trim().toLowerCase();
-    if (!trimmed) return players;
-    return players.filter((p) => p.name.toLowerCase().includes(trimmed));
+    if (!trimmed) return sortPlayersByName(players);
+    const matches = players.filter((p) => p.name.toLowerCase().includes(trimmed));
+    return sortPlayersByName(matches);
   }, [players, query]);
 
   const handleItemClick = (player: PlayerRow | ComboboxPlayer) => {

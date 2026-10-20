@@ -66,6 +66,7 @@ export function partitionIntoGroups(teams: Team[]): TournamentGroup[] {
       id: `group-${i}`,
       name: getBulgarianGroupLabel(i),
       teams: teams.slice(cursor, cursor + size),
+      targetSize: size,
     });
     cursor += size;
   }

@@ -457,4 +457,85 @@ describe('useTournaments hook', () => {
       expect(result.current.error?.message).toBe('Supabase не е конфигуриран.');
     });
   });
+
+  describe('saveTournamentDraft', () => {
+    it('persists draft_state without toggling main loading state to true', async () => {
+      setupFetchMock(sampleTournaments);
+
+      const updateEqMock = vi.fn().mockResolvedValue({ error: null });
+      const updateMock = vi.fn().mockReturnValue({ eq: updateEqMock });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'tournaments') {
+          return {
+            select: vi.fn().mockReturnValue({
+              order: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({ data: sampleTournaments, error: null }),
+              }),
+            }),
+            update: updateMock,
+          };
+        }
+        return {};
+      });
+
+      const { result } = renderHook(() => useTournaments());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      const mockDraftState = {
+        targetTeams: 4,
+        formationMode: 'manual' as const,
+        teams: [
+          { id: 't-1', name: 'Отбор 1', players: [] },
+          { id: 't-2', name: 'Отбор 2', players: [] },
+        ],
+        activePool: [],
+      };
+
+      let success = false;
+      await act(async () => {
+        success = await result.current.saveTournamentDraft('tourn-1', mockDraftState);
+      });
+
+      expect(success).toBe(true);
+      expect(result.current.loading).toBe(false);
+      expect(updateMock).toHaveBeenCalledWith({ draft_state: mockDraftState });
+      expect(updateEqMock).toHaveBeenCalledWith('id', 'tourn-1');
+
+      const updatedTourn = result.current.tournaments.find((t) => t.id === 'tourn-1');
+      expect(updatedTourn?.draft_state).toEqual(mockDraftState);
+    });
+
+    it('returns false and does not throw when Supabase query fails', async () => {
+      setupFetchMock(sampleTournaments);
+
+      const updateEqMock = vi.fn().mockResolvedValue({ error: new Error('DB error') });
+      const updateMock = vi.fn().mockReturnValue({ eq: updateEqMock });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'tournaments') {
+          return {
+            select: vi.fn().mockReturnValue({
+              order: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({ data: sampleTournaments, error: null }),
+              }),
+            }),
+            update: updateMock,
+          };
+        }
+        return {};
+      });
+
+      const { result } = renderHook(() => useTournaments());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      let success = true;
+      await act(async () => {
+        success = await result.current.saveTournamentDraft('tourn-1', null);
+      });
+
+      expect(success).toBe(false);
+      expect(result.current.loading).toBe(false);
+    });
+  });
 });

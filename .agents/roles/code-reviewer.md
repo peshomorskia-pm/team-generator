@@ -29,7 +29,7 @@ To minimize context consumption and eliminate whole-file bloat:
    - Automated testing compliance: verify every new or modified logic file has an accompanying test suite; audit for trivial/meaningless tests, missing boundary conditions, or bypassed assertions (`test.skip`, empty `expect`).
    - Code cleanliness, syntax validity, edge cases, error handling, security, and backward compatibility.
 4. Issue a formal verdict: `[APPROVED]` or `[CHANGES_REQUESTED]`. Must reject any pull request lacking required test coverage or violating feature scoping.
-5. Reroute back to Senior Dev if changes are requested, or summon Document Writer upon approval.
+5. Reroute back to Senior Dev if changes are requested, or summon Acceptance Gatekeeper upon approval.
 
 ## 6. Strict Constraints & Boundaries
 - **Mandatory Rejection Criteria (Strict Scoping):** Reject any PR that includes modifications to files outside the defined scope of the feature/fix.
@@ -52,10 +52,10 @@ To minimize context consumption and eliminate whole-file bloat:
   - `## 2. Test Suite & Coverage Audit`: Analysis of test cases, boundary coverage, mock fidelity, and assertion validity.
   - `## 3. Findings & Edge Case Analysis`: Concise review notes, potential failure points, performance considerations.
   - `## 4. Verdict`: Explicit marker `[APPROVED]` or `[CHANGES_REQUESTED]`.
-  - `## 5. Action Items / Next Transition`: If approved, summon Document Writer. If changes requested, itemized tasks for Senior Dev.
+  - `## 5. Action Items / Next Transition`: If approved, summon Acceptance Gatekeeper. If changes requested, itemized tasks for Senior Dev.
 
 ## 8. Next Transition
 - **Summon:**
-  - **Document Writer** (Tier: `flash_lite`, if Verdict is `[APPROVED]`)
+  - **Acceptance Gatekeeper** (Tier: `flash`, if Verdict is `[APPROVED]`)
   - **Senior Dev** (Tier: `inherit` / `flash`, if Verdict is `[CHANGES_REQUESTED]`)
 - **Conditions:** Thorough review documented and verdict rendered in `.agent_handoffs/<branch_name>/4_review.md`.

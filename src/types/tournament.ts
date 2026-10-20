@@ -1,8 +1,19 @@
 import type { Team, GeneratorMode, AlertNotification } from './index';
-import type { GeneratorPlayer, DatabasePlayer } from './generator';
+import type { GeneratorPlayer, DatabasePlayer, TeamFormationMode } from './generator';
 
 export type TournamentStatus = 'draft' | 'in_progress' | 'completed';
 export type TournamentFormat = 'singles' | 'doubles';
+
+export interface TournamentDraftState {
+  targetTeams: number;
+  formationMode: TeamFormationMode; // 'auto' | 'manual'
+  teams: Team[];
+  activePool: GeneratorPlayer[];
+  groups?: TournamentGroup[] | null;
+  schedule?: TournamentMatch[] | null;
+  playoffFinalists?: import('./playoffs').PlayoffFinalistsCount | null;
+  playoffs?: import('./playoffs').TournamentPlayoffState | null;
+}
 
 export interface Tournament {
   id: string;
@@ -12,6 +23,7 @@ export interface Tournament {
   status: TournamentStatus;
   winner_team_name: string | null;
   notes: string | null;
+  draft_state?: TournamentDraftState | null;
   created_at: string;
   updated_at: string;
 }
@@ -23,6 +35,7 @@ export interface CreateTournamentInput {
   status?: TournamentStatus;
   winner_team_name?: string | null;
   notes?: string | null;
+  draft_state?: TournamentDraftState | null;
 }
 
 export interface UpdateTournamentInput {
@@ -32,12 +45,14 @@ export interface UpdateTournamentInput {
   status?: TournamentStatus;
   winner_team_name?: string | null;
   notes?: string | null;
+  draft_state?: TournamentDraftState | null;
 }
 
 export interface TournamentGroup {
   id: string; // e.g. 'group-0'
   name: string; // e.g. 'Група А'
   teams: Team[];
+  targetSize?: number;
 }
 
 export interface TournamentMatch {
@@ -56,6 +71,12 @@ export interface TournamentRound {
   byeTeam?: Team;
 }
 
+export interface UseTeamGeneratorOptions {
+  initialMode?: GeneratorMode;
+  initialFormat?: 'singles' | 'doubles';
+  initialDraftState?: TournamentDraftState | null;
+}
+
 export interface UseTeamGeneratorReturn {
   mode: GeneratorMode;
   setMode: (mode: GeneratorMode) => void;
@@ -69,12 +90,23 @@ export interface UseTeamGeneratorReturn {
   playersPerTeam: number | null;
   setPlayersPerTeam: (val: number | null) => void;
   teams: Team[];
+  setTeams: (teams: Team[] | ((prev: Team[]) => Team[])) => void;
   targetTeamSize: number;
   hasIncompleteTeams: boolean;
   groups: TournamentGroup[];
-  drawGroups: () => void;
+  drawGroups: (teamsOverride?: Team[]) => void;
   resetGroups: () => void;
   clearGroups: () => void;
+  drawnGroups: TournamentGroup[];
+  setDrawnGroups: (groups: TournamentGroup[] | ((prev: TournamentGroup[]) => TournamentGroup[])) => void;
+  unassignedTeams: Team[];
+  hasValidGroupsForSchedule: boolean;
+  groupValidationMessage: string | null;
+  initializeBlankGroups: (totalTeams?: number) => TournamentGroup[];
+  assignTeamToGroup: (groupId: string, team: Team) => void;
+  removeTeamFromGroup: (groupId: string, teamId: string) => void;
+  moveTeamBetweenGroups: (teamId: string, targetGroupId: string) => void;
+  autoFillRemainingGroupTeams: () => void;
   schedule: TournamentMatch[];
   generateSchedule: () => void;
   resetSchedule: () => void;
@@ -114,4 +146,16 @@ export interface UseTeamGeneratorReturn {
   generateTeams: (teamCount?: number, balanceByRatingParam?: boolean) => void;
   shuffleSingleTeam: (teamId: string) => void;
   copyResults: () => Promise<boolean>;
+  formationMode: import('./generator').TeamFormationMode;
+  setFormationMode: (mode: import('./generator').TeamFormationMode) => void;
+  teamFormationMode: import('./generator').TeamFormationMode;
+  setTeamFormationMode: (mode: import('./generator').TeamFormationMode) => void;
+  unassignedPoolPlayers: GeneratorPlayer[];
+  initializeBlankTeams: (numTeams: number, playersPerTeam?: number) => void;
+  addBlankTeam: () => void;
+  deleteTeam: (teamId: string) => void;
+  assignPlayerToTeam: (teamId: string, player: GeneratorPlayer) => void;
+  removePlayerFromTeam: (teamId: string, playerId: string) => void;
+  autoFillRemainingSlots: (balance?: boolean) => void;
+  hydrateFromDraft?: (draftState: TournamentDraftState) => void;
 }

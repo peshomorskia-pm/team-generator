@@ -1,3 +1,11 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
 export interface Database {
   public: {
     Tables: {
@@ -60,6 +68,7 @@ export interface Database {
           tournament_id?: string | null; // uuid
           team_1_score: number | null; // integer
           team_2_score: number | null; // integer
+          sets?: Json | null;
           played_at: string; // timestamptz
           created_at: string; // timestamptz
           updated_at: string; // timestamptz
@@ -74,6 +83,7 @@ export interface Database {
           tournament_id?: string | null;
           team_1_score?: number | null;
           team_2_score?: number | null;
+          sets?: Json | null;
           played_at?: string;
           created_at?: string;
           updated_at?: string;
@@ -88,6 +98,7 @@ export interface Database {
           tournament_id?: string | null;
           team_1_score?: number | null;
           team_2_score?: number | null;
+          sets?: Json | null;
           played_at?: string;
           created_at?: string;
           updated_at?: string;
@@ -103,6 +114,7 @@ export interface Database {
           status: 'draft' | 'in_progress' | 'completed'; // text
           winner_team_name: string | null; // text
           notes: string | null; // text
+          draft_state: Json | null;
           created_at: string; // timestamptz
           updated_at: string; // timestamptz
         };
@@ -114,6 +126,7 @@ export interface Database {
           status?: 'draft' | 'in_progress' | 'completed';
           winner_team_name?: string | null;
           notes?: string | null;
+          draft_state?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -125,6 +138,7 @@ export interface Database {
           status?: 'draft' | 'in_progress' | 'completed';
           winner_team_name?: string | null;
           notes?: string | null;
+          draft_state?: Json | null;
           created_at?: string;
           updated_at?: string;
         };

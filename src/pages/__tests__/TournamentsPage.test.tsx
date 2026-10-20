@@ -41,11 +41,21 @@ const mockTournaments: Tournament[] = [
   },
 ];
 
+const mockNavigate = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
 describe('TournamentsPage', () => {
   const createTournamentMock = vi.fn();
   const updateTournamentMock = vi.fn();
   const deleteTournamentMock = vi.fn();
   const fetchTournamentsMock = vi.fn();
+  const saveTournamentDraftMock = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -57,6 +67,7 @@ describe('TournamentsPage', () => {
       createTournament: createTournamentMock,
       updateTournament: updateTournamentMock,
       deleteTournament: deleteTournamentMock,
+      saveTournamentDraft: saveTournamentDraftMock,
     });
   });
 
@@ -155,6 +166,7 @@ describe('TournamentsPage', () => {
       createTournament: createTournamentMock,
       updateTournament: updateTournamentMock,
       deleteTournament: deleteTournamentMock,
+      saveTournamentDraft: saveTournamentDraftMock,
     });
 
     renderComponent();
@@ -165,7 +177,7 @@ describe('TournamentsPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('opens create modal on button click and submits new tournament', async () => {
+  it('opens create modal on button click and submits new tournament and navigates', async () => {
     createTournamentMock.mockResolvedValueOnce({
       id: 't-4',
       title: 'Нов турнир 2026',
@@ -197,13 +209,14 @@ describe('TournamentsPage', () => {
           title: 'Нов турнир 2026',
         })
       );
+      expect(mockNavigate).toHaveBeenCalledWith('/tournaments/t-4');
     });
   });
 
   it('opens edit modal and submits updated tournament', async () => {
     updateTournamentMock.mockResolvedValueOnce({
-      ...mockTournaments[0],
-      title: 'Обновена Зима',
+      ...mockTournaments[1],
+      title: 'Обновена Пролет',
     });
 
     renderComponent();
@@ -212,10 +225,10 @@ describe('TournamentsPage', () => {
     fireEvent.click(editButtons[0]);
 
     expect(screen.getByRole('heading', { name: 'Редактиране на турнир' })).toBeInTheDocument();
-    expect(screen.getByLabelText(/име на турнира/i)).toHaveValue('Турнир Зима');
+    expect(screen.getByLabelText(/име на турнира/i)).toHaveValue('Турнир Пролет');
 
     fireEvent.change(screen.getByLabelText(/име на турнира/i), {
-      target: { value: 'Обновена Зима' },
+      target: { value: 'Обновена Пролет' },
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Запази' }));
@@ -223,9 +236,9 @@ describe('TournamentsPage', () => {
     await waitFor(() => {
       expect(updateTournamentMock).toHaveBeenCalledTimes(1);
       expect(updateTournamentMock).toHaveBeenCalledWith(
-        't-1',
+        't-2',
         expect.objectContaining({
-          title: 'Обновена Зима',
+          title: 'Обновена Пролет',
         })
       );
     });
@@ -240,16 +253,44 @@ describe('TournamentsPage', () => {
     fireEvent.click(deleteButtons[0]);
 
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByRole('heading', { name: 'Изтриване на турнир' })).toBeInTheDocument();
-    expect(within(dialog).getByText('Турнир Зима')).toBeInTheDocument();
+    expect(within(dialog).getByRole('heading', { name: 'Необратимо изтриване на турнир' })).toBeInTheDocument();
+    expect(within(dialog).getByText(/⚠️ Внимание: Този турнир съдържа записани мачове и официални резултати/i)).toBeInTheDocument();
 
-    // Confirm delete in modal
-    const confirmDeleteBtn = within(dialog).getByRole('button', { name: 'Изтриване' });
+    const confirmDeleteBtn = within(dialog).getByRole('button', { name: /🗑️ Изтрий безвъзвратно/i });
+    expect(confirmDeleteBtn).toBeDisabled();
+
+    const input = within(dialog).getByPlaceholderText('Въведете името на турнира тук...');
+    fireEvent.change(input, { target: { value: 'Турнир Зима' } });
+    expect(confirmDeleteBtn).toBeEnabled();
+
     fireEvent.click(confirmDeleteBtn);
 
     await waitFor(() => {
       expect(deleteTournamentMock).toHaveBeenCalledTimes(1);
       expect(deleteTournamentMock).toHaveBeenCalledWith('t-1');
+    });
+  });
+
+  it('opens draft delete confirmation modal and immediately deletes draft tournament upon confirmation', async () => {
+    deleteTournamentMock.mockResolvedValueOnce(undefined);
+
+    renderComponent();
+
+    const deleteButtons = screen.getAllByRole('button', { name: 'Изтриване' });
+    // mockTournaments[2] is 't-3' (status: 'draft')
+    fireEvent.click(deleteButtons[2]);
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Изтриване на чернова' })).toBeInTheDocument();
+
+    const confirmDeleteBtn = within(dialog).getByRole('button', { name: 'Изтрий' });
+    expect(confirmDeleteBtn).toBeEnabled();
+
+    fireEvent.click(confirmDeleteBtn);
+
+    await waitFor(() => {
+      expect(deleteTournamentMock).toHaveBeenCalledTimes(1);
+      expect(deleteTournamentMock).toHaveBeenCalledWith('t-3');
     });
   });
 });

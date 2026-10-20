@@ -3,6 +3,7 @@ import { User, X, Star, Users, Trash2 } from 'lucide-react';
 import { GeneratorPlayer } from '../../types/generator';
 import { GeneratorMode } from '../../types';
 import { Badge, Button } from '../ui';
+import { sortPlayersByName } from '../../utils/playerSort';
 
 export interface ActivePoolProps {
   activePool: GeneratorPlayer[];
@@ -19,6 +20,7 @@ export const ActivePool: React.FC<ActivePoolProps> = ({
   format,
   mode = 'tennis',
 }) => {
+  const sortedActivePool = useMemo(() => sortPlayersByName(activePool), [activePool]);
   const registeredCount = useMemo(
     () => activePool.filter((p) => p.source === 'registered').length,
     [activePool]
@@ -72,7 +74,7 @@ export const ActivePool: React.FC<ActivePoolProps> = ({
           data-testid="active-pool-list"
           className="flex flex-wrap gap-2 max-h-56 overflow-y-auto p-2.5 bg-gray-50/70 dark:bg-slate-800/40 rounded-xl border border-gray-100 dark:border-slate-700"
         >
-          {activePool.map((player) => {
+          {sortedActivePool.map((player) => {
             const isRegistered = player.source === 'registered';
             const displayRating =
               format === 'singles'

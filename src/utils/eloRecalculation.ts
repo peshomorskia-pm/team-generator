@@ -2,6 +2,7 @@ import type { PlayerRow } from '../types/database.types';
 import type { MatchDetail, MatchFormat, MatchPlayerDetail } from '../types/matches';
 import type { Player } from '../types/player';
 import { calculateMatchElo, DEFAULT_RATING } from './elo';
+import { getMatchOutcome } from './standings';
 
 export interface RecalculationResult {
   updatedPlayers: Player[];
@@ -92,7 +93,8 @@ export function recalculateRatings(
   const upcomingMatches: MatchDetail[] = [];
 
   for (const m of matches) {
-    if (m.team_1_score !== null && m.team_2_score !== null) {
+    const outcome = getMatchOutcome(m);
+    if (outcome.isCompleted) {
       completedMatches.push(m);
     } else {
       upcomingMatches.push(m);
@@ -118,8 +120,9 @@ export function recalculateRatings(
   // 4. Chronologically replay matches
   for (const match of completedMatches) {
     const format = resolveMatchFormat(match);
-    const score1 = match.team_1_score!;
-    const score2 = match.team_2_score!;
+    const outcome = getMatchOutcome(match);
+    const score1 = outcome.team1SetsWon > 0 || outcome.team2SetsWon > 0 ? outcome.team1SetsWon : (match.team_1_score ?? 0);
+    const score2 = outcome.team1SetsWon > 0 || outcome.team2SetsWon > 0 ? outcome.team2SetsWon : (match.team_2_score ?? 0);
 
     const t1Participants = match.match_players.filter((p) => p.team_side === 'team_1');
     const t2Participants = match.match_players.filter((p) => p.team_side === 'team_2');
@@ -141,8 +144,8 @@ export function recalculateRatings(
       score2,
     });
 
-    const team1Won = score1 > score2;
-    const team2Won = score2 > score1;
+    const team1Won = outcome.winner === 'team_1';
+    const team2Won = outcome.winner === 'team_2';
 
     // Process Team 1 players
     const updatedT1: MatchPlayerDetail[] = t1Participants.map((p) => {

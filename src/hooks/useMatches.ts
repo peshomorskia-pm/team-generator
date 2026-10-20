@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { AlertNotification, TournamentMatch } from '../types';
-import type { PlayerRow } from '../types/database.types';
+import type { PlayerRow, Json } from '../types/database.types';
 import type { MatchDetail, MatchFormData, MatchFormat, MatchPlayerDetail } from '../types/matches';
 import { calculateMatchElo } from '../utils/elo';
 import { recalculateRatings } from '../utils/eloRecalculation';
@@ -223,6 +223,7 @@ export function useMatches(): UseMatchesReturn {
           group_name: string | null;
           round: number | null;
           tournament_id?: string | null;
+          sets?: Json | null;
         } = {
           match_format: format,
           team_1_score: data.team_1_score,
@@ -236,6 +237,9 @@ export function useMatches(): UseMatchesReturn {
 
         if (data.tournament_id !== undefined) {
           insertPayload.tournament_id = data.tournament_id;
+        }
+        if (data.sets !== undefined) {
+          insertPayload.sets = data.sets as unknown as Json;
         }
 
         const { data: matchData, error: matchError } = await supabase
@@ -373,6 +377,7 @@ export function useMatches(): UseMatchesReturn {
 
         const newMatch: MatchDetail = {
           ...matchData,
+          sets: data.sets !== undefined ? data.sets : ((matchData as unknown as MatchDetail).sets ?? null),
           match_players: effectiveMatchPlayers,
         };
 
@@ -437,6 +442,7 @@ export function useMatches(): UseMatchesReturn {
           group_name?: string | null;
           round?: number | null;
           tournament_id?: string | null;
+          sets?: Json | null;
         } = {
           match_format: format,
           team_1_score: data.team_1_score,
@@ -458,6 +464,9 @@ export function useMatches(): UseMatchesReturn {
         }
         if (data.tournament_id !== undefined) {
           updatePayload.tournament_id = data.tournament_id;
+        }
+        if (data.sets !== undefined) {
+          updatePayload.sets = data.sets as unknown as Json;
         }
 
         const { data: matchData, error: matchError } = await supabase
@@ -531,6 +540,7 @@ export function useMatches(): UseMatchesReturn {
 
         const updatedMatch: MatchDetail = {
           ...matchData,
+          sets: data.sets !== undefined ? data.sets : ((matchData as unknown as MatchDetail).sets ?? null),
           match_players: effectiveMatchPlayers,
         };
 
@@ -658,7 +668,13 @@ export function useMatches(): UseMatchesReturn {
         const playedAt = new Date().toISOString();
 
         for (const item of schedule) {
-          const matchId = crypto.randomUUID();
+          const matchId =
+            item.id &&
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+              item.id
+            )
+              ? item.id
+              : crypto.randomUUID();
 
           matchRows.push({
             id: matchId,

@@ -133,8 +133,8 @@ describe('TeamList Component', () => {
     });
   });
 
-  describe('Tournament groups draw button', () => {
-    it('renders "🎲 Тегли жребий за групи" when tennis mode, >= 6 teams, and onDrawGroups provided', async () => {
+  describe('Tournament groups draw button and manual assignment', () => {
+    it('renders "🎲 Автоматичен жребий за групи" when tennis mode, >= 6 teams, and onDrawGroups provided', async () => {
       const user = userEvent.setup();
       const onDrawGroupsMock = vi.fn();
 
@@ -146,23 +146,44 @@ describe('TeamList Component', () => {
         />
       );
 
-      const drawBtn = screen.getByRole('button', { name: /тегли жребий за групи/i });
+      const drawBtn = screen.getByRole('button', { name: /автоматичен жребий за групи/i });
       expect(drawBtn).toBeInTheDocument();
 
       await user.click(drawBtn);
       expect(onDrawGroupsMock).toHaveBeenCalledTimes(1);
     });
 
-    it('does not render draw button when teams count is less than 6 (e.g. 3 teams)', () => {
+    it('renders "📋 Ръчно разпредели по групи" and invokes onInitializeBlankGroups when clicked', async () => {
+      const user = userEvent.setup();
+      const onInitMock = vi.fn();
+
+      render(
+        <TeamList
+          teams={mockTeams6}
+          mode="tennis"
+          onInitializeBlankGroups={onInitMock}
+        />
+      );
+
+      const initBtn = screen.getByRole('button', { name: /ръчно разпредели по групи/i });
+      expect(initBtn).toBeInTheDocument();
+
+      await user.click(initBtn);
+      expect(onInitMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not render draw button when teams count is less than 6 and empty slots > 1', () => {
       render(
         <TeamList
           teams={mockTeams3}
           mode="tennis"
+          targetTeamSize={2}
+          hasIncompleteTeams={true}
           onDrawGroups={vi.fn()}
         />
       );
 
-      expect(screen.queryByRole('button', { name: /тегли жребий за групи/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /автоматичен жребий за групи/i })).not.toBeInTheDocument();
     });
 
     it('does not render draw button when mode is generic', () => {
@@ -174,7 +195,7 @@ describe('TeamList Component', () => {
         />
       );
 
-      expect(screen.queryByRole('button', { name: /тегли жребий за групи/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /автоматичен жребий за групи/i })).not.toBeInTheDocument();
     });
   });
 
@@ -193,18 +214,22 @@ describe('TeamList Component', () => {
       expect(saveMatchBtn).toBeDisabled();
     });
 
-    it('disables "🎲 Тегли жребий за групи" when hasIncompleteTeams is true', () => {
+    it('disables "🎲 Автоматичен жребий за групи" and "📋 Ръчно разпредели по групи" when hasIncompleteTeams is true', () => {
       render(
         <TeamList
           teams={mockTeams6}
           mode="tennis"
           onDrawGroups={vi.fn()}
+          onInitializeBlankGroups={vi.fn()}
           hasIncompleteTeams={true}
         />
       );
 
-      const drawBtn = screen.getByRole('button', { name: /тегли жребий за групи/i });
+      const drawBtn = screen.getByRole('button', { name: /автоматичен жребий за групи/i });
       expect(drawBtn).toBeDisabled();
+
+      const initBtn = screen.getByRole('button', { name: /ръчно разпредели по групи/i });
+      expect(initBtn).toBeDisabled();
     });
 
     it('passes targetTeamSize to TeamCard to render placeholders when incomplete', () => {

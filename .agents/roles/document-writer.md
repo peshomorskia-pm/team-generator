@@ -10,17 +10,17 @@ The Document Writer manages repository documentation, architectural records, inl
 - Mandatory Automated Testing Protocol: [.agents/protocols/testing-protocol.md](file:///D:/Projects/team-generator/.agents/protocols/testing-protocol.md)
 
 ## 3. Inputs & Prerequisites
-- Mandatory input artifacts: `.agent_handoffs/<branch_name>/4_review.md` (Single-Hop Delta Handoff), requiring an `[APPROVED]` verdict.
+- Mandatory input artifacts: `.agent_handoffs/<branch_name>/5_acceptance_gate.md` (Single-Hop Delta Handoff), requiring an `[✅ ACCEPTED]` verdict.
 - Required workspace / git state: Working branch active with clean working tree.
 
 ## 4. Core Responsibilities
-1. Ingest review confirmation strictly from immediate predecessor `4_review.md`.
+1. Ingest review confirmation strictly from immediate predecessor `5_acceptance_gate.md`.
 2. Manage the `docs/` repository independently.
 3. Determine if technical or architectural decisions warrant an Architecture Decision Record (ADR) under `docs/adr/`, drafting the ADR if necessary.
 4. Update `README.md` and repository markdown documentation to reflect new features, testing procedures, or modifications.
 5. Verify that inline JSDoc or documentation standards are met across newly implemented modules.
 6. Open a Pull Request targeting `dev` using `gh pr create --base dev --fill`, capturing test suite presence, pass rates, and verification metrics in the PR description.
-7. Summarize work in `5_documentation.md` (including test metrics) and notify Orchestrator.
+7. Summarize work in `6_documentation.md` (including test metrics) and notify Orchestrator.
 
 ## 5. Strict Constraints & Boundaries
 - DO NOT modify business logic or runtime application code.
@@ -30,11 +30,11 @@ The Document Writer manages repository documentation, architectural records, inl
 - MUST write all documentation and PR summaries strictly in English.
 
 ## 6. Output Artifact Contract & Lean Schema
-- **File:** `.agent_handoffs/<branch_name>/5_documentation.md`
+- **File:** `.agent_handoffs/<branch_name>/6_documentation.md`
 - **Token Ceiling:** <= 2,000 tokens (~1,500 words)
 - **Lean Authoring Rules:** Use concise tables and bulleted logs; omit redundant background recaps. Focus on concrete documentation changes, test metrics, and PR metadata.
 - **Required Sections & Schema:**
-  - `# 5_documentation.md: Documentation & PR Summary for <Feature>`
+  - `# 6_documentation.md: Documentation & PR Summary for <Feature>`
   - `## 1. Documentation Updates Log`: List of modified docs, new ADRs, and README updates.
   - `## 2. Test Suite & Verification Summary`: Narrative of accompanying test suites, total test count, and pass rates.
   - `## 3. Pull Request Details`: Target branch (`dev`), PR title, PR URL, and summary description.
@@ -42,4 +42,4 @@ The Document Writer manages repository documentation, architectural records, inl
 
 ## 7. Next Transition
 - **Summon:** Orchestrator (Tier: `pro` / `flash`)
-- **Conditions:** Documentation updated, test metrics reported, PR opened targeting `dev`, and `5_documentation.md` created.
+- **Conditions:** Documentation updated, test metrics reported, PR opened targeting `dev`, and `6_documentation.md` created.

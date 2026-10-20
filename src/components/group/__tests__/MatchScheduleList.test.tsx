@@ -220,6 +220,39 @@ describe('MatchScheduleList Component', () => {
     expect(onSaveAllMatches).toHaveBeenCalledTimes(1);
   });
 
+  it('renders custom saveLabel when provided (e.g. tournament mode "💾 Запиши мачове за турнира")', () => {
+    const onSaveAllMatches = vi.fn();
+    const team1 = createMockTeam('t1', 'Отбор 1');
+    const team2 = createMockTeam('t2', 'Отбор 2');
+
+    const schedule: TournamentMatch[] = [
+      {
+        id: 'match-group-0-r1-m1',
+        groupId: 'group-0',
+        groupName: 'Група А',
+        round: 1,
+        team1,
+        team2,
+      },
+    ];
+
+    render(
+      <MatchScheduleList
+        schedule={schedule}
+        onSaveAllMatches={onSaveAllMatches}
+        saveLabel="💾 Запиши мачове за турнира"
+      />
+    );
+
+    const saveBtn = screen.getByRole('button', { name: /запиши мачове за турнира/i });
+    expect(saveBtn).toBeInTheDocument();
+    expect(saveBtn).toHaveAttribute('id', 'saveAllMatchesBtn');
+    expect(saveBtn).toHaveTextContent('💾 Запиши мачове за турнира');
+
+    fireEvent.click(saveBtn);
+    expect(onSaveAllMatches).toHaveBeenCalledTimes(1);
+  });
+
   it('disables save button and displays "Записване..." with spinner during isSavingMatches', () => {
     const onSaveAllMatches = vi.fn();
     const onReset = vi.fn();
