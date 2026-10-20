@@ -1,0 +1,52 @@
+name: Supabase Keep-Alive Healthcheck
+
+on:
+  schedule:
+    - cron: '0 7 */3 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  keepalive:
+    name: Supabase Activity Ping
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase Database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || secrets.VITE_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+
+          # Guardrail: Validate credentials existence
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "::error::Missing Supabase credentials in repository secrets!"
+            echo "Please configure the repository secrets in GitHub:"
+            echo "  1. Navigate to: Settings -> Secrets and variables -> Actions"
+            echo "  2. Add 'SUPABASE_URL' (or 'VITE_SUPABASE_URL') with your Supabase project URL"
+            echo "  3. Add 'SUPABASE_ANON_KEY' (or 'VITE_SUPABASE_ANON_KEY') with your Supabase anon API key"
+            exit 1
+          fi
+
+          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%SZ")
+          echo "[$TIMESTAMP] Initiating keep-alive query against Supabase..."
+
+          # Execute lightweight read query against PostgREST endpoint
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            -H "Range-Unit: items" \
+            "${SUPABASE_URL}/rest/v1/players?select=id&limit=1" || echo "000")
+
+          if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "206" ]; then
+            echo "[$TIMESTAMP] Supabase keep-alive successful (HTTP $HTTP_STATUS). Activity timestamp refreshed."
+          else
+            echo "::error::Supabase keep-alive failed with HTTP status: $HTTP_STATUS"
+            echo "Troubleshooting:"
+            echo "  - Verify that the Supabase project is active (not paused or deleted)."
+            echo "  - Check that 'SUPABASE_URL' and 'SUPABASE_ANON_KEY' (or 'VITE_SUPABASE_*') are accurate."
+            echo "  - Ensure RLS allows anonymous SELECT on the 'players' table."
+            exit 1
+          fi
