@@ -179,8 +179,32 @@ describe('GroupStandingsTable Component', () => {
 
     const rosterEl = screen.getByText('Иван Иванов, Петър Петров');
     expect(rosterEl).toBeInTheDocument();
-    expect(rosterEl).toHaveClass('truncate', 'mt-0.5', 'text-xs', 'text-slate-500');
+    expect(rosterEl).toHaveClass('line-clamp-2', 'break-words', 'mt-0.5', 'text-xs', 'text-slate-500');
+    expect(rosterEl).not.toHaveClass('truncate');
+    expect(rosterEl).toHaveAttribute('title', 'Иван Иванов, Петър Петров');
     expect(screen.getByTestId('team-roster-1')).toBe(rosterEl);
+  });
+
+  it('GST-05: provides unabridged roster as title tooltip attribute for hover', () => {
+    const longNames = [
+      'Константин Константинополски',
+      'Александър Александров-Велики',
+    ];
+    const teamRosterMap = new Map<string, string[]>([['t1', longNames]]);
+
+    render(
+      <GroupStandingsTable
+        groupName="Група А"
+        standings={mockStandings}
+        teamRosterMap={teamRosterMap}
+      />
+    );
+
+    const rosterEl = screen.getByTestId('team-roster-1');
+    expect(rosterEl).toHaveAttribute(
+      'title',
+      'Константин Константинополски, Александър Александров-Велики'
+    );
   });
 
   it('GST-02: renders player roster when teamRosterMap is passed as Record / Object', () => {

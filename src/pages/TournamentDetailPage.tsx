@@ -239,6 +239,7 @@ export const TournamentDetailPage: React.FC = () => {
         qualifiers: playoffResolution.qualifiers,
         teams: knownTeams,
         finalistsCount: selectedFinalistsCount,
+        groupCount: allGroupStandings.length,
       });
 
       const { error } = await bulkCreateMatches(newMatches, tournament.format, tournament.id);
