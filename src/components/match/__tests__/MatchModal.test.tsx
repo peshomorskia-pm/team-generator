@@ -255,6 +255,64 @@ describe('MatchModal Component', () => {
     expect(handleSave).not.toHaveBeenCalled();
   });
 
+  it('rejects corrupt score (> 50, e.g. 7:56)', async () => {
+    const user = userEvent.setup();
+    const handleSave = vi.fn();
+
+    render(
+      <MatchModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={handleSave}
+        match={sampleMatch}
+        availablePlayers={availablePlayers}
+      />
+    );
+
+    const scoreInput1 = screen.getByLabelText('Резултат Отбор 1');
+    const scoreInput2 = screen.getByLabelText('Резултат Отбор 2');
+    await user.clear(scoreInput1);
+    await user.type(scoreInput1, '7');
+    await user.clear(scoreInput2);
+    await user.type(scoreInput2, '56');
+
+    await user.click(screen.getByRole('button', { name: /запази/i }));
+
+    expect(
+      screen.getByText('Резултатът не може да надвишава 50.')
+    ).toBeInTheDocument();
+    expect(handleSave).not.toHaveBeenCalled();
+  });
+
+  it('rejects tied casual match score (e.g. 2:2)', async () => {
+    const user = userEvent.setup();
+    const handleSave = vi.fn();
+
+    render(
+      <MatchModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={handleSave}
+        match={sampleMatch}
+        availablePlayers={availablePlayers}
+      />
+    );
+
+    const scoreInput1 = screen.getByLabelText('Резултат Отбор 1');
+    const scoreInput2 = screen.getByLabelText('Резултат Отбор 2');
+    await user.clear(scoreInput1);
+    await user.type(scoreInput1, '2');
+    await user.clear(scoreInput2);
+    await user.type(scoreInput2, '2');
+
+    await user.click(screen.getByRole('button', { name: /запази/i }));
+
+    expect(
+      screen.getByText('Сетовете не могат да завършват наравно.')
+    ).toBeInTheDocument();
+    expect(handleSave).not.toHaveBeenCalled();
+  });
+
   it('prevents submit when a team has no players', async () => {
     const user = userEvent.setup();
     const handleSave = vi.fn();

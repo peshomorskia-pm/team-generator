@@ -5,6 +5,7 @@ import { Input } from '../ui/Input';
 import { PlayerCombobox } from './PlayerCombobox';
 import type { PlayerRow } from '../../types/database.types';
 import type { MatchDetail, MatchFormData, MatchFormat } from '../../types/matches';
+import { validateCasualMatchScore } from '../../utils/tennisScoreValidation';
 
 export interface MatchParticipant {
   player_id?: string;
@@ -292,8 +293,9 @@ export const MatchModal: React.FC<MatchModalProps> = ({
       const num1 = Number(team1Score);
       const num2 = Number(team2Score);
 
-      if (Number.isNaN(num1) || Number.isNaN(num2) || num1 < 0 || num2 < 0) {
-        setValidationError('Резултатът трябва да бъде 0 или по-голям.');
+      const scoreValidation = validateCasualMatchScore(num1, num2);
+      if (!scoreValidation.isValid) {
+        setValidationError(scoreValidation.error ?? 'Резултатът трябва да бъде 0 или по-голям.');
         return;
       }
 
@@ -311,8 +313,9 @@ export const MatchModal: React.FC<MatchModalProps> = ({
         const num1 = Number(team1Score);
         const num2 = Number(team2Score);
 
-        if (Number.isNaN(num1) || Number.isNaN(num2) || num1 < 0 || num2 < 0) {
-          setValidationError('Резултатът трябва да бъде 0 или по-голям.');
+        const scoreValidation = validateCasualMatchScore(num1, num2);
+        if (!scoreValidation.isValid) {
+          setValidationError(scoreValidation.error ?? 'Резултатът трябва да бъде 0 или по-голям.');
           return;
         }
 

@@ -175,8 +175,8 @@ describe('TournamentScoreModal Component', () => {
     await user.click(screen.getByText('💾 Запази резултат'));
 
     expect(
-      screen.getByText('Сетовете не могат да завършват наравно.')
-    ).toBeInTheDocument();
+      screen.getAllByText('Сетовете не могат да завършват наравно.').length
+    ).toBeGreaterThanOrEqual(1);
     expect(handleSave).not.toHaveBeenCalled();
   });
 
@@ -302,5 +302,140 @@ describe('TournamentScoreModal Component', () => {
 
     expect(handleSave).toHaveBeenCalledWith('m-tournament-1', null, null, null);
     expect(handleClose).toHaveBeenCalled();
+  });
+
+  it('populates scores using 1-tap preset chips across sets and submits valid 3-set match', async () => {
+    const user = userEvent.setup();
+    const handleSave = vi.fn().mockResolvedValue(undefined);
+    const handleClose = vi.fn();
+
+    render(
+      <TournamentScoreModal
+        isOpen={true}
+        onClose={handleClose}
+        match={sampleMatch}
+        onSave={handleSave}
+      />
+    );
+
+    // Set 1: click preset 6:3
+    const preset63 = screen.getByRole('button', { name: '6:3' });
+    await user.click(preset63);
+
+    const set1Team1 = screen.getByLabelText('Сет 1 Отбор 1');
+    const set1Team2 = screen.getByLabelText('Сет 1 Отбор 2');
+    expect(set1Team1).toHaveValue('6');
+    expect(set1Team2).toHaveValue('3');
+
+    // Add Set 2
+    await user.click(screen.getByText('+ Добави сет (2 от 3)'));
+
+    // Set 2: click preset 3:6
+    const preset36 = screen.getAllByRole('button', { name: '3:6' })[1];
+    await user.click(preset36);
+
+    const set2Team1 = screen.getByLabelText('Сет 2 Отбор 1');
+    const set2Team2 = screen.getByLabelText('Сет 2 Отбор 2');
+    expect(set2Team1).toHaveValue('3');
+    expect(set2Team2).toHaveValue('6');
+
+    // Deciding set button should appear
+    const addSet3Button = await screen.findByText('+ Добави решителен тайбрек (Сет 3)');
+    expect(addSet3Button).toBeInTheDocument();
+    await user.click(addSet3Button);
+
+    // Set 3: click preset 10:7
+    const preset107 = screen.getByRole('button', { name: '10:7' });
+    await user.click(preset107);
+
+    const set3Team1 = screen.getByLabelText('Сет 3 Отбор 1');
+    const set3Team2 = screen.getByLabelText('Сет 3 Отбор 2');
+    expect(set3Team1).toHaveValue('10');
+    expect(set3Team2).toHaveValue('7');
+
+    // Submit
+    await user.click(screen.getByText('💾 Запази резултат'));
+
+    expect(handleSave).toHaveBeenCalledWith(
+      'm-tournament-1',
+      [
+        { set_number: 1, team_1_score: 6, team_2_score: 3 },
+        { set_number: 2, team_1_score: 3, team_2_score: 6 },
+        { set_number: 3, team_1_score: 10, team_2_score: 7 },
+      ],
+      2,
+      1
+    );
+    expect(handleClose).toHaveBeenCalled();
+  });
+
+  it('increments and decrements Set 3 score using stepper buttons', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <TournamentScoreModal
+        isOpen={true}
+        onClose={vi.fn()}
+        match={sampleMatch}
+        onSave={vi.fn()}
+      />
+    );
+
+    // Set 1: 6:4
+    await user.click(screen.getByRole('button', { name: '6:4' }));
+
+    // Add Set 2: 4:6
+    await user.click(screen.getByText('+ Добави сет (2 от 3)'));
+    const preset46 = screen.getAllByRole('button', { name: '4:6' })[1];
+    await user.click(preset46);
+
+    // Add Set 3
+    await user.click(screen.getByText('+ Добави решителен тайбрек (Сет 3)'));
+
+    const set3Team1 = screen.getByLabelText('Сет 3 Отбор 1');
+    expect(set3Team1).toHaveValue('');
+
+    // Click + stepper for Team 1
+    const incTeam1 = screen.getByLabelText('Увеличи точки Отбор 1');
+    await user.click(incTeam1);
+    expect(set3Team1).toHaveValue('1');
+
+    await user.click(incTeam1);
+    expect(set3Team1).toHaveValue('2');
+
+    // Click - stepper for Team 1
+    const decTeam1 = screen.getByLabelText('Намали точки Отбор 1');
+    await user.click(decTeam1);
+    expect(set3Team1).toHaveValue('1');
+  });
+
+  it('rejects corrupt scores (7:56) and shows error banner without saving', async () => {
+    const user = userEvent.setup();
+    const handleSave = vi.fn();
+
+    render(
+      <TournamentScoreModal
+        isOpen={true}
+        onClose={vi.fn()}
+        match={sampleMatch}
+        onSave={handleSave}
+      />
+    );
+
+    const set1Team1 = screen.getByLabelText('Сет 1 Отбор 1');
+    const set1Team2 = screen.getByLabelText('Сет 1 Отбор 2');
+
+    await user.type(set1Team1, '7');
+    await user.type(set1Team2, '56');
+
+    // Live validation error should already be shown
+    expect(
+      screen.getByText('Невалиден сет: сетовете се играят до 6 гейма с 2 разлика, 7:5 или 7:6 при тайбрек.')
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByText('💾 Запази резултат'));
+
+    // Top error banner also displays it
+    expect(handleSave).not.toHaveBeenCalled();
   });
 });
