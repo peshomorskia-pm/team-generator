@@ -344,12 +344,11 @@ describe('TournamentScoreModal Component', () => {
     expect(addSet3Button).toBeInTheDocument();
     await user.click(addSet3Button);
 
-    // Set 3: click preset 10:7
-    const preset107 = screen.getByRole('button', { name: '10:7' });
-    await user.click(preset107);
-
+    // Set 3: type into numeric inputs
     const set3Team1 = screen.getByLabelText('Сет 3 Отбор 1');
     const set3Team2 = screen.getByLabelText('Сет 3 Отбор 2');
+    await user.type(set3Team1, '10');
+    await user.type(set3Team2, '7');
     expect(set3Team1).toHaveValue('10');
     expect(set3Team2).toHaveValue('7');
 
@@ -369,7 +368,7 @@ describe('TournamentScoreModal Component', () => {
     expect(handleClose).toHaveBeenCalled();
   });
 
-  it('increments and decrements Set 3 score using stepper buttons', async () => {
+  it('types Set 3 super tiebreak score directly into clean numeric inputs', async () => {
     const user = userEvent.setup();
 
     render(
@@ -393,20 +392,19 @@ describe('TournamentScoreModal Component', () => {
     await user.click(screen.getByText('+ Добави решителен тайбрек (Сет 3)'));
 
     const set3Team1 = screen.getByLabelText('Сет 3 Отбор 1');
+    const set3Team2 = screen.getByLabelText('Сет 3 Отбор 2');
     expect(set3Team1).toHaveValue('');
+    expect(set3Team2).toHaveValue('');
 
-    // Click + stepper for Team 1
-    const incTeam1 = screen.getByLabelText('Увеличи точки Отбор 1');
-    await user.click(incTeam1);
-    expect(set3Team1).toHaveValue('1');
+    // Type directly
+    await user.type(set3Team1, '10');
+    await user.type(set3Team2, '8');
+    expect(set3Team1).toHaveValue('10');
+    expect(set3Team2).toHaveValue('8');
 
-    await user.click(incTeam1);
-    expect(set3Team1).toHaveValue('2');
-
-    // Click - stepper for Team 1
-    const decTeam1 = screen.getByLabelText('Намали точки Отбор 1');
-    await user.click(decTeam1);
-    expect(set3Team1).toHaveValue('1');
+    // Confirm steppers are NOT in document
+    expect(screen.queryByLabelText(/намали/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/увеличи/i)).not.toBeInTheDocument();
   });
 
   it('rejects corrupt scores (7:56) and shows error banner without saving', async () => {
