@@ -4,6 +4,7 @@ import {
   validateSuperTiebreak,
   validateCasualMatchScore,
   validateTournamentMatch,
+  calculateMatchScores,
   REGULAR_SET_PRESETS_TEAM1,
   REGULAR_SET_PRESETS_TEAM2,
   SUPER_TIEBREAK_PRESETS_TEAM1,
@@ -366,4 +367,52 @@ describe('tennisScoreValidation Engine', () => {
       }
     });
   });
+
+  describe('calculateMatchScores', () => {
+    it('returns nulls for empty, null, or undefined sets', () => {
+      expect(calculateMatchScores(null)).toEqual({ team1Score: null, team2Score: null });
+      expect(calculateMatchScores(undefined)).toEqual({ team1Score: null, team2Score: null });
+      expect(calculateMatchScores([])).toEqual({ team1Score: null, team2Score: null });
+    });
+
+    it('returns game scores for single-set matches', () => {
+      expect(
+        calculateMatchScores([{ set_number: 1, team_1_score: 6, team_2_score: 4 }])
+      ).toEqual({ team1Score: 6, team2Score: 4 });
+      expect(
+        calculateMatchScores([{ set_number: 1, team_1_score: 3, team_2_score: 6 }])
+      ).toEqual({ team1Score: 3, team2Score: 6 });
+    });
+
+    it('returns sets won for multi-set matches (2-set match)', () => {
+      const sets20: MatchSet[] = [
+        { set_number: 1, team_1_score: 6, team_2_score: 2 },
+        { set_number: 2, team_1_score: 6, team_2_score: 4 },
+      ];
+      expect(calculateMatchScores(sets20)).toEqual({ team1Score: 2, team2Score: 0 });
+
+      const sets02: MatchSet[] = [
+        { set_number: 1, team_1_score: 4, team_2_score: 6 },
+        { set_number: 2, team_1_score: 3, team_2_score: 6 },
+      ];
+      expect(calculateMatchScores(sets02)).toEqual({ team1Score: 0, team2Score: 2 });
+    });
+
+    it('returns sets won for multi-set matches (3-set match)', () => {
+      const sets21: MatchSet[] = [
+        { set_number: 1, team_1_score: 6, team_2_score: 4 },
+        { set_number: 2, team_1_score: 4, team_2_score: 6 },
+        { set_number: 3, team_1_score: 10, team_2_score: 8 },
+      ];
+      expect(calculateMatchScores(sets21)).toEqual({ team1Score: 2, team2Score: 1 });
+
+      const sets12: MatchSet[] = [
+        { set_number: 1, team_1_score: 6, team_2_score: 4 },
+        { set_number: 2, team_1_score: 4, team_2_score: 6 },
+        { set_number: 3, team_1_score: 8, team_2_score: 10 },
+      ];
+      expect(calculateMatchScores(sets12)).toEqual({ team1Score: 1, team2Score: 2 });
+    });
+  });
 });
+

@@ -406,7 +406,7 @@ describe('MatchesPage Integration Tests', () => {
     await user.click(screen.getByRole('button', { name: /нов мач/i }));
 
     expect(screen.getByRole('heading', { name: 'Нов мач' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Резултат Отбор 1')).toBeInTheDocument();
+    expect(screen.getByLabelText('Сет 1 Отбор 1')).toBeInTheDocument();
   });
 
   it('opens edit MatchModal when clicking edit on a match card', async () => {
@@ -417,8 +417,8 @@ describe('MatchesPage Integration Tests', () => {
     await user.click(editButtons[0]);
 
     expect(screen.getByRole('heading', { name: 'Редактиране на мач' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Резултат Отбор 1')).toHaveValue(4);
-    expect(screen.getByLabelText('Резултат Отбор 2')).toHaveValue(2);
+    expect(screen.getByLabelText('Сет 1 Отбор 1')).toHaveValue('4');
+    expect(screen.getByLabelText('Сет 1 Отбор 2')).toHaveValue('2');
   });
 
   it('opens DeleteMatchModal and executes deletion on confirm', async () => {

@@ -12,6 +12,11 @@ export interface MatchValidationResult {
   setErrors: Record<number, string>; // 1-indexed by set_number
 }
 
+export interface CalculatedMatchScores {
+  team1Score: number | null;
+  team2Score: number | null;
+}
+
 export interface ScorePreset {
   score1: number;
   score2: number;
@@ -258,4 +263,29 @@ export function validateTournamentMatch(sets: MatchSet[]): MatchValidationResult
     error: TENNIS_ERROR_MESSAGES.MAX_SETS_EXCEEDED,
     setErrors: {},
   };
+}
+
+/**
+ * Computes official match scores from validated sets.
+ * - Single-set match: returns game scores (e.g. 6:4 -> 6, 4).
+ * - Multi-set match: returns sets won (e.g. [6:4, 4:6, 10:8] -> 2, 1).
+ * - Empty sets: returns null, null.
+ */
+export function calculateMatchScores(sets: MatchSet[] | null | undefined): CalculatedMatchScores {
+  if (!sets || sets.length === 0) {
+    return { team1Score: null, team2Score: null };
+  }
+  if (sets.length === 1) {
+    return {
+      team1Score: sets[0].team_1_score,
+      team2Score: sets[0].team_2_score,
+    };
+  }
+  let t1Won = 0;
+  let t2Won = 0;
+  for (const s of sets) {
+    if (s.team_1_score > s.team_2_score) t1Won += 1;
+    else if (s.team_2_score > s.team_1_score) t2Won += 1;
+  }
+  return { team1Score: t1Won, team2Score: t2Won };
 }
