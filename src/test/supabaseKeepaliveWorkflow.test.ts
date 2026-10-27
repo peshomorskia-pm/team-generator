@@ -11,9 +11,9 @@ describe('Supabase Keep-Alive Workflow & ADR Verification', () => {
       expect(fs.existsSync(workflowPath)).toBe(true);
     });
 
-    it('WF-02: verifies 3-day cron schedule trigger configuration', () => {
+    it('WF-02: verifies twice-daily cron schedule trigger configuration', () => {
       const workflowContent = fs.readFileSync(workflowPath, 'utf-8');
-      expect(workflowContent).toMatch(/cron:\s*['"]0 7 \*\/3 \* \*['"]/);
+      expect(workflowContent).toMatch(/cron:\s*['"]0 7,19 \* \* \*['"]/);
     });
 
     it('WF-03: verifies workflow_dispatch trigger for manual execution', () => {
@@ -72,12 +72,12 @@ describe('Supabase Keep-Alive Workflow & ADR Verification', () => {
       expect(fs.existsSync(adrPath)).toBe(true);
     });
 
-    it('ADR-02: verifies ADR status and context regarding 7-day pause rule and 3-day cadence', () => {
+    it('ADR-02: verifies ADR status and context regarding 7-day pause rule and twice-daily cadence', () => {
       const adrContent = fs.readFileSync(adrPath, 'utf-8');
       expect(adrContent).toContain('## Status');
       expect(adrContent).toContain('Accepted');
       expect(adrContent).toMatch(/7\s*(?:consecutive\s*)?days|7-day/i);
-      expect(adrContent).toMatch(/3\s*days|3-day/i);
+      expect(adrContent).toMatch(/twice-daily|twice\s+daily|12-hour/i);
     });
 
     it('ADR-03: verifies step-by-step GitHub Secrets configuration instructions', () => {

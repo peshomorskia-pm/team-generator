@@ -17,14 +17,14 @@ To guarantee high availability and prevent dormant pauses during tournament off-
 We implement an automated scheduled healthcheck workflow in [`.github/workflows/supabase-keepalive.yml`](../../.github/workflows/supabase-keepalive.yml) using GitHub Actions.
 
 Key architectural decisions:
-1. **Cadence (`0 7 */3 * *`)**: Run every 3 days at 07:00 UTC, providing a safe >96-hour buffer before the 7-day inactivity pause threshold is reached.
+1. **Cadence (`0 7,19 * * *`)**: Run twice daily at 07:00 UTC and 19:00 UTC (~14 pings per week), satisfying Supabase's activity heuristic across rolling 7-day windows and providing continuous database responsiveness.
 2. **On-Demand Trigger (`workflow_dispatch`)**: Enable manual workflow execution directly from the GitHub Actions UI or CLI for instant health verification.
 3. **Target Query (`/rest/v1/players?select=id&limit=1`)**: Execute a lightweight, read-only PostgREST SELECT query against the public `players` table. This invokes the PostgreSQL query planner and execution engine, resetting the internal Supabase activity tracking timestamp.
 4. **Secret Fallback Resolution**: Support both standard backend secret naming conventions (`SUPABASE_URL`, `SUPABASE_ANON_KEY`) and Vite frontend conventions (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) via `${{ secrets.SUPABASE_URL || secrets.VITE_SUPABASE_URL }}` and `${{ secrets.SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_ANON_KEY }}`.
 5. **Least Privilege & Secure Injection**: Scoped runner permissions strictly to `contents: read`. Secrets are injected solely through environment variables (`env:`) and never echoed to standard output or run logs.
 
 ## Rationale for Technical Choices
-* **3-Day Interval**: Provides >96 hours of buffer against transient network failures, GitHub Actions runner delays, or scheduled maintenance windows.
+* **Twice-Daily Interval (`0 7,19 * * *`)**: Supabase Free Tier dormancy detection evaluates daily query distribution across the rolling 7-day scanning window. The initial 3-day cadence provided only 2–3 pings weekly, resulting in heuristic inactivity warnings. The twice-daily cadence ensures active queries every ~12 hours (~14 pings/week), satisfying the activity heuristic while remaining well under GitHub Actions runner quotas.
 * **PostgREST Query vs `pg_isready` / Supabase CLI**: Directly executes an actual SQL query on the Postgres engine, ensuring compute activity is registered by Supabase metrics, without requiring heavy database client tools, pooler passwords, or connection pool exhaustion.
 * **Curl on Ubuntu Runner**: Native, zero-dependency utility pre-installed on `ubuntu-latest`. Avoids external npm packages or third-party GitHub Actions that introduce supply-chain risks.
 * **Validation & Diagnostic Guardrails**: Immediately validates that secrets are present before issuing network requests, outputting actionable setup instructions if configuration is incomplete.
@@ -47,7 +47,7 @@ To ensure the scheduled workflow can authenticate with the Supabase project:
 ### Positive
 * **Zero Manual Maintenance**: Supabase database remains continuously active without requiring developer dashboard logins.
 * **Automated Failure Alerting**: If the database is unreachable or returns an HTTP status other than 200/206, the workflow fails and sends GitHub Actions failure notifications.
-* **Minimal Resource Footprint**: Each run executes in under 10 seconds and consumes less than 1 minute of GitHub Actions runner quota per month.
+* **Minimal Resource Footprint**: Each run executes in under 10 seconds (~60 runs per month), consuming approximately 10 minutes of GitHub Actions runner quota monthly (< 0.5% of the 2,000 monthly free tier minutes).
 
 ### Operational Caveats & GitHub 60-Day Policy
 * **GitHub Inactivity Policy**: GitHub automatically disables scheduled cron workflows in repositories that have had no commit activity for 60 consecutive days. If the repository is inactive for nearly two months, maintainers must trigger a manual run (`workflow_dispatch`) or push a commit to keep scheduled workflows active.
