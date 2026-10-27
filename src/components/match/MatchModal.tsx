@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Save, Swords, Loader2, User } from 'lucide-react';
+import { X, Plus, Trash2, Save, Swords, Loader2, User, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
 import { PlayerCombobox } from './PlayerCombobox';
+import { TennisScoreEditor } from './TennisScoreEditor';
 import type { PlayerRow } from '../../types/database.types';
 import type { MatchDetail, MatchFormData, MatchFormat } from '../../types/matches';
-import { validateCasualMatchScore } from '../../utils/tennisScoreValidation';
+import type { MatchSet } from '../../types/match';
+import { calculateMatchScores } from '../../utils/tennisScoreValidation';
 
 export interface MatchParticipant {
   player_id?: string;
@@ -85,14 +86,37 @@ export const MatchModal: React.FC<MatchModalProps> = ({
     return 'singles';
   };
 
+  const getInitialSets = (): MatchSet[] => {
+    if (match?.sets && match.sets.length > 0) {
+      return match.sets.map((s, idx) => ({
+        set_number: idx + 1,
+        team_1_score: s.team_1_score,
+        team_2_score: s.team_2_score,
+      }));
+    }
+    if (
+      match?.team_1_score !== null &&
+      match?.team_1_score !== undefined &&
+      match?.team_2_score !== null &&
+      match?.team_2_score !== undefined
+    ) {
+      return [
+        {
+          set_number: 1,
+          team_1_score: match.team_1_score,
+          team_2_score: match.team_2_score,
+        },
+      ];
+    }
+    return [];
+  };
+
   const [format, setFormat] = useState<MatchFormat>(getInitialFormat);
   const [date, setDate] = useState(getInitialDate);
-  const [team1Score, setTeam1Score] = useState(
-    match && match.team_1_score !== null ? String(match.team_1_score) : ''
-  );
-  const [team2Score, setTeam2Score] = useState(
-    match && match.team_2_score !== null ? String(match.team_2_score) : ''
-  );
+  const [sets, setSets] = useState<MatchSet[]>(getInitialSets);
+  const [isScoreValid, setIsScoreValid] = useState(true);
+  const [scoreError, setScoreError] = useState<string | null>(null);
+
   const [team1Players, setTeam1Players] = useState<MatchParticipant[]>(() =>
     getInitialParticipants('team_1')
   );
@@ -126,8 +150,9 @@ export const MatchModal: React.FC<MatchModalProps> = ({
     setPrevInitialFormat(initialFormat);
     setFormat(getInitialFormat());
     setDate(getInitialDate());
-    setTeam1Score(match && match.team_1_score !== null ? String(match.team_1_score) : '');
-    setTeam2Score(match && match.team_2_score !== null ? String(match.team_2_score) : '');
+    setSets(getInitialSets());
+    setIsScoreValid(true);
+    setScoreError(null);
     setTeam1Players(getInitialParticipants('team_1'));
     setTeam2Players(getInitialParticipants('team_2'));
     setGuestNameT1('');
@@ -153,8 +178,17 @@ export const MatchModal: React.FC<MatchModalProps> = ({
     return null;
   }
 
+  const targetCount = format === 'singles' ? 1 : 2;
+  const isTeam1Full = team1Players.length >= targetCount;
+  const isTeam2Full = team2Players.length >= targetCount;
+  const showSinglesExcessWarning =
+    format === 'singles' && (team1Players.length > 1 || team2Players.length > 1);
+
   const handleAddPlayer = (teamSide: 'team_1' | 'team_2', playerId: string) => {
     if (!playerId) return;
+    if (teamSide === 'team_1' && team1Players.length >= targetCount) return;
+    if (teamSide === 'team_2' && team2Players.length >= targetCount) return;
+
     const playerObj = availablePlayers.find((p) => p.id === playerId);
     if (!playerObj) return;
 
@@ -165,18 +199,10 @@ export const MatchModal: React.FC<MatchModalProps> = ({
 
     if (teamSide === 'team_1') {
       if (team1Players.some((p) => p.player_id === playerId)) return;
-      const nextT1 = [...team1Players, participant];
-      setTeam1Players(nextT1);
-      if (nextT1.length > 1) {
-        setFormat('doubles');
-      }
+      setTeam1Players([...team1Players, participant]);
     } else {
       if (team2Players.some((p) => p.player_id === playerId)) return;
-      const nextT2 = [...team2Players, participant];
-      setTeam2Players(nextT2);
-      if (nextT2.length > 1) {
-        setFormat('doubles');
-      }
+      setTeam2Players([...team2Players, participant]);
     }
     setValidationError(null);
   };
@@ -184,6 +210,8 @@ export const MatchModal: React.FC<MatchModalProps> = ({
   const handleAddGuest = (teamSide: 'team_1' | 'team_2', name: string) => {
     const trimmed = name.trim();
     if (!trimmed) return;
+    if (teamSide === 'team_1' && team1Players.length >= targetCount) return;
+    if (teamSide === 'team_2' && team2Players.length >= targetCount) return;
 
     const participant: MatchParticipant = {
       guest_name: trimmed,
@@ -191,19 +219,11 @@ export const MatchModal: React.FC<MatchModalProps> = ({
     };
 
     if (teamSide === 'team_1') {
-      const nextT1 = [...team1Players, participant];
-      setTeam1Players(nextT1);
+      setTeam1Players([...team1Players, participant]);
       setGuestNameT1('');
-      if (nextT1.length > 1) {
-        setFormat('doubles');
-      }
     } else {
-      const nextT2 = [...team2Players, participant];
-      setTeam2Players(nextT2);
+      setTeam2Players([...team2Players, participant]);
       setGuestNameT2('');
-      if (nextT2.length > 1) {
-        setFormat('doubles');
-      }
     }
     setValidationError(null);
   };
@@ -214,6 +234,7 @@ export const MatchModal: React.FC<MatchModalProps> = ({
     } else {
       setTeam2Players((prev) => prev.filter((_, i) => i !== index));
     }
+    setValidationError(null);
   };
 
   const handleRemovePlayerById = (teamSide: 'team_1' | 'team_2', playerId: string) => {
@@ -229,21 +250,23 @@ export const MatchModal: React.FC<MatchModalProps> = ({
     e.preventDefault();
     setValidationError(null);
 
-    if (team1Players.length === 0 || team2Players.length === 0) {
-      setValidationError('Всеки отбор трябва да има поне един играч.');
+    // Validate exact roster limits with Bulgarian localized messages
+    if (team1Players.length !== targetCount) {
+      setValidationError(
+        format === 'singles'
+          ? 'При мач поединично Отбор 1 трябва да има точно 1 играч.'
+          : 'При мач по двойки Отбор 1 трябва да има точно 2 играчи.'
+      );
       return;
     }
 
-    if (format === 'singles') {
-      if (team1Players.length !== 1 || team2Players.length !== 1) {
-        setValidationError('За поединичен мач всеки отбор трябва да има точно по 1 играч.');
-        return;
-      }
-    } else if (format === 'doubles') {
-      if (team1Players.length !== 2 || team2Players.length !== 2) {
-        setValidationError('За мач по двойки всеки отбор трябва да има точно по 2 играчи.');
-        return;
-      }
+    if (team2Players.length !== targetCount) {
+      setValidationError(
+        format === 'singles'
+          ? 'При мач поединично Отбор 2 трябва да има точно 1 играч.'
+          : 'При мач по двойки Отбор 2 трябва да има точно 2 играчи.'
+      );
+      return;
     }
 
     // Check player overlap between team 1 and team 2
@@ -278,49 +301,42 @@ export const MatchModal: React.FC<MatchModalProps> = ({
     // Date-aware score validation
     const today = getTodayFormatted();
     const isPastDate = date < today;
-    const isT1Empty = team1Score.trim() === '';
-    const isT2Empty = team2Score.trim() === '';
 
     let parsedScore1: number | null = null;
     let parsedScore2: number | null = null;
+    let finalSets: MatchSet[] | null = null;
 
     if (isPastDate) {
-      if (isT1Empty || isT2Empty) {
+      if (sets.length === 0) {
         setValidationError('За минали мачове резултатът е задължителен.');
         return;
       }
-
-      const num1 = Number(team1Score);
-      const num2 = Number(team2Score);
-
-      const scoreValidation = validateCasualMatchScore(num1, num2);
-      if (!scoreValidation.isValid) {
-        setValidationError(scoreValidation.error ?? 'Резултатът трябва да бъде 0 или по-голям.');
+      if (!isScoreValid) {
+        setValidationError(scoreError || 'Невалиден резултат.');
         return;
       }
-
-      parsedScore1 = num1;
-      parsedScore2 = num2;
+      const { team1Score, team2Score } = calculateMatchScores(sets);
+      parsedScore1 = team1Score;
+      parsedScore2 = team2Score;
+      finalSets = sets;
     } else {
-      // Today or future date: scores are optional, but if one is provided both must be valid
-      if (isT1Empty && isT2Empty) {
-        parsedScore1 = null;
-        parsedScore2 = null;
-      } else if (isT1Empty || isT2Empty) {
-        setValidationError('Моля, въведете резултат и за двата отбора или оставете полетата празни.');
-        return;
-      } else {
-        const num1 = Number(team1Score);
-        const num2 = Number(team2Score);
-
-        const scoreValidation = validateCasualMatchScore(num1, num2);
-        if (!scoreValidation.isValid) {
-          setValidationError(scoreValidation.error ?? 'Резултатът трябва да бъде 0 или по-голям.');
+      if (sets.length === 0) {
+        if (!isScoreValid) {
+          setValidationError(scoreError || 'Невалиден резултат.');
           return;
         }
-
-        parsedScore1 = num1;
-        parsedScore2 = num2;
+        parsedScore1 = null;
+        parsedScore2 = null;
+        finalSets = null;
+      } else {
+        if (!isScoreValid) {
+          setValidationError(scoreError || 'Невалиден резултат.');
+          return;
+        }
+        const { team1Score, team2Score } = calculateMatchScores(sets);
+        parsedScore1 = team1Score;
+        parsedScore2 = team2Score;
+        finalSets = sets;
       }
     }
 
@@ -328,6 +344,7 @@ export const MatchModal: React.FC<MatchModalProps> = ({
       match_format: format,
       team_1_score: parsedScore1,
       team_2_score: parsedScore2,
+      sets: finalSets,
       played_at: new Date(date).toISOString(),
       team_1_players: team1Players.map((p) => ({
         player_id: p.player_id,
@@ -432,6 +449,12 @@ export const MatchModal: React.FC<MatchModalProps> = ({
                 По двойки
               </button>
             </div>
+            {showSinglesExcessWarning && (
+              <div className="mt-2 flex items-center gap-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 text-xs font-medium">
+                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>Внимание: За поединичен мач е необходим по 1 играч на отбор.</span>
+              </div>
+            )}
           </div>
 
           {/* Date Picker */}
@@ -463,37 +486,51 @@ export const MatchModal: React.FC<MatchModalProps> = ({
                 </span>
               </h3>
 
-              {/* Player Combobox for Registered Players */}
-              <PlayerCombobox
-                players={availablePlayers}
-                selectedIds={team1Players.filter((p) => p.player_id).map((p) => p.player_id!)}
-                excludedIds={team2Players.filter((p) => p.player_id).map((p) => p.player_id!)}
-                onSelect={(player) => handleAddPlayer('team_1', player.id)}
-                onRemove={(playerId) => handleRemovePlayerById('team_1', playerId)}
-                ariaLabel="Избери играч за Отбор 1"
-                placeholder="Избери играч..."
-                disabled={isSubmitting}
-              />
+              {/* Roster Input or Capacity Pill for Team 1 */}
+              {!isTeam1Full ? (
+                <>
+                  <PlayerCombobox
+                    players={availablePlayers}
+                    selectedIds={team1Players.filter((p) => p.player_id).map((p) => p.player_id!)}
+                    excludedIds={team2Players.filter((p) => p.player_id).map((p) => p.player_id!)}
+                    onSelect={(player) => handleAddPlayer('team_1', player.id)}
+                    onRemove={(playerId) => handleRemovePlayerById('team_1', playerId)}
+                    ariaLabel="Избери играч за Отбор 1"
+                    placeholder="Избери играч..."
+                    disabled={isSubmitting}
+                  />
 
-              {/* Add Guest */}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Име на гост..."
-                  value={guestNameT1}
-                  onChange={(e) => setGuestNameT1(e.target.value)}
-                  className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  aria-label="Име на гост за Отбор 1"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleAddGuest('team_1', guestNameT1)}
-                  className="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm transition-colors"
-                  aria-label="Добави гост към Отбор 1"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
+                  {/* Add Guest */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Име на гост..."
+                      value={guestNameT1}
+                      onChange={(e) => setGuestNameT1(e.target.value)}
+                      className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      aria-label="Име на гост за Отбор 1"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddGuest('team_1', guestNameT1)}
+                      className="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm transition-colors"
+                      aria-label="Добави гост към Отбор 1"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </>
+              ) : team1Players.length === targetCount ? (
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>Пълен състав ({targetCount}/{targetCount})</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-xs font-semibold">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span>Надхвърлен състав ({team1Players.length}/{targetCount}) - премахнете играч</span>
+                </div>
+              )}
 
               {/* Selected List */}
               <div className="space-y-1.5 pt-2">
@@ -533,37 +570,51 @@ export const MatchModal: React.FC<MatchModalProps> = ({
                 </span>
               </h3>
 
-              {/* Player Combobox for Registered Players */}
-              <PlayerCombobox
-                players={availablePlayers}
-                selectedIds={team2Players.filter((p) => p.player_id).map((p) => p.player_id!)}
-                excludedIds={team1Players.filter((p) => p.player_id).map((p) => p.player_id!)}
-                onSelect={(player) => handleAddPlayer('team_2', player.id)}
-                onRemove={(playerId) => handleRemovePlayerById('team_2', playerId)}
-                ariaLabel="Избери играч за Отбор 2"
-                placeholder="Избери играч..."
-                disabled={isSubmitting}
-              />
+              {/* Roster Input or Capacity Pill for Team 2 */}
+              {!isTeam2Full ? (
+                <>
+                  <PlayerCombobox
+                    players={availablePlayers}
+                    selectedIds={team2Players.filter((p) => p.player_id).map((p) => p.player_id!)}
+                    excludedIds={team1Players.filter((p) => p.player_id).map((p) => p.player_id!)}
+                    onSelect={(player) => handleAddPlayer('team_2', player.id)}
+                    onRemove={(playerId) => handleRemovePlayerById('team_2', playerId)}
+                    ariaLabel="Избери играч за Отбор 2"
+                    placeholder="Избери играч..."
+                    disabled={isSubmitting}
+                  />
 
-              {/* Add Guest */}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Име на гост..."
-                  value={guestNameT2}
-                  onChange={(e) => setGuestNameT2(e.target.value)}
-                  className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  aria-label="Име на гост за Отбор 2"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleAddGuest('team_2', guestNameT2)}
-                  className="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm transition-colors"
-                  aria-label="Добави гост към Отбор 2"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
+                  {/* Add Guest */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Име на гост..."
+                      value={guestNameT2}
+                      onChange={(e) => setGuestNameT2(e.target.value)}
+                      className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      aria-label="Име на гост за Отбор 2"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddGuest('team_2', guestNameT2)}
+                      className="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm transition-colors"
+                      aria-label="Добави гост към Отбор 2"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </>
+              ) : team2Players.length === targetCount ? (
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-xs font-semibold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>Пълен състав ({targetCount}/{targetCount})</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-xs font-semibold">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span>Надхвърлен състав ({team2Players.length}/{targetCount}) - премахнете играч</span>
+                </div>
+              )}
 
               {/* Selected List */}
               <div className="space-y-1.5 pt-2">
@@ -605,36 +656,19 @@ export const MatchModal: React.FC<MatchModalProps> = ({
                 (незадължителен за днес и бъдещи мачове)
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                id="team-1-score"
-                type="number"
-                min="0"
-                step="1"
-                label="Резултат Отбор 1"
-                placeholder="-"
-                value={team1Score}
-                onChange={(e) => {
-                  setTeam1Score(e.target.value);
-                  setValidationError(null);
-                }}
-                disabled={isSubmitting}
-              />
-              <Input
-                id="team-2-score"
-                type="number"
-                min="0"
-                step="1"
-                label="Резултат Отбор 2"
-                placeholder="-"
-                value={team2Score}
-                onChange={(e) => {
-                  setTeam2Score(e.target.value);
-                  setValidationError(null);
-                }}
-                disabled={isSubmitting}
-              />
-            </div>
+            <TennisScoreEditor
+              sets={sets}
+              onChange={(newSets) => {
+                setSets(newSets);
+                setValidationError(null);
+              }}
+              team1Name="Отбор 1"
+              team2Name="Отбор 2"
+              onValidationChange={(valid, err) => {
+                setIsScoreValid(valid);
+                setScoreError(err || null);
+              }}
+            />
           </div>
 
           {/* Modal Actions */}

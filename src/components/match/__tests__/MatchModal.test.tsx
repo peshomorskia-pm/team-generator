@@ -32,8 +32,8 @@ describe('MatchModal Component', () => {
 
   const sampleMatch: MatchDetail = {
     id: 'm-1',
-    team_1_score: 3,
-    team_2_score: 1,
+    team_1_score: 6,
+    team_2_score: 4,
     played_at: '2026-10-02T15:00:00.000Z',
     created_at: '2026-10-02T15:00:00.000Z',
     updated_at: '2026-10-02T15:00:00.000Z',
@@ -84,8 +84,8 @@ describe('MatchModal Component', () => {
 
     expect(screen.getByRole('heading', { name: 'Нов мач' })).toBeInTheDocument();
     // In Create mode, score inputs start empty ('')
-    expect(screen.getByLabelText('Резултат Отбор 1')).toHaveValue(null);
-    expect(screen.getByLabelText('Резултат Отбор 2')).toHaveValue(null);
+    expect(screen.getByLabelText('Сет 1 Отбор 1')).toHaveValue('');
+    expect(screen.getByLabelText('Сет 1 Отбор 2')).toHaveValue('');
     expect(screen.getByRole('button', { name: /създай/i })).toBeInTheDocument();
   });
 
@@ -101,8 +101,8 @@ describe('MatchModal Component', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Редактиране на мач' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Резултат Отбор 1')).toHaveValue(3);
-    expect(screen.getByLabelText('Резултат Отбор 2')).toHaveValue(1);
+    expect(screen.getByLabelText('Сет 1 Отбор 1')).toHaveValue('6');
+    expect(screen.getByLabelText('Сет 1 Отбор 2')).toHaveValue('4');
     expect(screen.getAllByText('Христо Стоичков').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('Димитър Бербатов').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole('button', { name: /запази/i })).toBeInTheDocument();
@@ -147,6 +147,7 @@ describe('MatchModal Component', () => {
       expect.objectContaining({
         team_1_score: null,
         team_2_score: null,
+        sets: null,
         team_1_players: [{ player_id: 'p-1', guest_name: undefined }],
         team_2_players: [{ player_id: 'p-2', guest_name: undefined }],
       })
@@ -218,39 +219,13 @@ describe('MatchModal Component', () => {
     await user.click(screen.getByRole('option', { name: /димитър бербатов/i }));
 
     // Fill only score 1
-    const score1 = screen.getByLabelText('Резултат Отбор 1');
+    const score1 = screen.getByLabelText('Сет 1 Отбор 1');
     await user.type(score1, '2');
 
     await user.click(screen.getByRole('button', { name: /създай/i }));
 
     expect(
-      screen.getByText('Моля, въведете резултат и за двата отбора или оставете полетата празни.')
-    ).toBeInTheDocument();
-    expect(handleSave).not.toHaveBeenCalled();
-  });
-
-  it('prevents submit when score is negative', async () => {
-    const user = userEvent.setup();
-    const handleSave = vi.fn();
-
-    render(
-      <MatchModal
-        isOpen={true}
-        onClose={vi.fn()}
-        onSave={handleSave}
-        match={sampleMatch}
-        availablePlayers={availablePlayers}
-      />
-    );
-
-    const scoreInput1 = screen.getByLabelText('Резултат Отбор 1');
-    await user.clear(scoreInput1);
-    await user.type(scoreInput1, '-1');
-
-    await user.click(screen.getByRole('button', { name: /запази/i }));
-
-    expect(
-      screen.getByText('Резултатът трябва да бъде 0 или по-голям.')
+      screen.getByText('Моля, попълнете резултата за Сет 1.')
     ).toBeInTheDocument();
     expect(handleSave).not.toHaveBeenCalled();
   });
@@ -269,8 +244,8 @@ describe('MatchModal Component', () => {
       />
     );
 
-    const scoreInput1 = screen.getByLabelText('Резултат Отбор 1');
-    const scoreInput2 = screen.getByLabelText('Резултат Отбор 2');
+    const scoreInput1 = screen.getByLabelText('Сет 1 Отбор 1');
+    const scoreInput2 = screen.getByLabelText('Сет 1 Отбор 2');
     await user.clear(scoreInput1);
     await user.type(scoreInput1, '7');
     await user.clear(scoreInput2);
@@ -279,12 +254,12 @@ describe('MatchModal Component', () => {
     await user.click(screen.getByRole('button', { name: /запази/i }));
 
     expect(
-      screen.getByText('Резултатът не може да надвишава 50.')
-    ).toBeInTheDocument();
+      screen.getAllByText('Невалиден сет: сетовете се играят до 6 гейма с 2 разлика, 7:5 или 7:6 при тайбрек.').length
+    ).toBeGreaterThanOrEqual(1);
     expect(handleSave).not.toHaveBeenCalled();
   });
 
-  it('rejects tied casual match score (e.g. 2:2)', async () => {
+  it('rejects tied set score (e.g. 2:2)', async () => {
     const user = userEvent.setup();
     const handleSave = vi.fn();
 
@@ -298,8 +273,8 @@ describe('MatchModal Component', () => {
       />
     );
 
-    const scoreInput1 = screen.getByLabelText('Резултат Отбор 1');
-    const scoreInput2 = screen.getByLabelText('Резултат Отбор 2');
+    const scoreInput1 = screen.getByLabelText('Сет 1 Отбор 1');
+    const scoreInput2 = screen.getByLabelText('Сет 1 Отбор 2');
     await user.clear(scoreInput1);
     await user.type(scoreInput1, '2');
     await user.clear(scoreInput2);
@@ -308,12 +283,12 @@ describe('MatchModal Component', () => {
     await user.click(screen.getByRole('button', { name: /запази/i }));
 
     expect(
-      screen.getByText('Сетовете не могат да завършват наравно.')
-    ).toBeInTheDocument();
+      screen.getAllByText('Сетовете не могат да завършват наравно.').length
+    ).toBeGreaterThanOrEqual(1);
     expect(handleSave).not.toHaveBeenCalled();
   });
 
-  it('prevents submit when a team has no players', async () => {
+  it('prevents submit when a team has no players in singles', async () => {
     const user = userEvent.setup();
     const handleSave = vi.fn();
 
@@ -330,7 +305,7 @@ describe('MatchModal Component', () => {
     await user.click(screen.getByRole('button', { name: /създай/i }));
 
     expect(
-      screen.getByText('Всеки отбор трябва да има поне един играч.')
+      screen.getByText('При мач поединично Отбор 1 трябва да има точно 1 играч.')
     ).toBeInTheDocument();
     expect(handleSave).not.toHaveBeenCalled();
   });
@@ -389,7 +364,7 @@ describe('MatchModal Component', () => {
     expect(t2OptionStoichkov).toHaveTextContent(/в другия отбор/i);
   });
 
-  it('allows adding guests and calls onSave with valid data', async () => {
+  it('allows adding guests and calls onSave with valid data and calculated scores', async () => {
     const user = userEvent.setup();
     const handleSave = vi.fn().mockResolvedValue(undefined);
     const handleClose = vi.fn();
@@ -413,12 +388,8 @@ describe('MatchModal Component', () => {
     await user.type(guestInputT2, 'Гост Георги');
     await user.click(screen.getByLabelText('Добави гост към Отбор 2'));
 
-    // Set scores
-    const score1 = screen.getByLabelText('Резултат Отбор 1');
-    await user.type(score1, '4');
-
-    const score2 = screen.getByLabelText('Резултат Отбор 2');
-    await user.type(score2, '2');
+    // Set scores via preset chip 6:3
+    await user.click(screen.getByRole('button', { name: '6:3' }));
 
     // Submit
     await user.click(screen.getByRole('button', { name: /създай/i }));
@@ -426,8 +397,9 @@ describe('MatchModal Component', () => {
     expect(handleSave).toHaveBeenCalledTimes(1);
     expect(handleSave).toHaveBeenCalledWith(
       expect.objectContaining({
-        team_1_score: 4,
-        team_2_score: 2,
+        team_1_score: 6,
+        team_2_score: 3,
+        sets: [{ set_number: 1, team_1_score: 6, team_2_score: 3 }],
         team_1_players: [{ player_id: 'p-1', guest_name: undefined }],
         team_2_players: [{ player_id: undefined, guest_name: 'Гост Георги' }],
       })
@@ -467,6 +439,125 @@ describe('MatchModal Component', () => {
 
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(handleClose).toHaveBeenCalledTimes(1);
+  });
+
+  describe('Roster Capacity Enforcement & Locking Status Pill', () => {
+    it('Singles: locks Team 1 with "Пълен състав (1/1)" pill and hides combobox when 1 player added', async () => {
+      const user = userEvent.setup();
+      render(
+        <MatchModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSave={vi.fn()}
+          availablePlayers={availablePlayers}
+        />
+      );
+
+      // In singles, combobox & guest input visible initially
+      expect(screen.getByLabelText('Избери играч за Отбор 1')).toBeInTheDocument();
+      expect(screen.getByLabelText('Име на гост за Отбор 1')).toBeInTheDocument();
+
+      // Add 1 player
+      await user.click(screen.getByLabelText('Избери играч за Отбор 1'));
+      await user.click(screen.getByRole('option', { name: /христо стоичков/i }));
+
+      // Combobox & guest input hidden
+      expect(screen.queryByLabelText('Избери играч за Отбор 1')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Име на гост за Отбор 1')).not.toBeInTheDocument();
+
+      // Lock status pill displayed
+      expect(screen.getByText('Пълен състав (1/1)')).toBeInTheDocument();
+    });
+
+    it('Singles: removing a player restores combobox and guest input', async () => {
+      const user = userEvent.setup();
+      render(
+        <MatchModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSave={vi.fn()}
+          availablePlayers={availablePlayers}
+        />
+      );
+
+      // Add 1 player
+      await user.click(screen.getByLabelText('Избери играч за Отбор 1'));
+      await user.click(screen.getByRole('option', { name: /христо стоичков/i }));
+
+      expect(screen.getByText('Пълен състав (1/1)')).toBeInTheDocument();
+
+      // Remove player
+      await user.click(screen.getByLabelText('Премахни Христо Стоичков'));
+
+      // Pill removed, inputs restored
+      expect(screen.queryByText('Пълен състав (1/1)')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Избери играч за Отбор 1')).toBeInTheDocument();
+      expect(screen.getByLabelText('Име на гост за Отбор 1')).toBeInTheDocument();
+    });
+
+    it('Doubles: locks Team 2 with "Пълен състав (2/2)" pill after 2 players added', async () => {
+      const user = userEvent.setup();
+      render(
+        <MatchModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSave={vi.fn()}
+          availablePlayers={availablePlayers}
+          initialFormat="doubles"
+        />
+      );
+
+      // Add 1st player to Team 2
+      const comboboxT2 = screen.getByRole('combobox', { name: 'Избери играч за Отбор 2' });
+      await user.click(comboboxT2);
+      await user.click(screen.getByRole('option', { name: /димитър бербатов/i }));
+
+      // Not full yet (1/2)
+      expect(screen.getByRole('combobox', { name: 'Избери играч за Отбор 2' })).toBeInTheDocument();
+      expect(screen.queryByText('Пълен състав (2/2)')).not.toBeInTheDocument();
+
+      // Add 2nd player to Team 2 via guest
+      const guestT2 = screen.getByLabelText('Име на гост за Отбор 2');
+      await user.type(guestT2, 'Гост Тест');
+      await user.click(screen.getByLabelText('Добави гост към Отбор 2'));
+
+      // Now full
+      expect(screen.queryByRole('combobox', { name: 'Избери играч за Отбор 2' })).not.toBeInTheDocument();
+      expect(screen.getByText('Пълен състав (2/2)')).toBeInTheDocument();
+    });
+
+    it('Doubles submit error: rejects when team has fewer than 2 players', async () => {
+      const user = userEvent.setup();
+      const handleSave = vi.fn();
+
+      render(
+        <MatchModal
+          isOpen={true}
+          onClose={vi.fn()}
+          onSave={handleSave}
+          availablePlayers={availablePlayers}
+          initialFormat="doubles"
+        />
+      );
+
+      // Team 1 has 2 players
+      const comboboxT1 = screen.getByRole('combobox', { name: 'Избери играч за Отбор 1' });
+      await user.click(comboboxT1);
+      await user.click(screen.getByRole('option', { name: /христо стоичков/i }));
+      await user.click(screen.getByRole('option', { name: /красимир балъков/i }));
+
+      // Team 2 has only 1 player
+      const comboboxT2 = screen.getByRole('combobox', { name: 'Избери играч за Отбор 2' });
+      await user.click(comboboxT2);
+      await user.click(screen.getByRole('option', { name: /димитър бербатов/i }));
+
+      await user.click(screen.getByRole('button', { name: /създай/i }));
+
+      expect(
+        screen.getByText('При мач по двойки Отбор 2 трябва да има точно 2 играчи.')
+      ).toBeInTheDocument();
+      expect(handleSave).not.toHaveBeenCalled();
+    });
   });
 
   describe('Prefill from Generator Integration', () => {
@@ -528,11 +619,11 @@ describe('MatchModal Component', () => {
       const dateInput = screen.getByLabelText('Дата на мача') as HTMLInputElement;
       expect(dateInput.value).toBe(todayFormatted);
 
-      expect(screen.getByLabelText('Резултат Отбор 1')).toHaveValue(null);
-      expect(screen.getByLabelText('Резултат Отбор 2')).toHaveValue(null);
+      expect(screen.getByLabelText('Сет 1 Отбор 1')).toHaveValue('');
+      expect(screen.getByLabelText('Сет 1 Отбор 2')).toHaveValue('');
     });
 
-    it('Scenario 3 (Stage 5 Validation): prevents submitting Singles format with 2 players per team', async () => {
+    it('Scenario 3 (Stage 5 Validation): displays warning banner and prevents submitting Singles format with 2 players per team', async () => {
       const user = userEvent.setup();
       const handleSave = vi.fn();
 
@@ -551,10 +642,15 @@ describe('MatchModal Component', () => {
       const singlesBtn = screen.getByRole('button', { name: /поединично/i });
       await user.click(singlesBtn);
 
+      // Warning banner displayed
+      expect(
+        screen.getByText('Внимание: За поединичен мач е необходим по 1 играч на отбор.')
+      ).toBeInTheDocument();
+
       await user.click(screen.getByRole('button', { name: /създай/i }));
 
       expect(
-        screen.getByText('За поединичен мач всеки отбор трябва да има точно по 1 играч.')
+        screen.getByText('При мач поединично Отбор 1 трябва да има точно 1 играч.')
       ).toBeInTheDocument();
       expect(handleSave).not.toHaveBeenCalled();
     });
@@ -588,7 +684,7 @@ describe('MatchModal Component', () => {
       await user.click(screen.getByRole('button', { name: /създай/i }));
 
       expect(
-        screen.getByText('За мач по двойки всеки отбор трябва да има точно по 2 играчи.')
+        screen.getByText('При мач по двойки Отбор 1 трябва да има точно 2 играчи.')
       ).toBeInTheDocument();
       expect(handleSave).not.toHaveBeenCalled();
     });
@@ -676,72 +772,6 @@ describe('MatchModal Component', () => {
       expect(doublesBtn).toHaveAttribute('aria-pressed', 'true');
     });
 
-    it('auto-toggles format to doubles when adding a second participant to a team', async () => {
-      const user = userEvent.setup();
-      render(
-        <MatchModal
-          isOpen={true}
-          onClose={vi.fn()}
-          onSave={vi.fn()}
-          availablePlayers={availablePlayers}
-        />
-      );
-
-      // Initially singles
-      const singlesBtn = screen.getByRole('button', { name: /поединично/i });
-      const doublesBtn = screen.getByRole('button', { name: /по двойки/i });
-      expect(singlesBtn).toHaveAttribute('aria-pressed', 'true');
-
-      // Add 1st player to Team 1
-      const comboboxT1 = screen.getByLabelText('Избери играч за Отбор 1');
-      await user.click(comboboxT1);
-      await user.click(screen.getByRole('option', { name: /христо стоичков/i }));
-      expect(singlesBtn).toHaveAttribute('aria-pressed', 'true');
-
-      // Add 2nd player to Team 1
-      await user.click(comboboxT1);
-      await user.click(screen.getByRole('option', { name: /димитър бербатов/i }));
-
-      // Format should auto-toggle to doubles!
-      expect(doublesBtn).toHaveAttribute('aria-pressed', 'true');
-    });
-
-    it('blocks saving singles match when 2 players are on a team', async () => {
-      const user = userEvent.setup();
-      const handleSave = vi.fn();
-
-      render(
-        <MatchModal
-          isOpen={true}
-          onClose={vi.fn()}
-          onSave={handleSave}
-          availablePlayers={availablePlayers}
-        />
-      );
-
-      // Add 2 players to Team 1
-      const comboboxT1 = screen.getByLabelText('Избери играч за Отбор 1');
-      await user.click(comboboxT1);
-      await user.click(screen.getByRole('option', { name: /христо стоичков/i }));
-      await user.click(comboboxT1);
-      await user.click(screen.getByRole('option', { name: /димитър бербатов/i }));
-
-      // Add 1 player to Team 2
-      const comboboxT2 = screen.getByLabelText('Избери играч за Отбор 2');
-      await user.click(comboboxT2);
-      await user.click(screen.getByRole('option', { name: /красимир балъков/i }));
-
-      // Manually force format back to singles
-      await user.click(screen.getByRole('button', { name: /поединично/i }));
-
-      await user.click(screen.getByRole('button', { name: /създай/i }));
-
-      expect(
-        screen.getByText('За поединичен мач всеки отбор трябва да има точно по 1 играч.')
-      ).toBeInTheDocument();
-      expect(handleSave).not.toHaveBeenCalled();
-    });
-
     it('initializes format toggle to doubles when initialFormat="doubles" is provided', () => {
       render(
         <MatchModal
@@ -777,4 +807,3 @@ describe('MatchModal Component', () => {
     });
   });
 });
-
