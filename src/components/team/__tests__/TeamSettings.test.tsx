@@ -93,6 +93,48 @@ describe('TeamSettings', () => {
         screen.getByText('Добавете още 1 играч за пълни двойки')
       ).toBeInTheDocument();
     });
+
+    it('renders formation mode selector in a responsive grid container', () => {
+      render(
+        <TeamSettings
+          mode="tennis"
+          formationMode="auto"
+          onGenerate={vi.fn()}
+        />
+      );
+
+      const autoBtn = screen.getByRole('button', { name: '🤖 Автоматично' });
+      const manualBtn = screen.getByRole('button', { name: '📋 Интерактивна дъска (Ръчно)' });
+      const container = autoBtn.parentElement;
+
+      expect(container).toBeInTheDocument();
+      expect(container).toHaveClass('grid', 'grid-cols-1', 'sm:grid-cols-2', 'w-full', 'sm:w-auto');
+      expect(container).toContainElement(manualBtn);
+    });
+
+    it('buttons occupy full width of grid cell with proper alignment and dispatch changes', () => {
+      const handleFormationModeChange = vi.fn();
+      render(
+        <TeamSettings
+          mode="tennis"
+          formationMode="auto"
+          onFormationModeChange={handleFormationModeChange}
+          onGenerate={vi.fn()}
+        />
+      );
+
+      const autoBtn = screen.getByRole('button', { name: '🤖 Автоматично' });
+      const manualBtn = screen.getByRole('button', { name: '📋 Интерактивна дъска (Ръчно)' });
+
+      expect(autoBtn).toHaveClass('w-full');
+      expect(manualBtn).toHaveClass('w-full');
+
+      fireEvent.click(manualBtn);
+      expect(handleFormationModeChange).toHaveBeenCalledWith('manual');
+
+      fireEvent.click(autoBtn);
+      expect(handleFormationModeChange).toHaveBeenCalledWith('auto');
+    });
   });
 
   describe('Generic mode', () => {

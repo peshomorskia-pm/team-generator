@@ -257,7 +257,7 @@ describe('MatchesPage Integration Tests', () => {
     expect(screen.getByText('Красимир Балъков')).toBeInTheDocument();
   });
 
-  it('filters matches by custom date range period from calendar', async () => {
+  it('filters matches by custom date range period from calendar and renders 2-column responsive grid', async () => {
     const user = userEvent.setup();
     renderPage();
 
@@ -269,6 +269,13 @@ describe('MatchesPage Integration Tests', () => {
     const endDateInput = screen.getByLabelText('Крайна дата');
     expect(startDateInput).toBeInTheDocument();
     expect(endDateInput).toBeInTheDocument();
+
+    // Verify responsive grid container and inputs classes
+    const dateGridContainer = startDateInput.closest('.grid');
+    expect(dateGridContainer).toBeInTheDocument();
+    expect(dateGridContainer).toHaveClass('grid', 'grid-cols-2', 'w-full', 'sm:w-auto');
+    expect(startDateInput).toHaveClass('min-w-0', 'w-full');
+    expect(endDateInput).toHaveClass('min-w-0', 'w-full');
 
     // Set custom range targeting the 2025 match
     await user.type(startDateInput, '2025-01-01');

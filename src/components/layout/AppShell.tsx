@@ -29,7 +29,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
       <Navbar />
 
       {/* Main Content Area */}
-      <main className="flex-1 pb-20 md:pb-8 min-h-[calc(100vh-4rem)] flex flex-col">
+      <main className="flex-1 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:pb-8 min-h-[calc(100vh-4rem)] flex flex-col">
         {children || <Outlet />}
       </main>
 

@@ -272,25 +272,25 @@ export const MatchesPage: React.FC = () => {
             </div>
 
             {periodFilter === 'custom' && (
-              <div className="flex items-center gap-2 bg-white dark:bg-gray-800 px-2.5 py-1 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xs text-xs">
-                <div className="flex items-center gap-1">
-                  <span className="text-gray-500 dark:text-gray-400 text-[11px] font-medium">От:</span>
+              <div className="grid grid-cols-2 gap-2 bg-white dark:bg-gray-800 p-2 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xs text-xs w-full sm:w-auto">
+                <div className="flex items-center gap-1 w-full min-w-0">
+                  <span className="text-gray-500 dark:text-gray-400 text-[11px] font-medium shrink-0">От:</span>
                   <input
                     type="date"
                     aria-label="Начална дата"
                     value={customStartDate}
                     onChange={(e) => setCustomStartDate(e.target.value)}
-                    className="px-2 py-0.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full min-w-0 px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   />
                 </div>
-                <div className="flex items-center gap-1">
-                  <span className="text-gray-500 dark:text-gray-400 text-[11px] font-medium">До:</span>
+                <div className="flex items-center gap-1 w-full min-w-0">
+                  <span className="text-gray-500 dark:text-gray-400 text-[11px] font-medium shrink-0">До:</span>
                   <input
                     type="date"
                     aria-label="Крайна дата"
                     value={customEndDate}
                     onChange={(e) => setCustomEndDate(e.target.value)}
-                    className="px-2 py-0.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full min-w-0 px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   />
                 </div>
               </div>
