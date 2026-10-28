@@ -93,3 +93,19 @@ All generated handoff artifacts must follow lean authoring standards:
 1. **No Requirement Re-stating:** Never copy-paste instructions, prompt transcripts, or prior artifact sections verbatim. State only new conclusions, plans, or specifications.
 2. **Tables and Bullets Over Prose:** Use concise bulleted lists and markdown tables. Avoid dense explanatory prose.
 3. **Actionable Outputs Only:** Focus solely on what changed, architectural specifications, test outputs, or actionable next-step transitions.
+
+## 8. Subagent Execution Guardrail & Anti-Hanging Watchdog Protocol
+
+### 8.1 Synchronous Command Preference & Invariants
+- **Mandatory WaitMsBeforeAsync:** All CLI tool invocations via `run_command` verifying code (`npm test`, `vitest`, `tsc`, `eslint`, `vite build`) MUST set `WaitMsBeforeAsync: 10000`. Setting values below `5000` for deterministic checks is prohibited.
+- **Scoped Execution:** Agents must execute targeted test files or Vitest filters (`vitest run <target_path>`) during development loops to ensure execution concludes synchronously in <10 seconds.
+
+### 8.2 Orphaned Task Handling & Reactive Wake-Up Rules
+- **Reactive Notification:** Subagents rely on automatic wakeup notifications from the system when a background task finishes. Polling loops or running background `sleep` commands are strictly forbidden.
+- **Task Bifurcation Handling:** If a command transitions to a background task (`task-<id>`), the subagent must record the task ID. If the background task finishes without triggering a turn continuation, the agent is considered in an orphaned state.
+
+### 8.3 Orchestrator Deadlock Watchdog Protocol (3-Step Algorithm)
+1. **Detection:** The Orchestrator monitors dispatched subagents. If a subagent remains in `waiting_for_dependents` or does not report completion after expected execution duration (e.g., >90 seconds for test suites), the Orchestrator initiates a watchdog inspection.
+2. **Audit:** The Orchestrator inspects background tasks via `manage_task(Action='list')`. If the subagent's background task has completed, exited with an error, or vanished, the subagent is classified as deadlocked.
+3. **Wake-Up Ping:** The Orchestrator issues a direct wake-up message to the subagent using `send_message(Recipient=<subagent_id>, Message="[WATCHDOG WAKE-UP PING] ...")`. This injects an external event that breaks the event-loop hang and forces the subagent to inspect task status and conclude its artifact.
+

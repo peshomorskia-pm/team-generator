@@ -43,6 +43,14 @@ All agents, workflows, and tools must strictly adhere to the following core prot
 * **Strict Scoping Rule:**
   No opportunistic refactoring during feature/fix cycles. All PRs must have clean, scoped diffs. Roles must only modify files explicitly required for the current ticket's requirements. Unrelated cleanups, reformatting, or cross-feature refactoring are strictly banned during feature cycles and must be captured as separate tickets.
 
+* **Anti-Hanging & Synchronous Execution Protocol:**
+  To guarantee deterministic subagent progress and prevent CLI commands from hanging indefinitely in `waiting_for_dependents`:
+  - **Maximize Synchronous Threshold:** When invoking `run_command` for testing, linting, typechecking, or building, agents MUST specify `WaitMsBeforeAsync: 10000` (or the tool maximum) to prevent unnecessary background task spawning.
+  - **Two-Tier Verification Strategy:**
+    1. *Inner Development Loops:* Use scoped/targeted test runs (e.g. `npx vitest run <path/to/test.ts>`) to keep runs under 3-5 seconds and well within synchronous limits.
+    2. *Outer Quality Gate Loops:* Full suite runs (`npm test`, `npm run typecheck`, `npm run lint`, `npm run build`) must be executed prior to generating handoffs.
+  - **Anti-Hanging Watchdog Clause:** If a command exceeds the synchronous limit and transitions to a background task, the subagent must never poll or idle silently. If an agent remains stalled in `waiting_for_dependents`, the Orchestrator executes watchdog inspection and wake-up pings to break deadlocks.
+
 ---
 
 ## 2. Tech Stack, Architecture & NPM Scripts
@@ -104,7 +112,7 @@ flowchart LR
 To prevent token bloat, context pollution, and excessive PO involvement:
 - **User as Product Owner (PO):** Defines business goals, user stories, acceptance criteria, and defect reports.
 - **Minimum PO Overhead Principle:** When technical constraints, trade-offs, or blockers arise, the agent team MUST NOT present open-ended questions. The Orchestrator evaluates the problem first. If PO input is necessary, the Orchestrator MUST present the **Problem alongside 2-3 Evaluated Solution Proposals (with a Recommended Option and Trade-offs)** so the PO only has to make a strategic decision.
-- **Orchestrator as Agile PM & Gatekeeper:** Strictly enforces workflow, sets up branches, initializes `0_context.md`, coordinates gates, and releases. Under the **Zero Source Code Inspection Rule**, the Orchestrator NEVER reads, greps, or inspects application files in `src/**`.
+- **Orchestrator as Agile PM & Gatekeeper:** Strictly enforces workflow, sets up branches, initializes `0_context.md`, coordinates gates, and releases. The Orchestrator actively monitors subagent execution latency and applies the 3-Step Watchdog Protocol if an agent remains unresponsive. Under the **Zero Source Code Inspection Rule**, the Orchestrator NEVER reads, greps, or inspects application files in `src/**`.
 - **Intake Gatekeeper as Tech Lead & First Responder:** The first role authorized to inspect `src/**`. Operates the investigation boundary for both feature scoping and defect triage.
 
 ### Investigation Workflows (Bug vs. Feature)
@@ -120,7 +128,7 @@ To prevent token bloat, context pollution, and excessive PO involvement:
 3. **Just-In-Time (JIT) Branch Creation (The Pivot):** Upon establishing a clear green light (🟢 GREEN or explicit PO selection of an approved solution proposal), the **Orchestrator** creates the dedicated feature/fix branch from `dev` (`git checkout -b <branch_name>`) with the finalized, accurate ticket name, initializes `.agent_handoffs/<branch_name>/`, and summons the Architect.
 4. **Architecture:** The **Architect** (`pro`) consumes `1_intake_gate.md` and designs technical contracts in `2_architecture.md` (ceiling: 3,000 tokens).
 5. **Implementation:** The **Senior Dev** (`inherit`/`flash`) consumes `2_architecture.md`, delivers conforming code, runs verification, and logs changes in `3_implementation.md` (ceiling: 2,500 tokens).
-6. **Technical Review:** The **Code Reviewer** (`flash`) consumes `3_implementation.md`, conducts a diff-based audit (`git diff`), and outputs `4_review.md` (ceiling: 1,500 tokens). If fixes are requested, control returns to Senior Dev.
+6. **Technical Review (Supervise Engineering Chain):** The **Code Reviewer** (`flash`) consumes `3_implementation.md`, conducts a diff-based audit (`git diff`), and outputs `4_review.md` (ceiling: 1,500 tokens). If fixes are requested, control returns to Senior Dev. Across the engineering chain, the Orchestrator actively monitors subagent execution latency and applies the 3-Step Watchdog Protocol if an agent remains unresponsive.
 7. **Business Acceptance & UAT:** The **Acceptance Gatekeeper** (`flash`) consumes `1_intake_gate.md` and `4_review.md`, verifies implementation against initial PO acceptance criteria, audits Bulgarian UI localization, and outputs `5_acceptance_gate.md` (ceiling: 2,000 tokens). If business defects are found, control returns to Senior Dev autonomously.
 8. **Documentation & PR:** Upon acceptance, the **Document Writer** (`flash_lite`) consumes `5_acceptance_gate.md`, drafts docs/ADRs (`docs/adr/`), creates `6_documentation.md` (ceiling: 2,000 tokens), and opens a PR targeting `dev`.
 9. **Hard Stop for Consent:** The Orchestrator presents the verified PR, UAT audit summary, and execution metrics to the user. The Orchestrator **MUST halt execution and request explicit user permission before merging**.
