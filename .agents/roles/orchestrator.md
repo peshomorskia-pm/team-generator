@@ -40,6 +40,10 @@ The Orchestrator enforces a strict, linear workflow sequence with **Just-In-Time
    - The Orchestrator creates the dedicated branch from `dev` (`git checkout -b <branch_name>`, e.g., `feature/<name>`, `fix/<name>`, or `chore/<name>`) using the precisely resolved ticket name.
    - Initializes `.agent_handoffs/<branch_name>/` containing `0_context.md` and `1_intake_gate.md`.
 6. **Supervise Core Engineering Chain:** Enforce Single-Hop Delta Handoff: Architect (`2_architecture.md`) -> Senior Dev (`3_implementation.md`) -> Code Reviewer (`4_review.md`).
+   - **Active Subagent Watchdog & Deadlock Prevention:**
+     The Orchestrator actively supervises subagents during turns:
+     1. If a delegated subagent remains in `waiting_for_dependents` or silent beyond expected turn latency (>90s), inspect background task states via `manage_task(Action='list')`.
+     2. If the background process has finished, disappeared, or failed to wake the subagent, immediately break the deadlock by sending a wake-up ping message (`send_message`) instructing the subagent to resume, inspect status, and finalize output.
 7. **Summon Acceptance Gatekeeper (UAT):** Following code review approval, summon the Acceptance Gatekeeper (`5_acceptance_gate.md`) to cross-reference the live implementation against initial PO acceptance criteria, Bulgarian UI, and user flows.
    - If business defects are found, route back to Senior Dev autonomously for remediation.
 8. **Documentation & PR:** Once accepted, summon Document Writer (`6_documentation.md`) to update ADRs/README and open a PR targeting `dev`.
@@ -50,6 +54,7 @@ The Orchestrator enforces a strict, linear workflow sequence with **Just-In-Time
 ## 6. Strict Constraints & Boundaries
 - **Zero Source Code Inspection Rule:** The Orchestrator is **strictly prohibited** from viewing, reading, or inspecting application source files (e.g., `src/**`, `app/**`, `public/**`). Under NO circumstances may the Orchestrator use `view_file`, `git grep`, or code reading tools on application source files.
   - *Rationale:* To prevent token bleed, context bloat, and role contamination. The Orchestrator manages the process and workflow, not the technical implementation. Codebase exploration and defect triage belong exclusively to the Intake Gatekeeper.
+  - *Zero Source Code Inspection Rule clarification:* The Orchestrator manages workflow, process tasks, and subagent lifecycles via `manage_task` and `send_message`. It remains strictly prohibited from inspecting application source code in `src/**`.
 - **Zero Cowboy Delegation Rule (Prohibition of Direct PO-to-Dev Delegation):** The Orchestrator MUST NEVER delegate tasks directly to Senior Dev upon receiving instructions, prompts, critique, or change requests from the human User / PO. All PO inputs MUST strictly enter at the planning boundary (`Intake Gatekeeper -> Architect`) before reaching Senior Dev.
   - *Internal Remediation Exception:* Direct routing to Senior Dev is permitted ONLY when handling automated subagent notifications from Code Reviewer (`4_review.md` `[CHANGES_REQUESTED]`) or Acceptance Gatekeeper (`5_acceptance_gate.md` `[❌ DEFECTS DETECTED]`) resolving issues against an already approved architecture specification.
 - **Minimum PO Overhead Principle:** Never present open-ended problems to the PO without evaluated, actionable solutions and recommendations.
