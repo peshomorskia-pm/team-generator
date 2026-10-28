@@ -191,4 +191,12 @@ describe('PlayerModal Component', () => {
     expect(handleSave).toHaveBeenCalled();
     expect(handleClose).not.toHaveBeenCalled();
   });
+
+  it('enforces max dynamic viewport height and vertical scrollability', () => {
+    render(<PlayerModal isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />);
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveClass('max-h-[90dvh]', 'overflow-y-auto', 'p-5', 'sm:p-6');
+  });
 });

@@ -88,11 +88,11 @@ export const TeamSettings = memo(function TeamSettings({
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Режим на сформиране
             </span>
-            <div className="flex items-center rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700 self-start">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-1 border border-gray-200 dark:border-gray-700 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={() => onFormationModeChange?.('auto')}
-                className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                className={`w-full py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all text-center flex items-center justify-center ${
                   formationMode === 'auto'
                     ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
@@ -104,7 +104,7 @@ export const TeamSettings = memo(function TeamSettings({
               <button
                 type="button"
                 onClick={() => onFormationModeChange?.('manual')}
-                className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                className={`w-full py-2 px-3 rounded-lg text-xs sm:text-sm font-semibold transition-all text-center flex items-center justify-center ${
                   formationMode === 'manual'
                     ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'

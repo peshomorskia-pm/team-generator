@@ -150,7 +150,7 @@ export const PlayerModal: React.FC<PlayerModalProps> = ({
       role="presentation"
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 text-gray-900 dark:text-gray-100 relative transition-all"
+        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full max-h-[90dvh] overflow-y-auto p-5 sm:p-6 text-gray-900 dark:text-gray-100 relative transition-all"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
