@@ -293,4 +293,22 @@ describe('TournamentsPage', () => {
       expect(deleteTournamentMock).toHaveBeenCalledWith('t-3');
     });
   });
+
+  describe('Mobile Ergonomics (ADR-0043)', () => {
+    it('TP-STATS-01: applies responsive 2-column grid and truncate ergonomics to stats cards', () => {
+      renderComponent();
+
+      const totalLabel = screen.getByText('Общо');
+      const statsCard = totalLabel.closest('.bg-white');
+      const statsGrid = statsCard?.parentElement;
+
+      expect(statsGrid).toHaveClass('grid-cols-2', 'gap-2.5', 'sm:gap-4');
+      expect(statsCard).toHaveClass('p-3.5', 'sm:p-5', 'min-w-0');
+
+      const completedLabel = screen.getByText('Приключили', { selector: 'p' });
+      expect(completedLabel).toHaveClass('truncate');
+      expect(completedLabel.parentElement).toHaveClass('min-w-0');
+    });
+  });
 });
+
