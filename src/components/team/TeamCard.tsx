@@ -57,11 +57,11 @@ export const TeamCard: React.FC<TeamCardProps> = ({
             <button
               type="button"
               onClick={() => onShuffleTeam(team.id)}
-              className="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-1 transition-colors"
+              className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors cursor-pointer"
               title="Разбъркай реда в отбора"
               aria-label="Разбъркай отбора"
             >
-              <Shuffle className="w-3.5 h-3.5" />
+              <Shuffle className="w-4 h-4" />
             </button>
           )}
           {onDeleteTeam && (
@@ -69,11 +69,11 @@ export const TeamCard: React.FC<TeamCardProps> = ({
               type="button"
               data-testid={`delete-team-${team.id}`}
               onClick={() => onDeleteTeam(team.id)}
-              className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 p-1 transition-colors cursor-pointer"
+              className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors cursor-pointer"
               title="Изтрий отбора"
               aria-label={`Изтрий ${team.name}`}
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="w-4 h-4" />
             </button>
           )}
         </div>
@@ -111,7 +111,7 @@ export const TeamCard: React.FC<TeamCardProps> = ({
                       onClick={() => onRemovePlayer(team.id, player.id)}
                       aria-label={`Премахни ${player.name} от отбора`}
                       title={`Премахни ${player.name} от отбора`}
-                      className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 p-0.5 rounded transition-colors cursor-pointer ml-1"
+                      className="p-1.5 min-w-[32px] min-h-[32px] flex items-center justify-center text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors cursor-pointer ml-1"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>

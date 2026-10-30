@@ -310,7 +310,7 @@ export const TennisScoreEditor: React.FC<TennisScoreEditorProps> = ({
                           key={preset.label}
                           type="button"
                           onClick={() => handleApplyPreset(index, preset.score1, preset.score2)}
-                          className="px-2 py-0.5 text-xs font-semibold rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 dark:text-indigo-300 dark:border-indigo-800/60 transition-colors select-none active:scale-95"
+                          className="min-h-[36px] py-1.5 px-2.5 flex items-center justify-center font-bold text-xs rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/60 dark:text-indigo-300 dark:border-indigo-800/60 select-none active:scale-95 transition-transform"
                         >
                           {preset.label}
                         </button>
@@ -329,7 +329,7 @@ export const TennisScoreEditor: React.FC<TennisScoreEditorProps> = ({
                           key={preset.label}
                           type="button"
                           onClick={() => handleApplyPreset(index, preset.score1, preset.score2)}
-                          className="px-2 py-0.5 text-xs font-semibold rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 dark:bg-gray-700/60 dark:hover:bg-gray-700 dark:text-gray-300 dark:border-gray-600 transition-colors select-none active:scale-95"
+                          className="min-h-[36px] py-1.5 px-2.5 flex items-center justify-center font-bold text-xs rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 dark:bg-gray-700/60 dark:hover:bg-gray-700 dark:text-gray-300 dark:border-gray-600 select-none active:scale-95 transition-transform"
                         >
                           {preset.label}
                         </button>

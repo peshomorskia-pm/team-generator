@@ -186,4 +186,26 @@ describe('TeamCard', () => {
     await user.click(deleteBtn);
     expect(handleDeleteTeam).toHaveBeenCalledWith('team-1');
   });
+
+  it('TC-TARGET-01: scales shuffle, delete, and roster remove buttons to touch targets', () => {
+    render(
+      <TeamCard
+        team={mockTeam}
+        index={0}
+        onShuffleTeam={vi.fn()}
+        onDeleteTeam={vi.fn()}
+        onRemovePlayer={vi.fn()}
+      />
+    );
+
+    const shuffleBtn = screen.getByRole('button', { name: 'Разбъркай отбора' });
+    expect(shuffleBtn).toHaveClass('min-w-[36px]', 'min-h-[36px]', 'p-2');
+
+    const deleteBtn = screen.getByRole('button', { name: 'Изтрий Отбор 1' });
+    expect(deleteBtn).toHaveClass('min-w-[36px]', 'min-h-[36px]', 'p-2');
+
+    const removePlayerBtn = screen.getByRole('button', { name: 'Премахни Иван от отбора' });
+    expect(removePlayerBtn).toHaveClass('min-w-[32px]', 'min-h-[32px]', 'p-1.5');
+  });
 });
+

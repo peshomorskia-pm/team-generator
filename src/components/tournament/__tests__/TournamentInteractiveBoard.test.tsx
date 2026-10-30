@@ -1410,4 +1410,20 @@ describe('TournamentInteractiveBoard Component', () => {
       expect(screen.queryByText('Програма на срещите')).not.toBeInTheDocument();
     });
   });
+
+  describe('Mobile Touch Targets (ADR-0043)', () => {
+    it('TIB-TARGET-01: scales team counter stepper buttons to w-10 h-10 touch targets', () => {
+      render(<TournamentInteractiveBoard tournament={baseTournament} />);
+
+      const decBtn = document.getElementById('decrementTeamCountBtn');
+      const incBtn = document.getElementById('incrementTeamCountBtn');
+
+      expect(decBtn).toBeInTheDocument();
+      expect(decBtn).toHaveClass('w-10', 'h-10');
+
+      expect(incBtn).toBeInTheDocument();
+      expect(incBtn).toHaveClass('w-10', 'h-10');
+    });
+  });
 });
+

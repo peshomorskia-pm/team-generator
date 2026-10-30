@@ -594,5 +594,70 @@ describe('MatchCard Component', () => {
       expect(badge).toHaveAttribute('title', 'Александър Александров-Велики');
     });
   });
+
+  describe('Mobile Touch Targets & Badge Wrapping (ADR-0043)', () => {
+    it('MC-WRAP-01: renders regular match header with flex-wrap and non-breaking date container', () => {
+      render(
+        <MatchCard
+          match={{
+            ...sampleMatch,
+            group_name: 'Група 1',
+            round: 2,
+          }}
+          onEdit={vi.fn()}
+        />
+      );
+
+      // Date element and its container
+      const dateText = screen.getByText(/2026/);
+      const dateContainer = dateText.parentElement;
+      expect(dateContainer).toHaveClass('whitespace-nowrap', 'shrink-0', 'inline-flex');
+
+      // Parent badge container
+      const badgeContainer = dateContainer?.parentElement;
+      expect(badgeContainer).toHaveClass('flex-wrap', 'min-w-0');
+
+      // Badges
+      const groupBadge = screen.getByText('Група 1');
+      expect(groupBadge).toHaveClass('whitespace-nowrap', 'shrink-0');
+
+      const roundBadge = screen.getByText('Кръг 2');
+      expect(roundBadge).toHaveClass('whitespace-nowrap', 'shrink-0');
+    });
+
+    it('MC-WRAP-02: renders playoff match header with non-breaking date and shrink-0 badges', () => {
+      const playoffMatch: MatchDetail = {
+        ...sampleMatch,
+        group_name: 'Полуфинал',
+      };
+
+      render(
+        <MatchCard
+          match={playoffMatch}
+          onEdit={vi.fn()}
+          isPlayoff={true}
+          court="1"
+          matchNumber={4}
+        />
+      );
+
+      const dateText = screen.getByText(/2026/);
+      const dateContainer = dateText.parentElement;
+      expect(dateContainer).toHaveClass('whitespace-nowrap', 'shrink-0', 'inline-flex');
+
+      const badgeContainer = dateContainer?.parentElement;
+      expect(badgeContainer).toHaveClass('flex-wrap', 'min-w-0');
+
+      const groupBadge = screen.getByText('Полуфинал');
+      expect(groupBadge).toHaveClass('whitespace-nowrap', 'shrink-0');
+
+      const matchNumBadge = screen.getByText('Мач #4');
+      expect(matchNumBadge).toHaveClass('whitespace-nowrap', 'shrink-0');
+
+      const courtBadge = screen.getByText('Корт 1');
+      expect(courtBadge).toHaveClass('whitespace-nowrap', 'shrink-0');
+    });
+  });
 });
+
 

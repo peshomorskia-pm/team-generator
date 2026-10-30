@@ -190,4 +190,27 @@ describe('TennisScoreEditor Component', () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '6:4' })).not.toBeInTheDocument();
   });
+
+  it('TSE-TARGET-01: scales regular set score preset chips to 36px touch targets with font-bold', () => {
+    render(<TennisScoreEditor sets={[]} onChange={vi.fn()} />);
+
+    const samplePresets = ['6:0', '6:3', '6:4', '7:5', '7:6'];
+    samplePresets.forEach((label) => {
+      const presetButtons = screen.getAllByRole('button', { name: label });
+      expect(presetButtons.length).toBeGreaterThanOrEqual(1);
+      presetButtons.forEach((btn) => {
+        expect(btn).toHaveClass(
+          'min-h-[36px]',
+          'py-1.5',
+          'px-2.5',
+          'flex',
+          'items-center',
+          'justify-center',
+          'font-bold',
+          'rounded-lg'
+        );
+      });
+    });
+  });
 });
+

@@ -158,4 +158,12 @@ describe('ActivePool Component', () => {
     expect(badges[1]).toHaveTextContent('Борис');
     expect(badges[2]).toHaveTextContent('Христо');
   });
+
+  it('AP-TARGET-01: scales player badge remove button to 36px touch target', () => {
+    render(<ActivePool activePool={samplePool} onRemovePlayer={vi.fn()} />);
+
+    const removeBtn = screen.getByRole('button', { name: 'Премахни Мартин' });
+    expect(removeBtn).toHaveClass('min-w-[36px]', 'min-h-[36px]', 'p-2', '-mr-2', '-my-1.5', 'inline-flex');
+  });
 });
+

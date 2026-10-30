@@ -114,7 +114,7 @@ export const ActivePool: React.FC<ActivePoolProps> = ({
                 <button
                   type="button"
                   onClick={() => onRemovePlayer(player.id)}
-                  className="ml-2 -mr-1 p-0.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors rounded-full focus:outline-none cursor-pointer"
+                  className="p-2 -mr-2 -my-1.5 min-w-[36px] min-h-[36px] inline-flex items-center justify-center text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-colors rounded-full focus:outline-none cursor-pointer"
                   aria-label={`Премахни ${player.name}`}
                 >
                   <X className="w-3.5 h-3.5" />

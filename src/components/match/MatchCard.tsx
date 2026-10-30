@@ -101,10 +101,10 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         data-testid={`playoff-match-card-${match.id || 'unassigned'}`}
       >
         {/* Playoff Header Bar */}
-        <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700/60 mb-3">
-          <div className="flex flex-wrap items-center gap-1.5 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
-            <div className="flex items-center gap-1 text-xs">
-              <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+        <div className="flex items-start sm:items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700/60 mb-3 gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 min-w-0 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
+            <div className="whitespace-nowrap shrink-0 inline-flex items-center gap-1 text-xs">
+              <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <span>{formattedDate}</span>
             </div>
 
@@ -112,14 +112,14 @@ export const MatchCard: React.FC<MatchCardProps> = ({
               /^финал/i.test(match.group_name.trim()) && !match.group_name.includes('🏆') ? (
                 <Badge
                   variant="outline"
-                  className="text-xs font-semibold bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800"
+                  className="whitespace-nowrap shrink-0 text-xs font-semibold bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800"
                 >
                   🏆 {match.group_name}
                 </Badge>
               ) : (
                 <Badge
                   variant="outline"
-                  className="text-xs font-semibold bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800"
+                  className="whitespace-nowrap shrink-0 text-xs font-semibold bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800"
                 >
                   {match.group_name}
                 </Badge>
@@ -127,7 +127,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
             ) : matchStage != null ? (
               <Badge
                 variant="outline"
-                className="text-xs font-semibold bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800"
+                className="whitespace-nowrap shrink-0 text-xs font-semibold bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800"
               >
                 {typeof matchStage === 'number' ? `Етап ${matchStage}` : String(matchStage)}
               </Badge>
@@ -136,7 +136,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
             {effectiveMatchNumber != null && (
               <Badge
                 variant="outline"
-                className="text-xs font-semibold bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700"
+                className="whitespace-nowrap shrink-0 text-xs font-semibold bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700"
               >
                 Мач #{effectiveMatchNumber}
               </Badge>
@@ -145,7 +145,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
             {effectiveCourt && (
               <Badge
                 variant="outline"
-                className="text-xs font-semibold bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800"
+                className="whitespace-nowrap shrink-0 text-xs font-semibold bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800"
               >
                 {effectiveCourt.toLowerCase().includes('корт') ? effectiveCourt : `Корт ${effectiveCourt}`}
               </Badge>
@@ -154,19 +154,19 @@ export const MatchCard: React.FC<MatchCardProps> = ({
             {match.sets && match.sets.length > 1 && (
               <Badge
                 variant="outline"
-                className="text-xs font-semibold bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700"
+                className="whitespace-nowrap shrink-0 text-xs font-semibold bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700"
               >
                 {match.sets.length} сета
               </Badge>
             )}
 
             {isUpcoming && (
-              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+              <span className="whitespace-nowrap shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
                 Предстоящ
               </span>
             )}
             {isDraw && (
-              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+              <span className="whitespace-nowrap shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                 Равенство
               </span>
             )}
@@ -177,7 +177,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
               <button
                 type="button"
                 onClick={() => onEdit(match)}
-                className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                className="p-1.5 shrink-0 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                 aria-label="Редактирай"
               >
                 <Edit2 className="w-4 h-4" />
@@ -187,7 +187,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
               <button
                 type="button"
                 onClick={() => onDelete(match)}
-                className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                className="p-1.5 shrink-0 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                 aria-label="Изтрий"
               >
                 <Trash2 className="w-4 h-4" />
@@ -363,19 +363,21 @@ export const MatchCard: React.FC<MatchCardProps> = ({
       className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs hover:shadow-md transition-all overflow-hidden p-5 ${className}`}
     >
       {/* Header with Date and Action Buttons */}
-      <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700/60 mb-4">
-        <div className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
-          <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-          <span>{formattedDate}</span>
+      <div className="flex items-start sm:items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700/60 mb-4 gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 min-w-0 text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">
+          <div className="whitespace-nowrap shrink-0 inline-flex items-center gap-1">
+            <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+            <span>{formattedDate}</span>
+          </div>
           {!effectiveIsPlayoff && (
-            <Badge variant="indigo" size="sm" className="ml-2 font-semibold">
+            <Badge variant="indigo" size="sm" className="whitespace-nowrap shrink-0 font-semibold">
               {formatLabel}
             </Badge>
           )}
           {match.group_name && (
             <Badge
               variant="outline"
-              className="text-xs font-semibold bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800"
+              className="whitespace-nowrap shrink-0 text-xs font-semibold bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800"
             >
               {match.group_name}
             </Badge>
@@ -383,29 +385,29 @@ export const MatchCard: React.FC<MatchCardProps> = ({
           {!effectiveIsPlayoff && match.round != null && match.round > 0 && (
             <Badge
               variant="outline"
-              className="text-xs font-semibold bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800"
+              className="whitespace-nowrap shrink-0 text-xs font-semibold bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800"
             >
               Кръг {match.round}
             </Badge>
           )}
           {isUpcoming && (
-            <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+            <span className="whitespace-nowrap shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
               Предстоящ
             </span>
           )}
           {isDraw && (
-            <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+            <span className="whitespace-nowrap shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
               Равенство
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           {!readOnly && onEdit && (
             <button
               type="button"
               onClick={() => onEdit(match)}
-              className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+              className="p-1.5 shrink-0 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
               aria-label="Редактирай"
             >
               <Edit2 className="w-4 h-4" />
@@ -415,7 +417,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
             <button
               type="button"
               onClick={() => onDelete(match)}
-              className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+              className="p-1.5 shrink-0 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors cursor-pointer"
               aria-label="Изтрий"
             >
               <Trash2 className="w-4 h-4" />
