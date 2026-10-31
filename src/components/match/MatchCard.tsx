@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Edit2, Trash2, Trophy, User } from 'lucide-react';
+import { Calendar, Edit2, Trash2, User } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 import type { MatchDetail, MatchPlayerDetail } from '../../types/matches';
 
@@ -59,7 +59,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({
     const name = p.players?.name ?? p.guest_name ?? 'Играч';
     const isGuest = !p.player_id;
     const delta =
-      p.rating_after !== null && p.rating_before !== null
+      p.rating_after != null && p.rating_before != null
         ? Math.round(p.rating_after - p.rating_before)
         : null;
 
@@ -222,12 +222,6 @@ export const MatchCard: React.FC<MatchCardProps> = ({
               >
                 {match.team_1_name || 'Отбор 1'}
               </h4>
-              {team1Won && (
-                <Trophy
-                  data-testid="winner-trophy-team-1"
-                  className="w-4 h-4 text-amber-500 fill-amber-500 shrink-0 ml-1"
-                />
-              )}
               {team1Players.length > 0 && (
                 <div className="flex flex-wrap gap-1 ml-2">
                   {team1Players.map(renderPlayerBadge)}
@@ -295,12 +289,6 @@ export const MatchCard: React.FC<MatchCardProps> = ({
               >
                 {match.team_2_name || 'Отбор 2'}
               </h4>
-              {team2Won && (
-                <Trophy
-                  data-testid="winner-trophy-team-2"
-                  className="w-4 h-4 text-amber-500 fill-amber-500 shrink-0 ml-1"
-                />
-              )}
               {team2Players.length > 0 && (
                 <div className="flex flex-wrap gap-1 ml-2">
                   {team2Players.map(renderPlayerBadge)}
@@ -440,7 +428,6 @@ export const MatchCard: React.FC<MatchCardProps> = ({
             >
               {match.team_1_name || 'Отбор 1'}
             </h4>
-            {team1Won && <Trophy className="w-4 h-4 text-amber-500 fill-amber-500" />}
           </div>
           <div className="flex flex-wrap gap-1.5">
             {team1Players.length > 0 ? (
@@ -495,7 +482,6 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         {/* Team 2 Roster */}
         <div className="md:col-span-3 text-left md:text-right">
           <div className="flex items-center gap-1.5 mb-2 md:justify-end">
-            {team2Won && <Trophy className="w-4 h-4 text-amber-500 fill-amber-500" />}
             <h4
               className={`font-bold text-sm sm:text-base ${
                 team2Won

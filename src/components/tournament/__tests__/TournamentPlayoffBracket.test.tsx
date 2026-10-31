@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { TournamentPlayoffBracket } from '../TournamentPlayoffBracket';
-import type { Tournament } from '../../../types/tournament';
+import type { Tournament, TournamentDraftState } from '../../../types/tournament';
 import type { MatchDetail } from '../../../types/matches';
 
 describe('TournamentPlayoffBracket Component', () => {
@@ -420,5 +420,210 @@ describe('TournamentPlayoffBracket Component', () => {
       expect(finalColumn).toHaveClass('md:min-w-[320px]', 'shrink-0');
     });
   });
+
+  describe('Champion Player Roster Display & Resolution', () => {
+    it('TPB-CHP-01: renders champion player roster pills when finalMatch has winning side match_players', () => {
+      const finalMatch: MatchDetail = {
+        id: 'p-final',
+        match_format: 'doubles',
+        team_1_score: 6,
+        team_2_score: 4,
+        played_at: '2026-04-18T15:00:00Z',
+        team_1_name: 'Отбор Шампиони',
+        team_2_name: 'Отбор Финалисти',
+        group_name: 'Финал',
+        round: 2,
+        tournament_id: 't-1',
+        created_at: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+        match_players: [
+          {
+            id: 'mp-1',
+            match_id: 'p-final',
+            player_id: 'p-1',
+            team_side: 'team_1',
+            guest_name: null,
+            rating_before: null,
+            rating_after: null,
+            players: { id: 'p-1', name: 'Георги Данков' },
+          },
+          {
+            id: 'mp-2',
+            match_id: 'p-final',
+            player_id: 'p-2',
+            team_side: 'team_1',
+            guest_name: null,
+            rating_before: null,
+            rating_after: null,
+            players: { id: 'p-2', name: 'Иван Йов' },
+          },
+          {
+            id: 'mp-3',
+            match_id: 'p-final',
+            player_id: 'p-3',
+            team_side: 'team_2',
+            guest_name: null,
+            rating_before: null,
+            rating_after: null,
+            players: { id: 'p-3', name: 'Петър Петров' },
+          },
+        ],
+      };
+
+      render(
+        <TournamentPlayoffBracket
+          tournament={dummyTournament}
+          playoffMatches={[finalMatch]}
+          groupMatches={[completedGroupMatch]}
+          onGeneratePlayoffs={vi.fn()}
+          onEditMatchScore={vi.fn()}
+        />
+      );
+
+      const rosterContainer = screen.getByTestId('playoff-champion-roster');
+      expect(rosterContainer).toBeInTheDocument();
+
+      const pills = screen.getAllByTestId('champion-player-pill');
+      expect(pills).toHaveLength(2);
+
+      expect(rosterContainer).toHaveTextContent('Георги Данков');
+      expect(rosterContainer).toHaveTextContent('Иван Йов');
+      expect(rosterContainer).not.toHaveTextContent('Петър Петров');
+    });
+
+    it('TPB-CHP-02: resolves champion player roster from tournament.draft_state.teams when final match players are empty', () => {
+      const finalMatch: MatchDetail = {
+        id: 'p-final',
+        match_format: 'doubles',
+        team_1_score: 6,
+        team_2_score: 4,
+        played_at: '2026-04-18T15:00:00Z',
+        team_1_name: 'Отбор Шампиони',
+        team_2_name: 'Отбор Финалисти',
+        group_name: 'Финал',
+        round: 2,
+        tournament_id: 't-1',
+        created_at: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+        match_players: [],
+      };
+
+      const draftState: TournamentDraftState = {
+        targetTeams: 2,
+        formationMode: 'auto',
+        teams: [
+          {
+            id: 't-c',
+            name: 'Отбор Шампиони',
+            players: [
+              { id: 'p-1', name: 'Стефан Тодоров' },
+              { id: 'p-2', name: 'Николай Василев' },
+            ],
+          },
+        ],
+        activePool: [],
+      };
+
+      const tournamentWithDraft: Tournament = {
+        ...dummyTournament,
+        draft_state: draftState,
+      };
+
+      render(
+        <TournamentPlayoffBracket
+          tournament={tournamentWithDraft}
+          playoffMatches={[finalMatch]}
+          groupMatches={[completedGroupMatch]}
+          onGeneratePlayoffs={vi.fn()}
+          onEditMatchScore={vi.fn()}
+        />
+      );
+
+      const rosterContainer = screen.getByTestId('playoff-champion-roster');
+      expect(rosterContainer).toBeInTheDocument();
+      expect(rosterContainer).toHaveTextContent('Стефан Тодоров');
+      expect(rosterContainer).toHaveTextContent('Николай Василев');
+    });
+
+    it('TPB-CHP-03: resolves champion player roster from earlier group/playoff matches when draft_state and final match players are empty', () => {
+      const finalMatch: MatchDetail = {
+        id: 'p-final',
+        match_format: 'doubles',
+        team_1_score: 6,
+        team_2_score: 4,
+        played_at: '2026-04-18T15:00:00Z',
+        team_1_name: 'Отбор Шампиони',
+        team_2_name: 'Отбор Финалисти',
+        group_name: 'Финал',
+        round: 2,
+        tournament_id: 't-1',
+        created_at: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+        match_players: [],
+      };
+
+      const groupMatchWithRoster: MatchDetail = {
+        ...completedGroupMatch,
+        team_1_name: 'Отбор Шампиони',
+        match_players: [
+          {
+            id: 'mp-x',
+            match_id: 'm-g-1',
+            player_id: 'p-x',
+            team_side: 'team_1',
+            guest_name: null,
+            rating_before: null,
+            rating_after: null,
+            players: { id: 'p-x', name: 'Александър Димитров' },
+          },
+        ],
+      };
+
+      render(
+        <TournamentPlayoffBracket
+          tournament={{ ...dummyTournament, draft_state: null }}
+          playoffMatches={[finalMatch]}
+          groupMatches={[groupMatchWithRoster]}
+          onGeneratePlayoffs={vi.fn()}
+          onEditMatchScore={vi.fn()}
+        />
+      );
+
+      const rosterContainer = screen.getByTestId('playoff-champion-roster');
+      expect(rosterContainer).toBeInTheDocument();
+      expect(rosterContainer).toHaveTextContent('Александър Димитров');
+    });
+
+    it('TPB-CHP-04: gracefully omits roster container when no player data is resolvable', () => {
+      const finalMatch: MatchDetail = {
+        id: 'p-final',
+        match_format: 'doubles',
+        team_1_score: 6,
+        team_2_score: 4,
+        played_at: '2026-04-18T15:00:00Z',
+        team_1_name: 'Отбор Шампиони',
+        team_2_name: 'Отбор Финалисти',
+        group_name: 'Финал',
+        round: 2,
+        tournament_id: 't-1',
+        created_at: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+        match_players: [],
+      };
+
+      render(
+        <TournamentPlayoffBracket
+          tournament={{ ...dummyTournament, draft_state: null }}
+          playoffMatches={[finalMatch]}
+          groupMatches={[completedGroupMatch]}
+          onGeneratePlayoffs={vi.fn()}
+          onEditMatchScore={vi.fn()}
+        />
+      );
+
+      expect(screen.queryByTestId('playoff-champion-roster')).not.toBeInTheDocument();
+    });
+  });
 });
+
 

@@ -18,7 +18,10 @@ export const Podium: React.FC<PodiumProps> = ({ topPlayers }) => {
       <div className="flex flex-col sm:flex-row items-center sm:items-end justify-center gap-4 sm:gap-6">
         {/* 2nd Place - Silver */}
         {second && (
-          <div className="order-2 sm:order-1 flex-1 max-w-[240px] w-full flex flex-col items-center">
+          <div
+            data-testid="podium-card-2"
+            className="order-2 sm:order-1 flex-1 w-full sm:max-w-[240px] flex flex-col items-center"
+          >
             <div className="relative bg-white dark:bg-gray-800 rounded-2xl p-5 border border-slate-200 dark:border-gray-700 shadow-xs flex flex-col items-center w-full text-center transition-all hover:shadow-md">
               <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-400 dark:text-slate-300 mb-3 border-2 border-slate-300 shadow-xs">
                 <Medal className="w-6 h-6 text-slate-400" />
@@ -45,7 +48,10 @@ export const Podium: React.FC<PodiumProps> = ({ topPlayers }) => {
 
         {/* 1st Place - Gold */}
         {first && (
-          <div className="order-1 sm:order-2 flex-1 max-w-[260px] w-full flex flex-col items-center -mt-2 sm:-mt-6">
+          <div
+            data-testid="podium-card-1"
+            className="order-1 sm:order-2 flex-1 w-full sm:max-w-[260px] flex flex-col items-center -mt-2 sm:-mt-6"
+          >
             <div className="relative bg-gradient-to-b from-amber-50/80 to-white dark:from-amber-950/20 dark:to-gray-800 rounded-2xl p-6 border-2 border-amber-300 dark:border-amber-600/50 shadow-md flex flex-col items-center w-full text-center transition-all hover:shadow-lg">
               <div className="w-14 h-14 rounded-full bg-amber-100 dark:bg-amber-900/60 flex items-center justify-center text-amber-500 dark:text-amber-400 mb-3 border-2 border-amber-400 shadow-xs">
                 <Trophy className="w-7 h-7 fill-amber-400 text-amber-500" />
@@ -72,7 +78,10 @@ export const Podium: React.FC<PodiumProps> = ({ topPlayers }) => {
 
         {/* 3rd Place - Bronze */}
         {third && (
-          <div className="order-3 flex-1 max-w-[240px] w-full flex flex-col items-center">
+          <div
+            data-testid="podium-card-3"
+            className="order-3 flex-1 w-full sm:max-w-[240px] flex flex-col items-center"
+          >
             <div className="relative bg-white dark:bg-gray-800 rounded-2xl p-5 border border-amber-800/20 dark:border-amber-900/30 shadow-xs flex flex-col items-center w-full text-center transition-all hover:shadow-md">
               <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center text-amber-700 dark:text-amber-500 mb-3 border-2 border-amber-600/40 shadow-xs">
                 <Award className="w-6 h-6 text-amber-700 dark:text-amber-500" />

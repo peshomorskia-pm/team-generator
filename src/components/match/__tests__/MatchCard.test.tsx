@@ -300,7 +300,7 @@ describe('MatchCard Component', () => {
     expect(screen.getByText('6:4, 3:6, 10:7')).toBeInTheDocument();
   });
 
-  it('awards trophy icon to multi-set match winner based on sets won, not game difference', () => {
+  it('awards winner styling to multi-set match winner based on sets won, not game difference', () => {
     // Team 1 won 2 sets to 1, but Team 2 won more total games (18 vs 15)
     const multiSetMatch: MatchDetail = {
       ...sampleMatch,
@@ -317,12 +317,15 @@ describe('MatchCard Component', () => {
 
     render(<MatchCard match={multiSetMatch} onEdit={vi.fn()} />);
 
-    // Team 1 header should have the Trophy SVG and emerald text color
+    // Team 1 header should have emerald text color and no match-level trophy icon
     const team1Header = screen.getByText('Отбор Победител');
     expect(team1Header).toHaveClass('text-emerald-600');
 
     const team2Header = screen.getByText('Отбор Загубил');
     expect(team2Header).not.toHaveClass('text-emerald-600');
+
+    expect(screen.queryByTestId('winner-trophy-team-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('winner-trophy-team-2')).not.toBeInTheDocument();
   });
 
   describe('Playoff MatchCard Badges Streamlining', () => {
@@ -476,7 +479,7 @@ describe('MatchCard Component', () => {
       expect(screen.getByTestId('playoff-match-card-m-100')).toBeInTheDocument();
     });
 
-    it('MC-STK-02: applies emerald winner styling and trophy to winning team row', () => {
+    it('MC-STK-02: highlights winning team row with emerald background without rendering match-level trophy icons', () => {
       const matchWithWinner: MatchDetail = {
         ...sampleMatch,
         team_1_score: 6,
@@ -489,9 +492,9 @@ describe('MatchCard Component', () => {
       const team2Row = screen.getByTestId('playoff-team-row-2');
 
       expect(team1Row).toHaveClass('bg-emerald-50/70');
-      expect(screen.getByTestId('winner-trophy-team-1')).toBeInTheDocument();
-      expect(screen.queryByTestId('winner-trophy-team-2')).not.toBeInTheDocument();
       expect(team2Row).not.toHaveClass('bg-emerald-50/70');
+      expect(screen.queryByTestId('winner-trophy-team-1')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('winner-trophy-team-2')).not.toBeInTheDocument();
     });
 
     it('MC-STK-03: renders multi-set scores on right of each team row and in footer', () => {
