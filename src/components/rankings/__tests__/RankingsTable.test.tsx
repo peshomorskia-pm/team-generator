@@ -79,7 +79,7 @@ describe('RankingsTable Component', () => {
     },
   ];
 
-  it('renders all required pure sports table headers', () => {
+  it('renders all required pure sports table headers including explicit game difference with tooltip', () => {
     render(<RankingsTable rankings={mockRankings} />);
 
     expect(screen.getByRole('columnheader', { name: '#' })).toBeInTheDocument();
@@ -88,7 +88,13 @@ describe('RankingsTable Component', () => {
     expect(screen.getByRole('columnheader', { name: 'П' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'З' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Успеваемост' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: '+/-' })).toBeInTheDocument();
+
+    const diffHeader = screen.getByRole('columnheader', { name: 'Геймова разлика' });
+    expect(diffHeader).toBeInTheDocument();
+    expect(diffHeader).toHaveAttribute('title', 'Геймова разлика (спечелени - загубени геймове)');
+    expect(diffHeader).toHaveClass('whitespace-nowrap');
+    expect(screen.queryByText('+/-')).not.toBeInTheDocument();
+
     expect(screen.getByRole('columnheader', { name: 'Форма' })).toBeInTheDocument();
   });
 

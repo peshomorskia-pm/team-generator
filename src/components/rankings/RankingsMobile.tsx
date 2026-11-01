@@ -34,7 +34,8 @@ export const RankingsMobile: React.FC<RankingsMobileProps> = ({ rankings }) => {
             </span>
           </div>
 
-          <div className="grid grid-cols-4 gap-2 pt-2 border-t border-gray-100 dark:border-gray-700/60 text-xs">
+          {/* Primary 3-Metric Grid */}
+          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-gray-100 dark:border-gray-700/60 text-xs">
             <div className="bg-gray-50 dark:bg-gray-700/30 p-2 rounded-xl text-center">
               <span className="block text-gray-400 text-[10px] uppercase font-semibold">
                 М
@@ -59,12 +60,14 @@ export const RankingsMobile: React.FC<RankingsMobileProps> = ({ rankings }) => {
                 {stat.losses}
               </span>
             </div>
-            <div className="bg-gray-50 dark:bg-gray-700/30 p-2 rounded-xl text-center">
-              <span className="block text-gray-400 text-[10px] uppercase font-semibold">
-                +/-
-              </span>
+          </div>
+
+          {/* Secondary Detail Row: Game Difference + Form */}
+          <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-gray-100 dark:border-gray-700/60 text-xs">
+            <span className="text-gray-500 dark:text-gray-400 font-medium">
+              Геймова разлика:{' '}
               <span
-                className={`font-bold text-sm ${
+                className={`font-bold ${
                   stat.gameDifference > 0
                     ? 'text-emerald-600 dark:text-emerald-400'
                     : stat.gameDifference < 0
@@ -74,12 +77,11 @@ export const RankingsMobile: React.FC<RankingsMobileProps> = ({ rankings }) => {
               >
                 {stat.gameDifference > 0 ? `+${stat.gameDifference}` : stat.gameDifference}
               </span>
+            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-gray-400 font-medium">Форма:</span>
+              <FormBadge form={stat.form} />
             </div>
-          </div>
-
-          <div className="flex items-center justify-between pt-2 mt-2 border-t border-gray-100 dark:border-gray-700/60">
-            <span className="text-xs text-gray-400 font-medium">Форма:</span>
-            <FormBadge form={stat.form} />
           </div>
         </div>
       ))}

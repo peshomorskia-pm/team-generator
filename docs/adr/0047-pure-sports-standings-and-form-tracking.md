@@ -17,9 +17,10 @@ Accepted
    - Created a standalone, functional calculation engine independent of UI or persistence logic.
    - Implemented `calculateGameDifference`: Computes games won, lost, and net differential (`gamesWon - gamesLost`) supporting both multi-set matches (`sets` array) and casual single-set scorelines (`team_1_score`, `team_2_score`).
    - Implemented `computePlayerSportsStats`: Traverses completed matches chronologically by `played_at`, extracting match outcomes (`W` / `L`), aggregating total games won/lost, win percentage rounded to 1 decimal place, and slicing the last 5 chronological outcomes for form.
-   - Graceful backward fallback preserves match and win counts for historical player records without match row joins.
+   - `matches` table is the exclusive Single Source of Truth. Stale legacy counter fallbacks are completely eliminated; players with zero matches in the `matches` table strictly receive 0 matches, 0 wins, 0 losses, 0.0% win rate, and empty form.
 
-2. **Deterministic 5-Tier Tie-Breaking Hierarchy (`sortPlayerSportsStats`)**:
+2. **Deterministic 6-Tier Tie-Breaking Hierarchy (`sortPlayerSportsStats`)**:
+   - **Gate 1**: Active Player Priority (`matchesPlayed > 0` strictly outranks `matchesPlayed === 0`, regardless of negative game differentials).
    - **Tier 1**: Total Wins (`wins` descending).
    - **Tier 2**: Win Rate % (`winRate` descending, rounded to 1 decimal place).
    - **Tier 3**: Net Game Difference (`gameDifference` descending).
@@ -33,10 +34,10 @@ Accepted
    - Losses (`L`): rose badge with label `З` and tooltip `"Загуба"`.
    - Empty/Unplayed slots: neutral dashed badge with label `-` and tooltip `"Няма изигран мач"`.
 
-4. **Zero-Emoji Clean Typography & Standings Overhaul**:
-   - `RankingsTable.tsx`: Clean tabular layout featuring columns `#`, `Играч`, `М`, `П`, `З`, `Успеваемост`, `+/-`, and `Форма`. Clean numeric typography replacing medal icons in the rank column.
-   - `RankingsMobile.tsx`: Mobile card format with `#1` rank header, 4-stat grid (`М`, `П`, `З`, `+/-`), and form badge row.
-   - `Podium.tsx`: Clean place titles (`Шампион`, `2-ро място`, `3-то място`), numeric pedestals `1`, `2`, `3`, and match record format (`XП - YЗ (Z%)`).
+4. **Zero-Emoji Clean Typography & Explicit Game Difference Labeling**:
+   - `RankingsTable.tsx`: Clean tabular layout featuring columns `#`, `Играч`, `М`, `П`, `З`, `Успеваемост`, `Геймова разлика` (with tooltip "Геймова разлика (спечелени - загубени геймове)" and `whitespace-nowrap`), and `Форма`. Clean numeric typography replacing medal icons in the rank column.
+   - `RankingsMobile.tsx`: Mobile card format with `#1` rank header, 3-metric primary grid (`М`, `П`, `З`), and dedicated secondary row featuring `Геймова разлика: +X` alongside `Форма`.
+   - `Podium.tsx`: Clean place titles (`Шампион`, `2-ро място`, `3-то място`), numeric pedestals `1`, `2`, `3`, and match record format (`XП - YЗ (Z%)`). Unmounted from `RankingsPage.tsx` to streamline page focus directly onto the standings table and search filter.
 
 5. **Hook Decoupling (`useRankings.ts`)**:
    - Parallel fetching of players and matches with joined `match_players`.

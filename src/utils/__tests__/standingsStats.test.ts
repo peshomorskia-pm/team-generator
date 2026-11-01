@@ -79,7 +79,42 @@ describe('standingsStats utility', () => {
     });
   });
 
-  describe('sortPlayerSportsStats (5-tier sports tie-breaking)', () => {
+  describe('sortPlayerSportsStats (6-tier sports tie-breaking)', () => {
+    it('ranks active player above unplayed player regardless of negative game difference (Gate 1)', () => {
+      const activePlayer: PlayerSportsStats = {
+        playerId: 'p-active',
+        name: 'Player Active',
+        matchesPlayed: 1,
+        wins: 0,
+        losses: 1,
+        winRate: 0,
+        gamesWon: 2,
+        gamesLost: 6,
+        gameDifference: -4,
+        form: ['L'],
+        rank: 0,
+      };
+      const inactivePlayer: PlayerSportsStats = {
+        playerId: 'p-inactive',
+        name: 'Player Inactive',
+        matchesPlayed: 0,
+        wins: 0,
+        losses: 0,
+        winRate: 0,
+        gamesWon: 0,
+        gamesLost: 0,
+        gameDifference: 0,
+        form: [],
+        rank: 0,
+      };
+
+      const sorted = sortPlayerSportsStats([inactivePlayer, activePlayer]);
+      expect(sorted[0].playerId).toBe('p-active');
+      expect(sorted[0].rank).toBe(1);
+      expect(sorted[1].playerId).toBe('p-inactive');
+      expect(sorted[1].rank).toBe(2);
+    });
+
     it('ranks player with more wins higher regardless of win rate (Tier 1)', () => {
       const playerA: PlayerSportsStats = {
         playerId: 'p-a',
@@ -248,6 +283,41 @@ describe('standingsStats utility', () => {
       expect(sorted[1].name).toBe('Борис');
       expect(sorted[1].rank).toBe(2);
     });
+
+    it('collates inactive players with 0 matches alphabetically using Bulgarian collation', () => {
+      const angel: PlayerSportsStats = {
+        playerId: 'p-angel',
+        name: 'Ангел',
+        matchesPlayed: 0,
+        wins: 0,
+        losses: 0,
+        winRate: 0,
+        gamesWon: 0,
+        gamesLost: 0,
+        gameDifference: 0,
+        form: [],
+        rank: 0,
+      };
+      const boris: PlayerSportsStats = {
+        playerId: 'p-boris',
+        name: 'Борис',
+        matchesPlayed: 0,
+        wins: 0,
+        losses: 0,
+        winRate: 0,
+        gamesWon: 0,
+        gamesLost: 0,
+        gameDifference: 0,
+        form: [],
+        rank: 0,
+      };
+
+      const sorted = sortPlayerSportsStats([boris, angel]);
+      expect(sorted[0].name).toBe('Ангел');
+      expect(sorted[0].rank).toBe(1);
+      expect(sorted[1].name).toBe('Борис');
+      expect(sorted[1].rank).toBe(2);
+    });
   });
 
   describe('computePlayerSportsStats', () => {
@@ -368,7 +438,7 @@ describe('standingsStats utility', () => {
       });
     });
 
-    it('falls back to legacy player row statistics if 0 match rows exist', () => {
+    it('returns strictly zeroed stats even if legacy player row fields are populated', () => {
       const legacyPlayer: PlayerRow = {
         ...p2,
         singles_matches_played: 10,
@@ -380,10 +450,10 @@ describe('standingsStats utility', () => {
       expect(stats[0]).toEqual({
         playerId: 'p2',
         name: 'Димитър Кузманов',
-        matchesPlayed: 10,
-        wins: 8,
-        losses: 2,
-        winRate: 80.0,
+        matchesPlayed: 0,
+        wins: 0,
+        losses: 0,
+        winRate: 0,
         gamesWon: 0,
         gamesLost: 0,
         gameDifference: 0,

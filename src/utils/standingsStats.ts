@@ -74,13 +74,20 @@ export function calculateGameDifference(
 }
 
 /**
- * Sorts PlayerSportsStats strictly adhering to the 5-tier sports hierarchy
+ * Sorts PlayerSportsStats strictly adhering to the 6-tier sports hierarchy
  * and assigns sequential 1-based ranks (1, 2, 3...).
  */
 export function sortPlayerSportsStats(
   stats: PlayerSportsStats[]
 ): PlayerSportsStats[] {
   const sorted = [...stats].sort((a, b) => {
+    // Gate 1: Active Player Priority (matchesPlayed > 0 precedes matchesPlayed === 0)
+    const aActive = a.matchesPlayed > 0 ? 1 : 0;
+    const bActive = b.matchesPlayed > 0 ? 1 : 0;
+    if (bActive !== aActive) {
+      return bActive - aActive; // Active (1) sorts before Inactive (0)
+    }
+
     // Tier 1: Total wins descending
     if (b.wins !== a.wins) {
       return b.wins - a.wins;
@@ -116,8 +123,6 @@ export function computePlayerSportsStats(
   matches: MatchDetail[],
   format?: MatchFormat
 ): PlayerSportsStats[] {
-  const isSingles = format !== 'doubles';
-
   // Filter matches matching format (if provided) and ensure completed
   const relevantCompletedMatches = matches.filter((m) => {
     if (format && resolveMatchFormat(m) !== format) {
@@ -202,36 +207,7 @@ export function computePlayerSportsStats(
       };
     }
 
-    // Graceful backward fallback if player has 0 match rows
-    const legacyMatchesPlayed = isSingles
-      ? ('singles_matches_played' in player ? player.singles_matches_played ?? 0 : 0)
-      : ('doubles_matches_played' in player ? player.doubles_matches_played ?? 0 : 0);
-    const legacyWins = isSingles
-      ? ('singles_wins' in player ? player.singles_wins ?? 0 : 0)
-      : ('doubles_wins' in player ? player.doubles_wins ?? 0 : 0);
-    const legacyLosses = isSingles
-      ? ('singles_losses' in player ? player.singles_losses ?? 0 : 0)
-      : ('doubles_losses' in player ? player.doubles_losses ?? 0 : 0);
-
-    if (legacyMatchesPlayed > 0) {
-      const winRate = Number(
-        ((legacyWins / legacyMatchesPlayed) * 100).toFixed(1)
-      );
-      return {
-        playerId: player.id,
-        name: player.name,
-        matchesPlayed: legacyMatchesPlayed,
-        wins: legacyWins,
-        losses: legacyLosses,
-        winRate,
-        gamesWon: 0,
-        gamesLost: 0,
-        gameDifference: 0,
-        form: [],
-        rank: 0,
-      };
-    }
-
+    // Strict zeroed stats when player has no match rows in matches table
     return {
       playerId: player.id,
       name: player.name,

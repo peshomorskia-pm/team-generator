@@ -76,16 +76,17 @@ describe('RankingsMobile Component', () => {
     expect(screen.getByText('75%')).toBeInTheDocument();
   });
 
-  it('renders 4-stat grid with M, P, Z, and gameDifference', () => {
+  it('renders 3-stat primary grid (М, П, З) and explicit Геймова разлика row', () => {
     render(<RankingsMobile rankings={mockRankings} />);
 
     expect(screen.getAllByText('М').length).toBe(2);
     expect(screen.getAllByText('П').length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText('З').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText('+/-').length).toBe(2);
+    expect(screen.queryByText('+/-')).not.toBeInTheDocument();
 
     expect(screen.getByText('+25')).toBeInTheDocument();
     expect(screen.getByText('+8')).toBeInTheDocument();
+    expect(screen.getAllByText(/Геймова разлика:/i)).toHaveLength(2);
   });
 
   it('renders FormBadge component in card footer', () => {

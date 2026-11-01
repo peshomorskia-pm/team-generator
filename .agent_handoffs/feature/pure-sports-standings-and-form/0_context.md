@@ -1,32 +1,35 @@
-# Stage 0: Context & Triage Initiation
+# Stage 0: Context & Triage Initiation (Delta Update)
 
 ## Ticket Overview
 - **Branch**: `feature/pure-sports-standings-and-form`
-- **Type**: Feature / Rankings & Performance Statistics Overhaul
-- **Objective**: 
-  1. Implement a pure sports statistics engine (Wins, Losses, Win Rate %, Game Difference, and 5-match Form tracker) replacing legacy ELO sorting.
-  2. Overhaul the Standings Table (`RankingsTable.tsx` / `RankingsMobile.tsx` / `RankingsPage.tsx`):
-     - Display columns: **#** | **Играч** | **М** (Мачове) | **П** (Победи) | **З** (Загуби) | **Успеваемост %** | **Форма** (посл. 5 мача).
-     - Strict ranking hierarchy: Wins (desc) -> Win Rate % (desc) -> Game Difference (+/- desc) -> Matches Played (desc) -> Alphabetical.
-     - Position numbers: Clean numbers `1`, `2`, `3`... **without medal emojis (NO 🥇 🥈 🥉)** in table, podium, and player cards.
-  3. Overhaul Podium (`Podium.tsx`):
-     - Remove emojis from cards. Display clean text titles: `1-во място`, `2-ро място`, `3-то място`.
-     - Display match win stats: e.g. `16 мача • 81.3% победи` (or `XП - YЗ (Z%)`).
-  4. Overhaul Player Cards (`PlayerCard.tsx` / `PlayersPage.tsx`):
-     - Remove rank medal emojis (e.g. `🥇 1-во място` -> `1-во място` or `#1`).
-     - Display match counts, wins, losses, and win rate %.
-  5. Form Indicator Component:
-     - Render 5 compact badges/dots representing the last 5 completed matches for each player (green `П` for win, red `З` for loss).
+- **Type**: PO Feedback / Quality & Usability Hardening
+- **Objective**: Address user observations from live local testing of PR #79:
+  1. **Remove the Podium block (`Podium.tsx`)** from `RankingsPage.tsx`. The page presents a single, clean sports standings table without duplicate top-3 cards crowding above it.
+  2. **Single Source of Truth for Standings**:
+     - Remove the legacy fallback to stale cached counters (`player.singles_matches_played`, `player.doubles_matches_played`) in `src/utils/standingsStats.ts`.
+     - Standings, win rates, game differences, and form must be derived **100% strictly from verified matches** in the `matches` table.
+     - Players with 0 actual matches will correctly show 0 matches, 0 wins, 0 losses, 0.0% win rate, and will not pollute the leaderboard with empty form pills.
+  3. **Clear Column Header for Game Difference**:
+     - Change the column header from cryptic `+/-` to explicit Bulgarian text: **`Геймова разлика`** (with tooltip `(спечелени - загубени геймове)`).
+     - In mobile view / mobile cards, label cleanly as `Геймова разлика: +11`.
+  4. **Synchronize & Resync Database Counters**:
+     - Update `useMatches.ts` / `useTournaments.ts` so deleting matches or tournaments resynchronizes player counters cleanly without leaving orphaned records.
 
-## User / PO Constraints & Approvals
-- User explicit request: "Вариант Б мисля, че ми харесва най много. ... Само няма нужда да има емотикон пред 1 2 3 . В картата на играча също да няма емотикон за мястото. ... давай".
-- Strict scoping: focus entirely on standings calculations, table layout, form pills, podium clean numbers, and player cards. Zero unrelated changes.
-- Dual-Language boundary: 100% English internal code, comments, tests, commits, and ADR; Bulgarian verbatim for UI strings ("М", "П", "З", "Успеваемост", "Форма", "1-во място").
-- Quality Gates: all test suites must pass 100%, 0 typecheck errors, 0 lint warnings, clean build.
+## User / PO Feedback
+- User directives:
+  - "Има останали топ 3 места отгоре голямото."
+  - "Но интересното е как има играчи без мачове с процент успеваемост или това е проблем с данните в базата?"
+  - "И още нещо в момента геймовата разлика като хедър на колоната е +/- . Реално не е ясно какво е това"
+  - "Геймова разлика мисля, че е ок. ДА го сложим засега така . после ще видим как е на телефон."
+
+## Constraints & System Protocols
+- **Dual-Language Boundary**: 100% English internal reasoning, commits, handoffs, tests, and ADR; Bulgarian verbatim for UI strings ("Геймова разлика").
+- **Synchronous Command Guardrail**: All `run_command` verification calls must specify `WaitMsBeforeAsync: 10000` per ADR-0041.
+- **Strict Scoping**: Confined strictly to these 4 refinements.
+- **Quality Gates**: All test suites must pass 100%, 0 typecheck errors, 0 lint warnings, clean build.
 
 ## Handoff Instructions for Intake Gatekeeper
 - Read this context file.
-- Inspect `src/hooks/useRankings.ts`, `src/components/rankings/RankingsTable.tsx`, `src/components/rankings/RankingsMobile.tsx`, `src/components/rankings/Podium.tsx`, `src/pages/RankingsPage.tsx`, `src/components/player/PlayerCard.tsx`, and `src/pages/PlayersPage.tsx` in read-only mode on `dev`.
-- Check how match history is loaded or can be aggregated to determine game differences and the last 5 match outcomes per player.
+- Inspect `src/pages/RankingsPage.tsx`, `src/utils/standingsStats.ts`, `src/components/rankings/RankingsTable.tsx`, `src/components/rankings/RankingsMobile.tsx`, and `src/hooks/useRankings.ts` on `feature/pure-sports-standings-and-form`.
 - Verify blast radius, test requirements, and issue verdict: 🟢 GREEN, 🟡 YELLOW, or 🔴 RED.
 - Output artifact to `.agent_handoffs/feature/pure-sports-standings-and-form/1_intake_gate.md`.

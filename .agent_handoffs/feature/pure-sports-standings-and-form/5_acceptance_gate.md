@@ -1,71 +1,72 @@
 # 5_acceptance_gate.md: Business Acceptance Gate Audit
 
 ## 1. Acceptance Verdict
-
-### **✅ ACCEPTED (Business Goals 100% Verified)**
-- **Audit Score:** 100 / 100
-- **Regression Status:** 0 regressions detected (889/889 automated tests passing across 69 test files)
-- **PO Intent Conformance:** 100% compliant with PO directives and pure sports standings specification (ADR-0047)
+**Verdict: ✅ ACCEPTED (Business Goals 100% Verified)**
+- **Overall Score**: 100% (6/6 Acceptance Criteria Passed)
+- **Quality Gates**: All 891 automated tests passing across 69 files (100% pass rate), 0 TypeScript errors, 0 ESLint warnings/errors, clean production build.
+- **Summary**: The user feedback regarding podium removal, phantom win rates on 0-match players, and explicit "Геймова разлика" labeling has been comprehensively satisfied. The implementation establishes the `matches` table as the Single Source of Truth, guarantees Gate 1 Active Player Priority, and provides 100% compliant Bulgarian localization across desktop and mobile.
 
 ---
 
 ## 2. Business Acceptance Criteria Matrix
 
-| Criterion | Target Requirement | Implemented Solution | Status |
-|---|---|---|:---:|
-| **AC-01 (Domain Extension)** | Extend `RankingStats` with pure sports metrics: games won/lost, game diff, and form array. | [src/types/rankings.ts](file:///D:/Projects/team-generator/src/types/rankings.ts) defines `gamesWon`, `gamesLost`, `gameDifference`, and `form: FormOutcome[] ('W' \| 'L')`. | **PASS** |
-| **AC-02 (Pure Sports Engine)** | Compute games won/lost and chronological match outcomes for singles and doubles from completed matches. | [src/utils/standingsStats.ts](file:///D:/Projects/team-generator/src/utils/standingsStats.ts) (`calculateGameDifference`, `computePlayerSportsStats`) accurately parses multi-set and casual sets. | **PASS** |
-| **AC-03 (5-Tier Deterministic Sorting)** | Enforce hierarchy: Wins (desc) -> Win Rate % (desc) -> Game Diff (desc) -> Matches Played (desc) -> Bulgarian Alpha Collation. | Implemented in `sortPlayerSportsStats` with 1-based sequential rank assignment; validated by 13 unit tests. | **PASS** |
-| **AC-04 (5-Match Form Tracker)** | Render up to 5 match outcomes with green `П` for wins, red `З` for losses, and neutral `-` for unplayed slots. | [src/components/rankings/FormBadge.tsx](file:///D:/Projects/team-generator/src/components/rankings/FormBadge.tsx) renders chronological pill row with localized tooltips and accessible aria labels. | **PASS** |
-| **AC-05 (Zero-Emoji Rankings Table)** | Desktop table with columns `#`, `Играч`, `М`, `П`, `З`, `Успеваемост`, `+/-`, `Форма`. No medal emojis (`🥇`, `🥈`, `🥉`). | [src/components/rankings/RankingsTable.tsx](file:///D:/Projects/team-generator/src/components/rankings/RankingsTable.tsx) renders clean numeric typography, win rate bars, sign-prefixed diff, and form pills. | **PASS** |
-| **AC-06 (Zero-Emoji Mobile Cards)** | Mobile view with `#1` numeric rank typography, 4-stat grid (`М`, `П`, `З`, `+/-`), and form badge row. | [src/components/rankings/RankingsMobile.tsx](file:///D:/Projects/team-generator/src/components/rankings/RankingsMobile.tsx) renders clean mobile cards free of emoji clutter. | **PASS** |
-| **AC-07 (Podium Refinement)** | Clean titles (`Шампион`, `2-ро място`, `3-то място`), numeric pedestals `1`, `2`, `3`, and match record `XП - YЗ (Z%)`. Zero emojis. | [src/components/rankings/Podium.tsx](file:///D:/Projects/team-generator/src/components/rankings/Podium.tsx) renders refined podium cards with clean numeric pedestals and zero emoji icons. | **PASS** |
-| **AC-08 (Zero-Emoji Player Cards & Global Audit)** | Ensure no medal emojis appear in player cards or anywhere in rankings/player management. | Global repository regex scan for `🥇`, `🥈`, `🥉` confirmed 0 medal emojis across all components and pages. | **PASS** |
-| **AC-09 (Architectural Documentation)** | Formalize design decisions and sports standing rules in ADR-0047. | [docs/adr/0047-pure-sports-standings-and-form-tracking.md](file:///D:/Projects/team-generator/docs/adr/0047-pure-sports-standings-and-form-tracking.md) authored and accepted. | **PASS** |
-| **AC-10 (Automated Quality Gates)** | 100% test pass rate, 0 typecheck errors, 0 linter warnings, clean production build. | `vitest run` (889/889 passed), `tsc --noEmit` (0 errors), `eslint src` (0 errors/warnings), `vite build` (clean in 1.98s). | **PASS** |
+| Criterion | Target PO Requirement | Live Implementation | Status |
+|---|---|---|---|
+| **AC-01: Single Source of Truth** | Standings derived exclusively from completed match rows in `matches` table. Players with 0 matches receive 0 matches, 0 wins, 0 losses, 0.0% win rate, 0 game difference, and empty form. | [standingsStats.ts](file:///D:/Projects/team-generator/src/utils/standingsStats.ts#L210-L224) stripped all legacy counter fallbacks. Returns strict zeroed stats for players without completed match rows. Verified in [standingsStats.test.ts](file:///D:/Projects/team-generator/src/utils/__tests__/standingsStats.test.ts). | **PASS** |
+| **AC-02: Active Player Priority** | Active players with matches played (even with negative game difference, e.g., 0W-1L, -4) must rank ahead of unplayed players (0 matches, 0 difference). | Added Gate 1 Active Player Priority in [standingsStats.ts](file:///D:/Projects/team-generator/src/utils/standingsStats.ts#L84-L89): `matchesPlayed > 0` strictly sorts ahead of `matchesPlayed === 0`. Inactive players are subsequently collated alphabetically. | **PASS** |
+| **AC-03: Podium Banner Elimination** | Completely remove top-3 podium block from `/rankings` page per feedback: *"Има останали топ 3 места отгоре голямото."* | Unmounted `<Podium />` from [RankingsPage.tsx](file:///D:/Projects/team-generator/src/pages/RankingsPage.tsx). Direct table rendering with search bar and format toggles. Preserved isolated [Podium.tsx](file:///D:/Projects/team-generator/src/components/rankings/Podium.tsx) component. | **PASS** |
+| **AC-04: Explicit Desktop Game Difference Header** | Desktop table column header must display verbatim text `Геймова разлика` with descriptive tooltip, replacing `+/-`. | [RankingsTable.tsx](file:///D:/Projects/team-generator/src/components/rankings/RankingsTable.tsx#L34-L39) renders `<th>Геймова разлика</th>` with `title="Геймова разлика (спечелени - загубени геймове)"` and `whitespace-nowrap`. | **PASS** |
+| **AC-05: Clean Mobile Card Layout** | Mobile player cards must legibly display `Геймова разлика: +X` without cramped 4-column tile overflow. | [RankingsMobile.tsx](file:///D:/Projects/team-generator/src/components/rankings/RankingsMobile.tsx#L38-L85) reorganized into a 3-metric primary grid (`М`, `П`, `З`) and dedicated secondary row for `Геймова разлика: +X` and `Форма:`. | **PASS** |
+| **AC-06: Database Counter Resynchronization** | Deleting matches or tournaments does not corrupt standings or leave phantom win rates. | Deletion in `useMatches.ts` invokes `syncRatingsAndStats(remainingMatches)`. Regardless of cached counter state, `computePlayerSportsStats` strictly aggregates from verified match rows. | **PASS** |
 
 ---
 
-## 3. UI & Bulgarian Localization Audit
+## 3. UI & Localization Audit
 
-Strict compliance with the **Dual-Language Boundary Protocol** was validated across all modified views:
-
-| Component / Screen | Verified UI Strings (100% Bulgarian) | Compliance Status |
-|---|---|:---:|
-| **Header & Controls** | `"Класиране"`, `"Класиране и статистика на играчите"`, `"Поединично"`, `"По двойки"`, `"Търси играч..."`, `"Търсене на играч"` | **100% PASS** |
-| **Rankings Table** | Columns: `#`, `"Играч"`, `"М"`, `"П"`, `"З"`, `"Успеваемост"`, `"+/-"`, `"Форма"` | **100% PASS** |
-| **Mobile Rankings Card** | Header: `"#1"`, `"{winRate}%"`; Grid: `"М"`, `"П"`, `"З"`, `"+/-"`; Footer: `"Форма:"` | **100% PASS** |
-| **Form Badge** | Badges: `"П"` (Победа), `"З"` (Загуба), `"-"` (Няма изигран мач); Aria: `"Форма от последните 5 мача"` | **100% PASS** |
-| **Podium Cards** | Titles: `"Шампион"`, `"2-ро място"`, `"3-то място"`; Record: `"{wins}П - {losses}З ({winRate}%)"` | **100% PASS** |
-| **Empty & Loading States** | `"Зареждане на класирането..."`, `"Все още няма добавени играчи"`, `"Добавете играчи от меню 'Играчи'..."`, `"Няма намерени играчи за..."` | **100% PASS** |
-
-No untranslated English strings, malformed placeholders, or broken grammar were found.
+Strict compliance with the **Dual-Language Boundary Protocol** was verified:
+- **100% Bulgarian User-Facing UI**:
+  - Page Titles & Subtitles: `Класиране`, `Класиране и статистика на играчите`
+  - Format Switcher: `Поединично` (Singles), `По двойки` (Doubles)
+  - Search Controls: `Търси играч...`, `Търсене на играч`
+  - Table Headers: `#`, `Играч`, `М`, `П`, `З`, `Успеваемост`, `Геймова разлика`, `Форма`
+  - Tooltip: `Геймова разлика (спечелени - загубени геймове)`
+  - Mobile Card Labels: `М`, `П`, `З`, `Геймова разлика: +X`, `Форма:`
+  - Form Badges: `П` (tooltip `Победа`), `З` (tooltip `Загуба`), `-` (tooltip `Няма изигран мач`)
+  - Empty States: `Все още няма добавени играчи`, `Няма намерени играчи за "..."`
+  - Loading State: `Зареждане на класирането...`
+- **Zero Medal Emojis**: Eliminated `🥇`, `🥈`, `🥉` from table and mobile cards; replaced with crisp, accessible numeric typography (`#1`, `#2`, `#3`).
+- **Zero Translation Leaks**: No English placeholders or untranslated UI tokens exist in the user-facing bundles.
 
 ---
 
 ## 4. User Flow & Boundary Verification
 
-1. **Format Switch Workflow (Singles vs. Doubles):**
-   - Seamlessly toggles between singles and doubles formats.
-   - Sports metrics and form badges instantly recalculate from isolated format match records.
-2. **Search Filter & Rank Retention:**
-   - Entering player search terms filters displayed rows while preserving calculated absolute positions (`stat.rank`).
-   - Clearing search immediately restores the top-3 podium and complete roster.
-3. **Edge Case: Zero Matches & Sparse History:**
-   - Players with 0 matches display `0` for matches, wins, losses, win rate, and game difference.
-   - Form tracker renders 5 neutral dashed badges (`-`) with tooltip `"Няма изигран мач"`, maintaining table column alignment.
-   - Players with 1 to 4 matches display neutral dashed badges on the left for unplayed slots and chronological outcomes on the right.
-4. **Edge Case: Historical Players (Backward Compatibility):**
-   - Historical records with player table counts but missing match rows fall back smoothly to player table metrics without crashing or dropping from standings.
-5. **Deterministic Multi-Level Tie-Breaking:**
-   - Verified that identical win counts fall through cleanly to Win Rate %, Game Difference, Matches Played, and Bulgarian alphabetical collation without unstable ranking reorders.
+### User Interaction Flows
+1. **Direct Navigation**: Navigating to `/rankings` displays a clean, distraction-free leaderboard immediately beneath the search bar.
+2. **Format Switching**: Toggling between `Поединично` and `По двойки` dynamically recalculates game differentials and form pills from format-filtered matches without screen flicker or misplaced podium components.
+3. **Real-time Search Filter**: Filtering by player name (e.g., `Кузманов`) preserves the player's true global rank (`#2`) rather than re-indexing to 1, maintaining authentic context.
+4. **Responsive Experience**:
+   - Desktop viewports (>= 768px): Tabular presentation with `overflow-x-auto` and `whitespace-nowrap` headers.
+   - Mobile viewports (< 768px): Card-based presentation featuring a 3-stat tile grid and secondary differential row, preventing label truncation.
+
+### Edge Case Robustness
+- **Inactive Players with Legacy Database State**: Players with pre-existing counter values but 0 completed match rows receive `0` matches, `0` wins, `0.0%` win rate, `0` differential, and empty form pills.
+- **Active Players with Negative Differential vs. Inactive Players**: An active player with `0W-1L (-4)` correctly ranks ahead of an inactive player `(0W-0L, 0 diff)` via Gate 1 Active Player Priority.
+- **Tie-Breaking Multi-Tier Evaluation**: When wins, win rates, and game differences match, sequential fallback adheres to:
+  1. Total matches played (participation priority).
+  2. Bulgarian locale alphabetical collation (`localeCompare(..., 'bg')`).
+- **Empty States**: Properly handles unconfigured Supabase, zero database players, and zero search matches with localized feedback cards.
+
+### Quality Gate Automation
+- **Vitest Suite**: `npm test -- --run` -> **891 / 891 tests passed** (69 suites, 100% pass rate).
+- **TypeScript**: `npm run typecheck` -> **0 errors**.
+- **ESLint**: `npm run lint` -> **0 errors, 0 warnings**.
+- **Vite Build**: `npm run build` -> **Clean production bundle**.
 
 ---
 
 ## 5. Next Transition
 
-The business acceptance requirements and PO expectations are completely satisfied. The release is cleared for final documentation and deployment preparation.
-
-- **Status:** **✅ ACCEPTED**
-- **Next Agent:** **Document Writer** (`6_documentation.md`)
-- **Action:** Prepare release documentation and summarize PR delivery on branch `feature/pure-sports-standings-and-form`.
+The implementation meets all Product Owner requirements and business acceptance criteria.
+- **Verdict**: **`✅ ACCEPTED`**
+- **Action**: Pass control back to the **Orchestrator** to summon the **Document Writer** (`6_documentation.md`) for final documentation review and Pull Request preparation.

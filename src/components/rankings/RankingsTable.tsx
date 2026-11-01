@@ -31,8 +31,11 @@ export const RankingsTable: React.FC<RankingsTableProps> = ({ rankings }) => {
             <th className="py-3.5 px-4 text-right w-28">
               Успеваемост
             </th>
-            <th className="py-3.5 px-3 text-center w-16">
-              +/-
+            <th
+              className="py-3.5 px-3 text-center whitespace-nowrap"
+              title="Геймова разлика (спечелени - загубени геймове)"
+            >
+              Геймова разлика
             </th>
             <th className="py-3.5 px-4 text-center w-36">
               Форма
@@ -82,7 +85,7 @@ export const RankingsTable: React.FC<RankingsTableProps> = ({ rankings }) => {
                   <span>{stat.winRate}%</span>
                 </div>
               </td>
-              <td className="py-3 px-3 text-center">
+              <td className="py-3 px-3 text-center whitespace-nowrap">
                 <span
                   className={
                     stat.gameDifference > 0
