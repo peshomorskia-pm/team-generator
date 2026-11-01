@@ -67,7 +67,7 @@ describe('Podium Component', () => {
     },
   ];
 
-  it('POD-01: renders top 3 players with names, ratings, and match records', () => {
+  it('POD-01: renders top 3 players with names, place titles, and match records without ratings', () => {
     render(<Podium topPlayers={mockTopPlayers} />);
 
     expect(screen.getByTestId('rankings-podium')).toBeInTheDocument();
@@ -75,20 +75,23 @@ describe('Podium Component', () => {
     // 1st place
     expect(screen.getByText('Шампион')).toBeInTheDocument();
     expect(screen.getByText('Александър Златков')).toBeInTheDocument();
-    expect(screen.getByText('1550')).toBeInTheDocument();
     expect(screen.getByText('9П - 1З (90%)')).toBeInTheDocument();
 
     // 2nd place
     expect(screen.getByText('2-ро място')).toBeInTheDocument();
     expect(screen.getByText('Борис Сребров')).toBeInTheDocument();
-    expect(screen.getByText('1420')).toBeInTheDocument();
     expect(screen.getByText('7П - 3З (70%)')).toBeInTheDocument();
 
     // 3rd place
     expect(screen.getByText('3-то място')).toBeInTheDocument();
     expect(screen.getByText('Васил Бронзов')).toBeInTheDocument();
-    expect(screen.getByText('1380')).toBeInTheDocument();
     expect(screen.getByText('6П - 4З (60%)')).toBeInTheDocument();
+
+    // Verify rating strings and "т." pills are removed
+    expect(screen.queryByText('1550')).not.toBeInTheDocument();
+    expect(screen.queryByText('1420')).not.toBeInTheDocument();
+    expect(screen.queryByText('1380')).not.toBeInTheDocument();
+    expect(screen.queryByText('т.')).not.toBeInTheDocument();
   });
 
   it('POD-02: applies responsive w-full and sm:max-w-* classes on podium card wrappers', () => {

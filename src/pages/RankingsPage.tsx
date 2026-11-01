@@ -28,7 +28,7 @@ export const RankingsPage: React.FC = () => {
             <span>Класиране</span>
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Таблица на лидерите и ELO рейтинг на играчите
+            Класиране и статистика на играчите
           </p>
         </div>
 

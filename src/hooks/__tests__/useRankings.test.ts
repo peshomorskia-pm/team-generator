@@ -149,4 +149,70 @@ describe('useRankings hook', () => {
     expect(result.current.error).toBe('Supabase не е конфигуриран.');
     expect(result.current.rankings).toEqual([]);
   });
+
+  it('ranks players by winRate descending, then wins, then matchesPlayed, then alphabetical name', async () => {
+    const testPlayers: PlayerRow[] = [
+      {
+        id: 'p-tie-1',
+        name: 'Борис',
+        rating: 1200,
+        singles_matches_played: 4,
+        singles_wins: 2,
+        singles_losses: 2,
+        created_at: '2026-10-01T00:00:00Z',
+        updated_at: '2026-10-01T00:00:00Z',
+      },
+      {
+        id: 'p-tie-2',
+        name: 'Ангел',
+        rating: 1200,
+        singles_matches_played: 4,
+        singles_wins: 2,
+        singles_losses: 2,
+        created_at: '2026-10-01T00:00:00Z',
+        updated_at: '2026-10-01T00:00:00Z',
+      },
+      {
+        id: 'p-more-wins',
+        name: 'Георги',
+        rating: 1200,
+        singles_matches_played: 10,
+        singles_wins: 5,
+        singles_losses: 5,
+        created_at: '2026-10-01T00:00:00Z',
+        updated_at: '2026-10-01T00:00:00Z',
+      },
+      {
+        id: 'p-high-rate',
+        name: 'Даниел',
+        rating: 1200,
+        singles_matches_played: 2,
+        singles_wins: 2,
+        singles_losses: 0,
+        created_at: '2026-10-01T00:00:00Z',
+        updated_at: '2026-10-01T00:00:00Z',
+      },
+    ];
+
+    const selectMock = vi.fn().mockResolvedValue({ data: testPlayers, error: null });
+    mockFrom.mockReturnValue({ select: selectMock });
+
+    const { result } = renderHook(() => useRankings());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    // 1st: Даниел (100% win rate)
+    expect(result.current.rankings[0].player.name).toBe('Даниел');
+    expect(result.current.rankings[0].winRate).toBe(100);
+
+    // 2nd: Георги (50% win rate, 5 wins > 2 wins)
+    expect(result.current.rankings[1].player.name).toBe('Георги');
+    expect(result.current.rankings[1].winRate).toBe(50);
+    expect(result.current.rankings[1].wins).toBe(5);
+
+    // 3rd: Ангел (50% win rate, 2 wins, alphabetical tie-break vs Борис)
+    expect(result.current.rankings[2].player.name).toBe('Ангел');
+
+    // 4th: Борис (50% win rate, 2 wins)
+    expect(result.current.rankings[3].player.name).toBe('Борис');
+  });
 });

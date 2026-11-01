@@ -284,16 +284,16 @@ describe('useMatches hook', () => {
           player_id: 'p-2',
           guest_name: null,
           team_side: 'team_1',
-          rating_before: 1200,
-          rating_after: 1216,
+          rating_before: null,
+          rating_after: null,
         },
         {
           match_id: 'match-2',
           player_id: null,
           guest_name: 'Стоян',
           team_side: 'team_2',
-          rating_before: 1200,
-          rating_after: 1184,
+          rating_before: null,
+          rating_after: null,
         },
       ]);
       expect(result.current.matches).toHaveLength(2);
@@ -1048,8 +1048,8 @@ describe('useMatches hook', () => {
     });
   });
 
-  describe('Stage 5: ELO Calculations and Dual Format Support', () => {
-    it('complete singles match computes ELO deltas, stores match_players snapshot, and updates players ratings and stats', async () => {
+  describe('Stage 5: Match Statistics and Dual Format Support', () => {
+    it('complete singles match stores match_players with null ratings and updates player stats without ratings', async () => {
       const orderMock = vi.fn().mockResolvedValue({ data: [], error: null });
       const initialSelect = vi.fn().mockReturnValue({ order: orderMock });
 
@@ -1067,8 +1067,8 @@ describe('useMatches hook', () => {
 
       const playersInsertSelectMock = vi.fn().mockResolvedValue({
         data: [
-          { id: 'mp-s1', match_id: 'match-singles-1', player_id: 'p-1', rating_before: 1200, rating_after: 1216 },
-          { id: 'mp-s2', match_id: 'match-singles-1', player_id: 'p-2', rating_before: 1200, rating_after: 1184 },
+          { id: 'mp-s1', match_id: 'match-singles-1', player_id: 'p-1', rating_before: null, rating_after: null },
+          { id: 'mp-s2', match_id: 'match-singles-1', player_id: 'p-2', rating_before: null, rating_after: null },
         ],
         error: null,
       });
@@ -1117,42 +1117,38 @@ describe('useMatches hook', () => {
         await result.current.createMatch(matchData);
       });
 
-      // Verify match_players snapshot
+      // Verify match_players snapshot has null ratings
       expect(playersInsertMock).toHaveBeenCalledWith([
         {
           match_id: 'match-singles-1',
           player_id: 'p-1',
           guest_name: null,
           team_side: 'team_1',
-          rating_before: 1200,
-          rating_after: 1216,
+          rating_before: null,
+          rating_after: null,
         },
         {
           match_id: 'match-singles-1',
           player_id: 'p-2',
           guest_name: null,
           team_side: 'team_2',
-          rating_before: 1200,
-          rating_after: 1184,
+          rating_before: null,
+          rating_after: null,
         },
       ]);
 
-      // Verify player updates in players table
+      // Verify player updates in players table omit rating fields
       expect(playerUpdateMock).toHaveBeenCalledWith({
-        singles_rating: 1216,
         singles_matches_played: 1,
         singles_wins: 1,
         singles_losses: 0,
-        rating: 1216,
       });
       expect(playerUpdateEqMock).toHaveBeenCalledWith('id', 'p-1');
 
       expect(playerUpdateMock).toHaveBeenCalledWith({
-        singles_rating: 1184,
         singles_matches_played: 1,
         singles_wins: 0,
         singles_losses: 1,
-        rating: 1184,
       });
       expect(playerUpdateEqMock).toHaveBeenCalledWith('id', 'p-2');
     });
@@ -1205,7 +1201,7 @@ describe('useMatches hook', () => {
       expect(playerUpdateMock).not.toHaveBeenCalled();
     });
 
-    it('doubles match calculates ELO with partner averaging and updates doubles stats', async () => {
+    it('doubles match stores match_players with null ratings and updates doubles stats', async () => {
       const orderMock = vi.fn().mockResolvedValue({ data: [], error: null });
       const initialSelect = vi.fn().mockReturnValue({ order: orderMock });
 
@@ -1245,9 +1241,7 @@ describe('useMatches hook', () => {
       const { result } = renderHook(() => useMatches());
       await waitFor(() => expect(result.current.loading).toBe(false));
 
-      // Team 1: p-1 + p-2 (both 1200 -> avg 1200)
-      // Team 2: p-3 + guest (p-3 1200 + guest 1200 -> avg 1200)
-      // Team 1 wins 6 - 4: delta is +16 for Team 1, -16 for Team 2
+      // Team 1: p-1 + p-2 wins 6 - 4 against Team 2: p-3 + guest
       await act(async () => {
         await result.current.createMatch({
           match_format: 'doubles',
@@ -1259,17 +1253,23 @@ describe('useMatches hook', () => {
         });
       });
 
-      // Verify doubles rating was updated on both Team 1 players
+      // Verify doubles rating before/after are null in match_players
+      expect(playersInsertMock).toHaveBeenCalledWith([
+        expect.objectContaining({ rating_before: null, rating_after: null }),
+        expect.objectContaining({ rating_before: null, rating_after: null }),
+        expect.objectContaining({ rating_before: null, rating_after: null }),
+        expect.objectContaining({ rating_before: null, rating_after: null }),
+      ]);
+
+      // Verify doubles stats updated on Team 1 players
       expect(playerUpdateMock).toHaveBeenCalledWith({
-        doubles_rating: 1216,
-        doubles_matches_played: 3,
-        doubles_wins: 2,
-        doubles_losses: 1,
+        doubles_matches_played: 1,
+        doubles_wins: 1,
+        doubles_losses: 0,
       });
       expect(playerUpdateEqMock).toHaveBeenCalledWith('id', 'p-1');
 
       expect(playerUpdateMock).toHaveBeenCalledWith({
-        doubles_rating: 1216,
         doubles_matches_played: 1,
         doubles_wins: 1,
         doubles_losses: 0,
@@ -1278,15 +1278,14 @@ describe('useMatches hook', () => {
 
       // Verify Team 2 player updated with loss
       expect(playerUpdateMock).toHaveBeenCalledWith({
-        doubles_rating: 1184,
-        doubles_matches_played: 5,
-        doubles_wins: 2,
-        doubles_losses: 3,
+        doubles_matches_played: 1,
+        doubles_wins: 0,
+        doubles_losses: 1,
       });
       expect(playerUpdateEqMock).toHaveBeenCalledWith('id', 'p-3');
     });
 
-    it('updateMatch is idempotent and does not drift rating values or inflate match counts on repeated updates', async () => {
+    it('updateMatch is idempotent and updates match statistics accurately on repeated calls', async () => {
       const existingMatch: MatchDetail = {
         id: 'match-idempotent-1',
         match_format: 'singles',
@@ -1302,8 +1301,8 @@ describe('useMatches hook', () => {
             player_id: 'p-1',
             guest_name: null,
             team_side: 'team_1',
-            rating_before: 1200,
-            rating_after: 1216,
+            rating_before: null,
+            rating_after: null,
             players: { id: 'p-1', name: 'Иван' },
           },
           {
@@ -1312,8 +1311,8 @@ describe('useMatches hook', () => {
             player_id: 'p-2',
             guest_name: null,
             team_side: 'team_2',
-            rating_before: 1200,
-            rating_after: 1184,
+            rating_before: null,
+            rating_after: null,
             players: { id: 'p-2', name: 'Георги' },
           },
         ],
@@ -1342,8 +1341,8 @@ describe('useMatches hook', () => {
 
       const playersInsertSelectMock = vi.fn().mockResolvedValue({
         data: [
-          { id: 'mp-i1', match_id: 'match-idempotent-1', player_id: 'p-1', rating_before: 1200, rating_after: 1216 },
-          { id: 'mp-i2', match_id: 'match-idempotent-1', player_id: 'p-2', rating_before: 1200, rating_after: 1184 },
+          { id: 'mp-i1', match_id: 'match-idempotent-1', player_id: 'p-1', rating_before: null, rating_after: null },
+          { id: 'mp-i2', match_id: 'match-idempotent-1', player_id: 'p-2', rating_before: null, rating_after: null },
         ],
         error: null,
       });
@@ -1384,11 +1383,9 @@ describe('useMatches hook', () => {
       });
 
       expect(playerUpdateMock).toHaveBeenLastCalledWith({
-        singles_rating: 1184,
         singles_matches_played: 1,
         singles_wins: 0,
         singles_losses: 1,
-        rating: 1184,
       });
 
       // Call updateMatch 2nd time with exact same data
@@ -1396,17 +1393,15 @@ describe('useMatches hook', () => {
         await result.current.updateMatch('match-idempotent-1', updateData);
       });
 
-      // Assert that matches_played is STILL 1 and rating did not drift
+      // Assert that matches_played is STILL 1 and stats remain accurate
       expect(playerUpdateMock).toHaveBeenLastCalledWith({
-        singles_rating: 1184,
         singles_matches_played: 1,
         singles_wins: 0,
         singles_losses: 1,
-        rating: 1184,
       });
     });
 
-    it('deleteMatch rolls back ratings and match records cleanly to pre-match state', async () => {
+    it('deleteMatch resets match stats cleanly to pre-match state', async () => {
       const matchToDelete: MatchDetail = {
         id: 'match-del-1',
         match_format: 'singles',
@@ -1422,8 +1417,8 @@ describe('useMatches hook', () => {
             player_id: 'p-1',
             guest_name: null,
             team_side: 'team_1',
-            rating_before: 1200,
-            rating_after: 1216,
+            rating_before: null,
+            rating_after: null,
             players: { id: 'p-1', name: 'Иван' },
           },
           {
@@ -1432,8 +1427,8 @@ describe('useMatches hook', () => {
             player_id: 'p-2',
             guest_name: null,
             team_side: 'team_2',
-            rating_before: 1200,
-            rating_after: 1184,
+            rating_before: null,
+            rating_after: null,
             players: { id: 'p-2', name: 'Георги' },
           },
         ],
@@ -1446,8 +1441,8 @@ describe('useMatches hook', () => {
       const deleteMock = vi.fn().mockReturnValue({ eq: deleteEqMock });
 
       const mockDbPlayers = [
-        { id: 'p-1', name: 'Иван', singles_rating: 1216, singles_matches_played: 1, singles_wins: 1, singles_losses: 0 },
-        { id: 'p-2', name: 'Георги', singles_rating: 1184, singles_matches_played: 1, singles_wins: 0, singles_losses: 1 },
+        { id: 'p-1', name: 'Иван', singles_rating: 1200, singles_matches_played: 1, singles_wins: 1, singles_losses: 0 },
+        { id: 'p-2', name: 'Георги', singles_rating: 1200, singles_matches_played: 1, singles_wins: 0, singles_losses: 1 },
       ];
       const playersInMock = vi.fn().mockResolvedValue({ data: mockDbPlayers, error: null });
       const playersSelectMock = vi.fn().mockReturnValue({ in: playersInMock });
@@ -1471,13 +1466,11 @@ describe('useMatches hook', () => {
       expect(deleteEqMock).toHaveBeenCalledWith('id', 'match-del-1');
       expect(result.current.matches).toHaveLength(0);
 
-      // Verify players were reset to baseline 1200 / 0 matches
+      // Verify players were reset to 0 matches without rating changes
       expect(playerUpdateMock).toHaveBeenCalledWith({
-        singles_rating: 1200,
         singles_matches_played: 0,
         singles_wins: 0,
         singles_losses: 0,
-        rating: 1200,
       });
       expect(playerUpdateEqMock).toHaveBeenCalledWith('id', 'p-1');
       expect(playerUpdateEqMock).toHaveBeenCalledWith('id', 'p-2');

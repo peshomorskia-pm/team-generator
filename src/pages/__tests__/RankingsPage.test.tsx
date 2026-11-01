@@ -90,6 +90,7 @@ describe('RankingsPage Component', () => {
     render(<RankingsPage />);
 
     expect(screen.getByRole('heading', { name: /класиране/i })).toBeInTheDocument();
+    expect(screen.getByText('Класиране и статистика на играчите')).toBeInTheDocument();
 
     // Wait for data load
     expect(await screen.findByTestId('rankings-podium')).toBeInTheDocument();

@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { AlertNotification, TournamentMatch } from '../types';
-import type { PlayerRow, Json } from '../types/database.types';
+import type { Json } from '../types/database.types';
 import type { MatchDetail, MatchFormData, MatchFormat, MatchPlayerDetail } from '../types/matches';
-import { calculateMatchElo } from '../utils/elo';
-import { recalculateRatings } from '../utils/eloRecalculation';
+import { resolveMatchFormat } from '../utils/matchFormat';
+import { getMatchOutcome } from '../utils/standings';
 
 export interface UseMatchesReturn {
   matches: MatchDetail[];
@@ -96,18 +96,6 @@ export function useMatches(): UseMatchesReturn {
         activeFormat?: MatchFormat;
       }
     ) => {
-      // 1. In production, trigger DB RPC if available
-      try {
-        if (typeof (supabase as unknown as { rpc?: unknown }).rpc === 'function') {
-          await (supabase as unknown as { rpc: (fn: string) => Promise<unknown> }).rpc(
-            'recalculate_all_elo'
-          );
-        }
-      } catch {
-        // Fall back gracefully to client recalculation
-      }
-
-      // 2. Deterministic client-side recalculation to update players table
       try {
         const playersTable = supabase.from('players');
         if (!playersTable || typeof playersTable.select !== 'function') return;
@@ -122,55 +110,100 @@ export function useMatches(): UseMatchesReturn {
         const idList = Array.from(allPlayerIds);
         if (idList.length === 0) return;
 
-        let dbPlayers: PlayerRow[] = [];
-        const selectQuery = playersTable.select('*');
-        if (selectQuery && typeof (selectQuery as unknown as { in?: unknown }).in === 'function') {
-          const res = await (
-            selectQuery as unknown as {
-              in: (col: string, val: string[]) => Promise<{ data: PlayerRow[] | null }>;
+        const statsMap = new Map<
+          string,
+          {
+            singles_matches_played: number;
+            singles_wins: number;
+            singles_losses: number;
+            doubles_matches_played: number;
+            doubles_wins: number;
+            doubles_losses: number;
+          }
+        >();
+
+        for (const id of idList) {
+          statsMap.set(id, {
+            singles_matches_played: 0,
+            singles_wins: 0,
+            singles_losses: 0,
+            doubles_matches_played: 0,
+            doubles_wins: 0,
+            doubles_losses: 0,
+          });
+        }
+
+        for (const m of currentMatches) {
+          const outcome = getMatchOutcome(m);
+          if (!outcome.isCompleted) continue;
+
+          const format = resolveMatchFormat(m);
+          const team1Won = outcome.winner === 'team_1';
+          const team2Won = outcome.winner === 'team_2';
+
+          for (const mp of m.match_players) {
+            if (!mp.player_id) continue;
+            let stats = statsMap.get(mp.player_id);
+            if (!stats) {
+              stats = {
+                singles_matches_played: 0,
+                singles_wins: 0,
+                singles_losses: 0,
+                doubles_matches_played: 0,
+                doubles_wins: 0,
+                doubles_losses: 0,
+              };
+              statsMap.set(mp.player_id, stats);
             }
-          ).in('id', idList);
-          if (res && res.data) {
-            dbPlayers = res.data;
+
+            if (format === 'doubles') {
+              stats.doubles_matches_played += 1;
+              if (mp.team_side === 'team_1') {
+                if (team1Won) stats.doubles_wins += 1;
+                else if (team2Won) stats.doubles_losses += 1;
+              } else if (mp.team_side === 'team_2') {
+                if (team2Won) stats.doubles_wins += 1;
+                else if (team1Won) stats.doubles_losses += 1;
+              }
+            } else {
+              stats.singles_matches_played += 1;
+              if (mp.team_side === 'team_1') {
+                if (team1Won) stats.singles_wins += 1;
+                else if (team2Won) stats.singles_losses += 1;
+              } else if (mp.team_side === 'team_2') {
+                if (team2Won) stats.singles_wins += 1;
+                else if (team1Won) stats.singles_losses += 1;
+              }
+            }
           }
         }
 
-        const recalc = recalculateRatings(currentMatches, dbPlayers, {
-          initialBaselines: options?.initialBaselines,
-        });
-
         if (typeof playersTable.update === 'function') {
           const updatePromises: PromiseLike<unknown>[] = [];
-          for (const p of recalc.updatedPlayers) {
-            if (!allPlayerIds.has(p.id)) continue;
+          for (const [id, stats] of statsMap.entries()) {
+            if (!allPlayerIds.has(id)) continue;
 
             const format = options?.activeFormat;
             const updateObj =
               format === 'singles'
                 ? {
-                    singles_rating: p.singles_rating,
-                    singles_matches_played: p.singles_matches_played,
-                    singles_wins: p.singles_wins,
-                    singles_losses: p.singles_losses,
-                    rating: p.singles_rating,
+                    singles_matches_played: stats.singles_matches_played,
+                    singles_wins: stats.singles_wins,
+                    singles_losses: stats.singles_losses,
                   }
                 : format === 'doubles'
                 ? {
-                    doubles_rating: p.doubles_rating,
-                    doubles_matches_played: p.doubles_matches_played,
-                    doubles_wins: p.doubles_wins,
-                    doubles_losses: p.doubles_losses,
+                    doubles_matches_played: stats.doubles_matches_played,
+                    doubles_wins: stats.doubles_wins,
+                    doubles_losses: stats.doubles_losses,
                   }
                 : {
-                    singles_rating: p.singles_rating,
-                    doubles_rating: p.doubles_rating,
-                    rating: p.singles_rating,
-                    singles_matches_played: p.singles_matches_played,
-                    singles_wins: p.singles_wins,
-                    singles_losses: p.singles_losses,
-                    doubles_matches_played: p.doubles_matches_played,
-                    doubles_wins: p.doubles_wins,
-                    doubles_losses: p.doubles_losses,
+                    singles_matches_played: stats.singles_matches_played,
+                    singles_wins: stats.singles_wins,
+                    singles_losses: stats.singles_losses,
+                    doubles_matches_played: stats.doubles_matches_played,
+                    doubles_wins: stats.doubles_wins,
+                    doubles_losses: stats.doubles_losses,
                   };
 
             const uQuery = playersTable.update(updateObj);
@@ -180,7 +213,7 @@ export function useMatches(): UseMatchesReturn {
                   uQuery as unknown as {
                     eq: (col: string, val: string) => PromiseLike<unknown>;
                   }
-                ).eq('id', p.id)
+                ).eq('id', id)
               );
             }
           }
@@ -261,96 +294,23 @@ export function useMatches(): UseMatchesReturn {
             .filter((id): id is string => Boolean(id)),
         ];
 
-        const playerMap = new Map<string, PlayerRow>();
-        if (isCompleted && registeredIds.length > 0) {
-          try {
-            const playersTable = supabase.from('players');
-            if (playersTable && typeof playersTable.select === 'function') {
-              const selectQuery = playersTable.select('*');
-              if (selectQuery && typeof selectQuery.in === 'function') {
-                const { data: fetchedPlayers } = await selectQuery.in('id', registeredIds);
-                if (fetchedPlayers) {
-                  for (const p of fetchedPlayers) {
-                    playerMap.set(p.id, p);
-                  }
-                }
-              }
-            }
-          } catch {
-            // Fall back gracefully
-          }
-        }
-
-        const getPlayerRating = (playerId: string | undefined): number => {
-          if (!playerId) return 1200;
-          const p = playerMap.get(playerId);
-          if (!p) return 1200;
-          if (format === 'doubles') {
-            return p.doubles_rating ?? p.rating ?? 1200;
-          }
-          return p.singles_rating ?? p.rating ?? 1200;
-        };
-
-        let team1Delta = 0;
-        let team2Delta = 0;
-
-        if (isCompleted) {
-          const team1Ratings = data.team_1_players.map((p) =>
-            getPlayerRating(p.player_id)
-          );
-          const team2Ratings = data.team_2_players.map((p) =>
-            getPlayerRating(p.player_id)
-          );
-
-          const eloResult = calculateMatchElo({
-            format,
-            team1Ratings,
-            team2Ratings,
-            score1: data.team_1_score!,
-            score2: data.team_2_score!,
-          });
-
-          team1Delta = eloResult.team1Delta;
-          team2Delta = eloResult.team2Delta;
-        }
-
         const matchPlayers = [
-          ...data.team_1_players.map((p) => {
-            const ratingBefore = isCompleted
-              ? getPlayerRating(p.player_id)
-              : null;
-            const ratingAfter =
-              isCompleted && ratingBefore !== null
-                ? ratingBefore + team1Delta
-                : null;
-
-            return {
-              match_id: matchData.id,
-              player_id: p.player_id ?? null,
-              guest_name: p.guest_name ?? null,
-              team_side: 'team_1' as const,
-              rating_before: ratingBefore,
-              rating_after: ratingAfter,
-            };
-          }),
-          ...data.team_2_players.map((p) => {
-            const ratingBefore = isCompleted
-              ? getPlayerRating(p.player_id)
-              : null;
-            const ratingAfter =
-              isCompleted && ratingBefore !== null
-                ? ratingBefore + team2Delta
-                : null;
-
-            return {
-              match_id: matchData.id,
-              player_id: p.player_id ?? null,
-              guest_name: p.guest_name ?? null,
-              team_side: 'team_2' as const,
-              rating_before: ratingBefore,
-              rating_after: ratingAfter,
-            };
-          }),
+          ...data.team_1_players.map((p) => ({
+            match_id: matchData.id,
+            player_id: p.player_id ?? null,
+            guest_name: p.guest_name ?? null,
+            team_side: 'team_1' as const,
+            rating_before: null as number | null,
+            rating_after: null as number | null,
+          })),
+          ...data.team_2_players.map((p) => ({
+            match_id: matchData.id,
+            player_id: p.player_id ?? null,
+            guest_name: p.guest_name ?? null,
+            team_side: 'team_2' as const,
+            rating_before: null as number | null,
+            rating_after: null as number | null,
+          })),
         ];
 
         let insertedPlayers: MatchPlayerDetail[] = [];
