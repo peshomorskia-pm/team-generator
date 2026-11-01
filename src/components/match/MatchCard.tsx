@@ -3,7 +3,7 @@ import { Calendar, Edit2, Trash2, User } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 import type { MatchDetail, MatchPlayerDetail } from '../../types/matches';
 
-import { resolveMatchFormat } from '../../utils/eloRecalculation';
+import { resolveMatchFormat } from '../../utils/matchFormat';
 import { getMatchOutcome } from '../../utils/standings';
 
 export interface MatchCardProps {
@@ -58,10 +58,6 @@ export const MatchCard: React.FC<MatchCardProps> = ({
   const renderPlayerBadge = (p: MatchPlayerDetail) => {
     const name = p.players?.name ?? p.guest_name ?? 'Играч';
     const isGuest = !p.player_id;
-    const delta =
-      p.rating_after != null && p.rating_before != null
-        ? Math.round(p.rating_after - p.rating_before)
-        : null;
 
     return (
       <span
@@ -77,19 +73,6 @@ export const MatchCard: React.FC<MatchCardProps> = ({
         <User className="w-3 h-3 opacity-60 shrink-0" />
         <span className="truncate">{name}</span>
         {isGuest && <span className="opacity-75 text-[10px] shrink-0">(гост)</span>}
-        {delta !== null && (
-          <span
-            className={`ml-1 px-1.5 py-0.2 rounded text-[10px] font-bold shrink-0 ${
-              delta > 0
-                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
-                : delta < 0
-                ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
-                : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-            }`}
-          >
-            {delta > 0 ? `+${delta}` : delta}
-          </span>
-        )}
       </span>
     );
   };

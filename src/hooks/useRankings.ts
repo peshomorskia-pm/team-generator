@@ -100,15 +100,26 @@ export function useRankings(initialFormat: MatchFormat = 'singles'): UseRankings
     const isSingles = format === 'singles';
 
     const sortedPlayers = [...players].sort((a, b) => {
-      const ratingA = isSingles
-        ? (a.singles_rating ?? a.rating ?? 1200)
-        : (a.doubles_rating ?? a.rating ?? 1200);
-      const ratingB = isSingles
-        ? (b.singles_rating ?? b.rating ?? 1200)
-        : (b.doubles_rating ?? b.rating ?? 1200);
+      const matchesA = isSingles
+        ? (a.singles_matches_played ?? 0)
+        : (a.doubles_matches_played ?? 0);
+      const winsA = isSingles ? (a.singles_wins ?? 0) : (a.doubles_wins ?? 0);
+      const winRateA = matchesA > 0 ? Math.round((winsA / matchesA) * 100) : 0;
 
-      if (ratingB !== ratingA) {
-        return ratingB - ratingA;
+      const matchesB = isSingles
+        ? (b.singles_matches_played ?? 0)
+        : (b.doubles_matches_played ?? 0);
+      const winsB = isSingles ? (b.singles_wins ?? 0) : (b.doubles_wins ?? 0);
+      const winRateB = matchesB > 0 ? Math.round((winsB / matchesB) * 100) : 0;
+
+      if (winRateB !== winRateA) {
+        return winRateB - winRateA;
+      }
+      if (winsB !== winsA) {
+        return winsB - winsA;
+      }
+      if (matchesB !== matchesA) {
+        return matchesB - matchesA;
       }
       return a.name.localeCompare(b.name);
     });

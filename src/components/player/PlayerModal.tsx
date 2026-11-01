@@ -9,7 +9,7 @@ export interface PlayerModalProps {
   onClose: () => void;
   onSave: (
     name: string,
-    rating: number,
+    rating?: number,
     singlesRating?: number,
     doublesRating?: number
   ) => Promise<void>;
@@ -23,17 +23,7 @@ export const PlayerModal: React.FC<PlayerModalProps> = ({
   player,
 }) => {
   const [name, setName] = useState(player ? player.name : '');
-  const [rating, setRating] = useState(player ? String(player.rating) : '1200');
-  const [singlesRating, setSinglesRating] = useState(
-    player ? String(player.singles_rating ?? player.rating ?? 1200) : '1200'
-  );
-  const [doublesRating, setDoublesRating] = useState(
-    player ? String(player.doubles_rating ?? player.rating ?? 1200) : '1200'
-  );
   const [nameError, setNameError] = useState('');
-  const [ratingError, setRatingError] = useState('');
-  const [singlesRatingError, setSinglesRatingError] = useState('');
-  const [doublesRatingError, setDoublesRatingError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
@@ -43,17 +33,7 @@ export const PlayerModal: React.FC<PlayerModalProps> = ({
     setPrevIsOpen(isOpen);
     setPrevPlayer(player);
     setName(isOpen && player ? player.name : '');
-    setRating(isOpen && player ? String(player.rating) : '1200');
-    setSinglesRating(
-      isOpen && player ? String(player.singles_rating ?? player.rating ?? 1200) : '1200'
-    );
-    setDoublesRating(
-      isOpen && player ? String(player.doubles_rating ?? player.rating ?? 1200) : '1200'
-    );
     setNameError('');
-    setRatingError('');
-    setSinglesRatingError('');
-    setDoublesRatingError('');
     setIsSubmitting(false);
   }
 
@@ -76,58 +56,20 @@ export const PlayerModal: React.FC<PlayerModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    let hasError = false;
 
     if (!name.trim()) {
       setNameError('Името на играча е задължително.');
-      hasError = true;
-    } else {
-      setNameError('');
-    }
-
-    const parsedRating = Number(rating);
-    if (rating.trim() === '' || Number.isNaN(parsedRating) || parsedRating < 0) {
-      setRatingError('Рейтингът трябва да бъде положително число или 0.');
-      hasError = true;
-    } else {
-      setRatingError('');
-    }
-
-    const parsedSingles = Number(singlesRating);
-    if (
-      singlesRating.trim() === '' ||
-      Number.isNaN(parsedSingles) ||
-      parsedSingles < 0
-    ) {
-      setSinglesRatingError(
-        'Рейтингът поединично трябва да бъде положително число или 0.'
-      );
-      hasError = true;
-    } else {
-      setSinglesRatingError('');
-    }
-
-    const parsedDoubles = Number(doublesRating);
-    if (
-      doublesRating.trim() === '' ||
-      Number.isNaN(parsedDoubles) ||
-      parsedDoubles < 0
-    ) {
-      setDoublesRatingError(
-        'Рейтингът по двойки трябва да бъде положително число или 0.'
-      );
-      hasError = true;
-    } else {
-      setDoublesRatingError('');
-    }
-
-    if (hasError) {
       return;
     }
 
     try {
       setIsSubmitting(true);
-      await onSave(name.trim(), parsedRating, parsedSingles, parsedDoubles);
+      await onSave(
+        name.trim(),
+        player?.rating ?? 1200,
+        player?.singles_rating ?? 1200,
+        player?.doubles_rating ?? 1200
+      );
       onClose();
     } catch {
       // Keep modal open so the user can inspect or retry
@@ -188,56 +130,6 @@ export const PlayerModal: React.FC<PlayerModalProps> = ({
             error={nameError}
             autoFocus
           />
-
-          <Input
-            id="player-rating"
-            type="number"
-            min="0"
-            step="1"
-            label="Общ рейтинг (ELO)"
-            placeholder="1200"
-            value={rating}
-            onChange={(e) => {
-              setRating(e.target.value);
-              if (ratingError) setRatingError('');
-            }}
-            disabled={isSubmitting}
-            error={ratingError}
-          />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              id="player-singles-rating"
-              type="number"
-              min="0"
-              step="1"
-              label="Рейтинг поединично (ELO)"
-              placeholder="1200"
-              value={singlesRating}
-              onChange={(e) => {
-                setSinglesRating(e.target.value);
-                if (singlesRatingError) setSinglesRatingError('');
-              }}
-              disabled={isSubmitting}
-              error={singlesRatingError}
-            />
-
-            <Input
-              id="player-doubles-rating"
-              type="number"
-              min="0"
-              step="1"
-              label="Рейтинг по двойки (ELO)"
-              placeholder="1200"
-              value={doublesRating}
-              onChange={(e) => {
-                setDoublesRating(e.target.value);
-                if (doublesRatingError) setDoublesRatingError('');
-              }}
-              disabled={isSubmitting}
-              error={doublesRatingError}
-            />
-          </div>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
             <Button

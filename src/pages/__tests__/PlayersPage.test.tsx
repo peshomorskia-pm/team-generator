@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { PlayersPage, getRatingBadgeVariant } from '../PlayersPage';
+import { PlayersPage } from '../PlayersPage';
 import * as usePlayersHook from '../../hooks/usePlayers';
 import type { PlayerRow } from '../../types/database.types';
 
@@ -56,28 +56,6 @@ describe('PlayersPage', () => {
     vi.mocked(usePlayersHook.usePlayers).mockReturnValue({ ...defaultMockReturn });
   });
 
-  describe('Rating badge variant logic', () => {
-    it('returns emerald for ratings >= 1500', () => {
-      expect(getRatingBadgeVariant(1500)).toBe('emerald');
-      expect(getRatingBadgeVariant(2000)).toBe('emerald');
-    });
-
-    it('returns indigo for ratings >= 1300 and < 1500', () => {
-      expect(getRatingBadgeVariant(1300)).toBe('indigo');
-      expect(getRatingBadgeVariant(1499)).toBe('indigo');
-    });
-
-    it('returns amber for ratings >= 1100 and < 1300', () => {
-      expect(getRatingBadgeVariant(1100)).toBe('amber');
-      expect(getRatingBadgeVariant(1299)).toBe('amber');
-    });
-
-    it('returns slate for ratings < 1100', () => {
-      expect(getRatingBadgeVariant(1099)).toBe('slate');
-      expect(getRatingBadgeVariant(800)).toBe('slate');
-    });
-  });
-
   describe('Rendering and layout', () => {
     it('renders page header, count badge, and "+ Нов играч" button', () => {
       render(<PlayersPage />);
@@ -97,7 +75,7 @@ describe('PlayersPage', () => {
       expect(screen.getByText('1 играч')).toBeInTheDocument();
     });
 
-    it('renders both desktop table and mobile cards with dual ELO badges', () => {
+    it('renders both desktop table and mobile cards without ELO badges', () => {
       const dualPlayer: PlayerRow = {
         id: 'p-dual',
         name: 'Григор Димитров',
@@ -118,18 +96,16 @@ describe('PlayersPage', () => {
       // Table presence
       expect(screen.getByRole('table')).toBeInTheDocument();
       expect(screen.getByRole('columnheader', { name: 'Играч' })).toBeInTheDocument();
-      expect(screen.getByRole('columnheader', { name: 'Рейтинг' })).toBeInTheDocument();
+      expect(screen.queryByRole('columnheader', { name: 'Рейтинг' })).not.toBeInTheDocument();
       expect(screen.getByRole('columnheader', { name: 'Действия' })).toBeInTheDocument();
 
       // Check player rows (each player appears in table and mobile card)
       const playerElements = screen.getAllByText('Григор Димитров');
       expect(playerElements.length).toBeGreaterThanOrEqual(2);
 
-      // Verify dual badges (🎾 and 👥) on both desktop and mobile
-      const singlesBadges = screen.getAllByText('🎾 1950 ELO');
-      const doublesBadges = screen.getAllByText('👥 1650 ELO');
-      expect(singlesBadges.length).toBeGreaterThanOrEqual(2);
-      expect(doublesBadges.length).toBeGreaterThanOrEqual(2);
+      // Verify absence of ELO badges
+      expect(screen.queryByText('🎾 1950 ELO')).not.toBeInTheDocument();
+      expect(screen.queryByText('👥 1650 ELO')).not.toBeInTheDocument();
     });
 
     it('renders loading state when loading is true and players array is empty', () => {
@@ -245,23 +221,13 @@ describe('PlayersPage', () => {
       expect(screen.getByRole('heading', { name: 'Нов играч' })).toBeInTheDocument();
 
       const nameInput = screen.getByLabelText(/име на играча/i);
-      const ratingInput = screen.getByLabelText(/общ рейтинг/i);
-      const singlesInput = screen.getByLabelText(/рейтинг поединично/i);
-      const doublesInput = screen.getByLabelText(/рейтинг по двойки/i);
-
       await user.type(nameInput, 'Стилиян Петров');
-      await user.clear(ratingInput);
-      await user.type(ratingInput, '1400');
-      await user.clear(singlesInput);
-      await user.type(singlesInput, '1450');
-      await user.clear(doublesInput);
-      await user.type(doublesInput, '1350');
 
       const submitBtn = screen.getByRole('button', { name: /създай/i });
       await user.click(submitBtn);
 
       await waitFor(() => {
-        expect(createPlayerMock).toHaveBeenCalledWith('Стилиян Петров', 1400, 1450, 1350);
+        expect(createPlayerMock).toHaveBeenCalledWith('Стилиян Петров', 1200, 1200, 1200);
       });
     });
 
@@ -280,16 +246,9 @@ describe('PlayersPage', () => {
       await user.click(editButtons[0]);
 
       expect(screen.getByRole('heading', { name: 'Редактиране на играч' })).toBeInTheDocument();
-      const ratingInput = screen.getByLabelText(/общ рейтинг/i);
-      const singlesInput = screen.getByLabelText(/рейтинг поединично/i);
-      const doublesInput = screen.getByLabelText(/рейтинг по двойки/i);
-
-      await user.clear(ratingInput);
-      await user.type(ratingInput, '2050');
-      await user.clear(singlesInput);
-      await user.type(singlesInput, '2100');
-      await user.clear(doublesInput);
-      await user.type(doublesInput, '2000');
+      const nameInput = screen.getByLabelText(/име на играча/i);
+      await user.clear(nameInput);
+      await user.type(nameInput, 'Христо Стоичков - обновен');
 
       const saveBtn = screen.getByRole('button', { name: /запази/i });
       await user.click(saveBtn);
@@ -297,10 +256,10 @@ describe('PlayersPage', () => {
       await waitFor(() => {
         expect(updatePlayerMock).toHaveBeenCalledWith(
           'p-1',
-          'Христо Стоичков',
-          2050,
-          2100,
-          2000
+          'Христо Стоичков - обновен',
+          1950,
+          1200,
+          1200
         );
       });
     });

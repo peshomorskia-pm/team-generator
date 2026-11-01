@@ -11,15 +11,6 @@ import { Card } from '../components/ui/Card';
 import type { PlayerRow } from '../types/database.types';
 import { sortPlayersByName } from '../utils/playerSort';
 
-export const getRatingBadgeVariant = (
-  rating: number
-): 'emerald' | 'indigo' | 'amber' | 'slate' => {
-  if (rating >= 1500) return 'emerald';
-  if (rating >= 1300) return 'indigo';
-  if (rating >= 1100) return 'amber';
-  return 'slate';
-};
-
 export const PlayersPage: React.FC = () => {
   const {
     players,
@@ -47,7 +38,7 @@ export const PlayersPage: React.FC = () => {
 
   const handleSavePlayer = async (
     name: string,
-    rating: number,
+    rating?: number,
     singlesRating?: number,
     doublesRating?: number
   ) => {
@@ -184,12 +175,6 @@ export const PlayersPage: React.FC = () => {
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                    >
-                      Рейтинг
-                    </th>
-                    <th
-                      scope="col"
                       className="px-6 py-3.5 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                     >
                       Действия
@@ -210,26 +195,6 @@ export const PlayersPage: React.FC = () => {
                           <span className="font-medium text-gray-900 dark:text-white">
                             {player.name}
                           </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            variant={getRatingBadgeVariant(
-                              player.singles_rating ?? player.rating
-                            )}
-                            size="md"
-                          >
-                            🎾 {player.singles_rating ?? player.rating} ELO
-                          </Badge>
-                          <Badge
-                            variant={getRatingBadgeVariant(
-                              player.doubles_rating ?? player.rating
-                            )}
-                            size="md"
-                          >
-                            👥 {player.doubles_rating ?? player.rating} ELO
-                          </Badge>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
@@ -273,24 +238,6 @@ export const PlayersPage: React.FC = () => {
                       <p className="font-semibold text-gray-900 dark:text-white truncate">
                         {player.name}
                       </p>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                        <Badge
-                          variant={getRatingBadgeVariant(
-                            player.singles_rating ?? player.rating
-                          )}
-                          size="sm"
-                        >
-                          🎾 {player.singles_rating ?? player.rating} ELO
-                        </Badge>
-                        <Badge
-                          variant={getRatingBadgeVariant(
-                            player.doubles_rating ?? player.rating
-                          )}
-                          size="sm"
-                        >
-                          👥 {player.doubles_rating ?? player.rating} ELO
-                        </Badge>
-                      </div>
                     </div>
                   </div>
 

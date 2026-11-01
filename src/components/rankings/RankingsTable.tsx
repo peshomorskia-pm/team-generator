@@ -46,7 +46,6 @@ export const RankingsTable: React.FC<RankingsTableProps> = ({ rankings }) => {
           <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50/75 dark:bg-gray-700/30 text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">
             <th className="py-3.5 px-4 text-center w-16">Място</th>
             <th className="py-3.5 px-4">Играч</th>
-            <th className="py-3.5 px-4 text-right">Рейтинг</th>
             <th className="py-3.5 px-4 text-center">Мачове</th>
             <th className="py-3.5 px-4 text-center">П-З</th>
             <th className="py-3.5 px-4 text-right">Победи %</th>
@@ -68,9 +67,6 @@ export const RankingsTable: React.FC<RankingsTableProps> = ({ rankings }) => {
                   </div>
                   <span className="truncate">{stat.player.name}</span>
                 </div>
-              </td>
-              <td className="py-3 px-4 text-right font-extrabold text-emerald-600 dark:text-emerald-400 text-base">
-                {stat.rating}
               </td>
               <td className="py-3 px-4 text-center text-gray-600 dark:text-gray-300 font-semibold">
                 {stat.matchesPlayed}
