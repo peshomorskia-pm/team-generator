@@ -24,6 +24,10 @@ describe('Podium Component', () => {
       wins: 9,
       losses: 1,
       winRate: 90,
+      gamesWon: 60,
+      gamesLost: 35,
+      gameDifference: 25,
+      form: ['W', 'W', 'W', 'W', 'W'],
     },
     {
       rank: 2,
@@ -44,6 +48,10 @@ describe('Podium Component', () => {
       wins: 7,
       losses: 3,
       winRate: 70,
+      gamesWon: 50,
+      gamesLost: 40,
+      gameDifference: 10,
+      form: ['W', 'W', 'L', 'W', 'W'],
     },
     {
       rank: 3,
@@ -64,6 +72,10 @@ describe('Podium Component', () => {
       wins: 6,
       losses: 4,
       winRate: 60,
+      gamesWon: 45,
+      gamesLost: 40,
+      gameDifference: 5,
+      form: ['L', 'W', 'L', 'W', 'W'],
     },
   ];
 
