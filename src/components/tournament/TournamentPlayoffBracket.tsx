@@ -1,90 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { Trophy, AlertTriangle, Sparkles, CheckCircle2, User } from 'lucide-react';
+import { Trophy, AlertTriangle } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { MatchCard } from '../match/MatchCard';
-import { getMatchOutcome } from '../../utils/standings';
 import { isPlaceholderTeam } from '../../utils/playoffs';
 import type { Tournament } from '../../types/tournament';
 import type { MatchDetail } from '../../types/matches';
 import type { TournamentPlayoffTree } from '../../types/playoffs';
 
-/**
- * Resolves player display names for the tournament champion team using a multi-tiered fallback:
- * 1. Final match: Winning side players from finalMatch.match_players.
- * 2. Tournament draft state: Team matching championTeamName in tournament.draft_state.teams.
- * 3. Preceding matches: Match records across playoff/group matches where team_1_name or team_2_name
- *    matches championTeamName and contains populated match_players.
- * 4. Empty array fallback: Gracefully returns [] if no player data is found.
- */
-export function resolveChampionPlayers(
-  championTeamName: string | null | undefined,
-  finalMatch: MatchDetail | undefined,
-  tournament: Tournament,
-  playoffMatches: MatchDetail[] = [],
-  groupMatches: MatchDetail[] = []
-): string[] {
-  if (!championTeamName) return [];
-
-  const targetName = championTeamName.trim().toLowerCase();
-
-  // Tier 1: Final match winning side match_players
-  if (finalMatch?.match_players && finalMatch.match_players.length > 0) {
-    const isTeam1 = finalMatch.team_1_name?.trim().toLowerCase() === targetName;
-    const isTeam2 = finalMatch.team_2_name?.trim().toLowerCase() === targetName;
-    const targetSide = isTeam1 ? 'team_1' : isTeam2 ? 'team_2' : null;
-
-    if (targetSide) {
-      const names = finalMatch.match_players
-        .filter((p) => p.team_side === targetSide)
-        .map((p) => (p.players?.name || p.guest_name || '').trim())
-        .filter(Boolean);
-
-      if (names.length > 0) {
-        return Array.from(new Set(names));
-      }
-    }
-  }
-
-  // Tier 2: tournament.draft_state.teams
-  const draftTeams = tournament.draft_state?.teams;
-  if (Array.isArray(draftTeams) && draftTeams.length > 0) {
-    const matchedTeam = draftTeams.find(
-      (t) => t.name?.trim().toLowerCase() === targetName
-    );
-    if (matchedTeam && Array.isArray(matchedTeam.players) && matchedTeam.players.length > 0) {
-      const names = matchedTeam.players
-        .map((p) => p.name?.trim())
-        .filter(Boolean);
-
-      if (names.length > 0) {
-        return Array.from(new Set(names));
-      }
-    }
-  }
-
-  // Tier 3: Preceding playoff or group matches
-  const allMatches = [...playoffMatches, ...groupMatches];
-  for (const m of allMatches) {
-    if (!m.match_players || m.match_players.length === 0) continue;
-    const isTeam1 = m.team_1_name?.trim().toLowerCase() === targetName;
-    const isTeam2 = m.team_2_name?.trim().toLowerCase() === targetName;
-    const targetSide = isTeam1 ? 'team_1' : isTeam2 ? 'team_2' : null;
-
-    if (targetSide) {
-      const names = m.match_players
-        .filter((p) => p.team_side === targetSide)
-        .map((p) => (p.players?.name || p.guest_name || '').trim())
-        .filter(Boolean);
-
-      if (names.length > 0) {
-        return Array.from(new Set(names));
-      }
-    }
-  }
-
-  // Tier 4: Fallback
-  return [];
-}
+export { resolveChampionPlayers, formatChampionDisplay } from '../../utils/playoffs';
 
 export interface TournamentPlayoffBracketProps {
   tournament: Tournament;
@@ -106,7 +29,7 @@ export const TournamentPlayoffBracket: React.FC<TournamentPlayoffBracketProps> =
   tree: _tree,
   onGeneratePlayoffs,
   onEditMatchScore,
-  onCompleteTournament,
+  onCompleteTournament: _onCompleteTournament,
   isGenerating = false,
   className = '',
   readOnly,
@@ -148,30 +71,6 @@ export const TournamentPlayoffBracket: React.FC<TournamentPlayoffBracketProps> =
     [playoffMatches]
   );
 
-  const finalMatch = finalMatches[0];
-  const finalOutcome = finalMatch ? getMatchOutcome(finalMatch) : null;
-  const isFinalCompleted =
-    Boolean(finalOutcome?.isCompleted) &&
-    (finalOutcome?.winner === 'team_1' || finalOutcome?.winner === 'team_2');
-
-  const championTeamName = isFinalCompleted
-    ? finalOutcome?.winner === 'team_1'
-      ? finalMatch.team_1_name
-      : finalMatch.team_2_name
-    : tournament.winner_team_name;
-
-  const championPlayers = useMemo(
-    () =>
-      resolveChampionPlayers(
-        championTeamName,
-        finalMatch,
-        tournament,
-        playoffMatches,
-        groupMatches
-      ),
-    [championTeamName, finalMatch, tournament, playoffMatches, groupMatches]
-  );
-
   const handleGenerateClick = () => {
     if (unplayedGroupMatches.length > 0) {
       setShowWarningModal(true);
@@ -206,60 +105,6 @@ export const TournamentPlayoffBracket: React.FC<TournamentPlayoffBracketProps> =
           )}
         </div>
       </div>
-
-      {/* Champion Banner */}
-      {isFinalCompleted && championTeamName && (
-        <div
-          className="relative overflow-hidden p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 text-slate-950 shadow-lg border border-amber-300 dark:border-amber-600 animate-in fade-in duration-500"
-          data-testid="playoff-champion-banner"
-        >
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-950/15 text-slate-950 text-xs font-extrabold uppercase tracking-wider backdrop-blur-xs">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Шампион на турнира</span>
-              </div>
-              <h3 className="text-3xl sm:text-4xl font-black tracking-tight drop-shadow-xs">
-                🏆 {championTeamName}
-              </h3>
-              {championPlayers.length > 0 && (
-                <div
-                  className="flex flex-wrap items-center gap-2 pt-1"
-                  data-testid="playoff-champion-roster"
-                >
-                  {championPlayers.map((playerName, index) => (
-                    <span
-                      key={`${playerName}-${index}`}
-                      data-testid="champion-player-pill"
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs sm:text-sm font-bold bg-slate-950/15 text-slate-950 border border-slate-950/10 backdrop-blur-xs shadow-2xs"
-                    >
-                      <User className="w-3.5 h-3.5 opacity-75 shrink-0" />
-                      <span>{playerName}</span>
-                    </span>
-                  ))}
-                </div>
-              )}
-              <p className="text-sm font-medium text-slate-900/80 max-w-xl">
-                Поздравления на победителите за спечелването на турнирния трофей!
-              </p>
-            </div>
-
-            {!isReadOnly && tournament.status !== 'completed' && onCompleteTournament && (
-              <Button
-                type="button"
-                variant="secondary"
-                size="md"
-                onClick={() => void onCompleteTournament()}
-                className="bg-slate-950 text-white hover:bg-slate-900 border-none font-bold shrink-0 shadow-md"
-                data-testid="mark-tournament-completed-btn"
-              >
-                <CheckCircle2 className="w-4 h-4 mr-2" />
-                <span>Маркирай турнира като приключил</span>
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Main Bracket Content */}
       {!hasGeneratedMatches ? (

@@ -9,11 +9,14 @@ import {
   propagatePlayoffWinner,
   extractTournamentTeams,
   buildPlayoffPairings,
+  formatChampionDisplay,
+  resolveChampionPlayers,
 } from '../playoffs';
 import type { GroupStanding } from '../../types/standings';
 import type { Team } from '../../types';
 import type { MatchDetail } from '../../types/matches';
 import type { PlayoffQualifier } from '../../types/playoffs';
+import type { Tournament } from '../../types/tournament';
 
 describe('playoffs utility engine', () => {
   describe('getAvailableFinalistOptions', () => {
@@ -1450,6 +1453,210 @@ describe('playoffs utility engine', () => {
         expect(round1Match?.team1.id).toBe(pairing.team1.teamId);
         expect(round1Match?.team2.id).toBe(pairing.team2.teamId);
       }
+    });
+  });
+
+  describe('formatChampionDisplay', () => {
+    it('FCD-01: formatChampionDisplay with empty players returns championTeamName without parentheses', () => {
+      expect(formatChampionDisplay('Отбор 1', [])).toBe('Отбор 1');
+      expect(formatChampionDisplay('  Шампиони  ', [])).toBe('Шампиони');
+    });
+
+    it('FCD-02: doubles with default team name "Отбор 5" and players ["Данков", "Йов"] returns "Данков, Йов (Отбор 5)"', () => {
+      expect(formatChampionDisplay('Отбор 5', ['Данков', 'Йов'])).toBe('Данков, Йов (Отбор 5)');
+    });
+
+    it('FCD-03: singles with team name "Иван" matching player [{ id: "1", name: "Иван" }] returns "Иван"', () => {
+      expect(formatChampionDisplay('Иван', [{ id: '1', name: 'Иван' }])).toBe('Иван');
+      expect(formatChampionDisplay('иван', [{ id: '1', name: 'Иван' }])).toBe('Иван');
+    });
+
+    it('FCD-04: custom team name "Асове" and players ["Данков", "Йов"] returns "Данков, Йов (Асове)"', () => {
+      expect(formatChampionDisplay('Асове', ['Данков', 'Йов'])).toBe('Данков, Йов (Асове)');
+    });
+
+    it('FCD-05: supports mixed input types (strings and { id, name } objects)', () => {
+      expect(
+        formatChampionDisplay('Отбор 2', [
+          'Данков',
+          { id: 'p-2', name: 'Йов' },
+        ])
+      ).toBe('Данков, Йов (Отбор 2)');
+    });
+
+    it('FCD-06: handles empty / null team name gracefully by returning empty string', () => {
+      expect(formatChampionDisplay(null, ['Данков'])).toBe('');
+      expect(formatChampionDisplay(undefined, ['Данков'])).toBe('');
+      expect(formatChampionDisplay('', ['Данков'])).toBe('');
+      expect(formatChampionDisplay('   ', ['Данков'])).toBe('');
+    });
+  });
+
+  describe('resolveChampionPlayers', () => {
+    const dummyTournament: Tournament = {
+      id: 't-1',
+      title: 'Турнир София 2026',
+      date: '2026-04-18',
+      format: 'doubles',
+      status: 'in_progress',
+      winner_team_name: null,
+      notes: null,
+      created_at: '2026-04-01T10:00:00Z',
+      updated_at: '2026-04-01T10:00:00Z',
+    };
+
+    it('RCP-01: resolveChampionPlayers from final match winning side players', () => {
+      const finalMatch: MatchDetail = {
+        id: 'p-final',
+        match_format: 'doubles',
+        team_1_score: 6,
+        team_2_score: 4,
+        played_at: '2026-04-18T15:00:00Z',
+        team_1_name: 'Отбор Шампиони',
+        team_2_name: 'Отбор Финалисти',
+        group_name: 'Финал',
+        round: 2,
+        tournament_id: 't-1',
+        created_at: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+        match_players: [
+          {
+            id: 'mp-1',
+            match_id: 'p-final',
+            player_id: 'p-1',
+            team_side: 'team_1',
+            guest_name: null,
+            rating_before: null,
+            rating_after: null,
+            players: { id: 'p-1', name: 'Данков' },
+          },
+          {
+            id: 'mp-2',
+            match_id: 'p-final',
+            player_id: 'p-2',
+            team_side: 'team_1',
+            guest_name: null,
+            rating_before: null,
+            rating_after: null,
+            players: { id: 'p-2', name: 'Йов' },
+          },
+          {
+            id: 'mp-3',
+            match_id: 'p-final',
+            player_id: 'p-3',
+            team_side: 'team_2',
+            guest_name: null,
+            rating_before: null,
+            rating_after: null,
+            players: { id: 'p-3', name: 'Петров' },
+          },
+        ],
+      };
+
+      const result = resolveChampionPlayers('Отбор Шампиони', finalMatch, dummyTournament);
+      expect(result).toEqual(['Данков', 'Йов']);
+    });
+
+    it('RCP-02: resolveChampionPlayers fallback to tournament.draft_state.teams', () => {
+      const tournamentWithDraft: Tournament = {
+        ...dummyTournament,
+        draft_state: {
+          targetTeams: 2,
+          formationMode: 'auto',
+          teams: [
+            {
+              id: 't-c',
+              name: 'Отбор Шампиони',
+              players: [
+                { id: 'p-1', name: 'Стефан Тодоров' },
+                { id: 'p-2', name: 'Николай Василев' },
+              ],
+            },
+          ],
+          activePool: [],
+        },
+      };
+
+      const finalMatch: MatchDetail = {
+        id: 'p-final',
+        match_format: 'doubles',
+        team_1_score: 6,
+        team_2_score: 4,
+        played_at: '2026-04-18T15:00:00Z',
+        team_1_name: 'Отбор Шампиони',
+        team_2_name: 'Отбор Финалисти',
+        group_name: 'Финал',
+        round: 2,
+        tournament_id: 't-1',
+        created_at: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+        match_players: [],
+      };
+
+      const result = resolveChampionPlayers('Отбор Шампиони', finalMatch, tournamentWithDraft);
+      expect(result).toEqual(['Стефан Тодоров', 'Николай Василев']);
+    });
+
+    it('RCP-03: resolveChampionPlayers fallback to preceding group/playoff matches', () => {
+      const finalMatch: MatchDetail = {
+        id: 'p-final',
+        match_format: 'doubles',
+        team_1_score: 6,
+        team_2_score: 4,
+        played_at: '2026-04-18T15:00:00Z',
+        team_1_name: 'Отбор Шампиони',
+        team_2_name: 'Отбор Финалисти',
+        group_name: 'Финал',
+        round: 2,
+        tournament_id: 't-1',
+        created_at: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+        match_players: [],
+      };
+
+      const groupMatch: MatchDetail = {
+        id: 'm-g-1',
+        match_format: 'doubles',
+        team_1_score: 6,
+        team_2_score: 2,
+        played_at: '2026-04-18T10:00:00Z',
+        team_1_name: 'Отбор Шампиони',
+        team_2_name: 'Отбор Друг',
+        group_name: 'Група А',
+        round: 1,
+        tournament_id: 't-1',
+        created_at: '2026-04-18T10:00:00Z',
+        updated_at: '2026-04-18T10:00:00Z',
+        match_players: [
+          {
+            id: 'mp-x',
+            match_id: 'm-g-1',
+            player_id: 'p-x',
+            team_side: 'team_1',
+            guest_name: null,
+            rating_before: null,
+            rating_after: null,
+            players: { id: 'p-x', name: 'Александър Димитров' },
+          },
+        ],
+      };
+
+      const result = resolveChampionPlayers(
+        'Отбор Шампиони',
+        finalMatch,
+        dummyTournament,
+        [],
+        [groupMatch]
+      );
+      expect(result).toEqual(['Александър Димитров']);
+    });
+
+    it('RCP-04: resolveChampionPlayers with no data found returns empty array []', () => {
+      const result = resolveChampionPlayers('Несъществуващ', undefined, dummyTournament, [], []);
+      expect(result).toEqual([]);
+
+      expect(resolveChampionPlayers(null, undefined, dummyTournament)).toEqual([]);
+      expect(resolveChampionPlayers(undefined, undefined, dummyTournament)).toEqual([]);
     });
   });
 });

@@ -10,7 +10,7 @@ import type {
   TournamentPlayoffTree,
   GeneratePlayoffMatchesParams,
 } from '../types/playoffs';
-import type { TournamentMatch } from '../types/tournament';
+import type { Tournament, TournamentMatch } from '../types/tournament';
 import { getMatchOutcome } from './standings';
 
 /**
@@ -932,3 +932,114 @@ export function propagatePlayoffWinner(params: {
     matchId: nextMatch.id,
   };
 }
+
+export type ChampionPlayerInput = string | { id?: string; name: string };
+
+/**
+ * Formats champion team name and player roster into an ergonomic display string.
+ * - If players.length === 0: returns trimmed championTeamName.
+ * - If roster exactly matches championTeamName (e.g. singles "Данков"): returns "Данков".
+ * - If default team name (starts with "Отбор", e.g. "Отбор 5"): returns "Данков, Йов (Отбор 5)".
+ * - If custom team name (e.g. "Асове"): returns "Данков, Йов (Асове)".
+ */
+export function formatChampionDisplay(
+  championTeamName: string | null | undefined,
+  players: ChampionPlayerInput[] = []
+): string {
+  const trimmedTeam = championTeamName ? championTeamName.trim() : '';
+  if (!trimmedTeam) return '';
+
+  const playerNames = players
+    .map((p) => (typeof p === 'string' ? p : p?.name))
+    .map((n) => (n ?? '').trim())
+    .filter(Boolean);
+
+  if (playerNames.length === 0) {
+    return trimmedTeam;
+  }
+
+  const rosterStr = playerNames.join(', ');
+  if (rosterStr.toLowerCase() === trimmedTeam.toLowerCase()) {
+    return rosterStr;
+  }
+
+  return `${rosterStr} (${trimmedTeam})`;
+}
+
+/**
+ * Resolves player display names for tournament champion using a 4-tier fallback:
+ * 1. Final match winning side match_players.
+ * 2. tournament.draft_state.teams matching championTeamName.
+ * 3. Preceding playoff or group match records involving championTeamName with match_players.
+ * 4. Graceful fallback to empty array [].
+ */
+export function resolveChampionPlayers(
+  championTeamName: string | null | undefined,
+  finalMatch: MatchDetail | undefined,
+  tournament: Tournament,
+  playoffMatches: MatchDetail[] = [],
+  groupMatches: MatchDetail[] = []
+): string[] {
+  if (!championTeamName) return [];
+
+  const targetName = championTeamName.trim().toLowerCase();
+
+  // Tier 1: Final match winning side match_players
+  if (finalMatch?.match_players && finalMatch.match_players.length > 0) {
+    const isTeam1 = finalMatch.team_1_name?.trim().toLowerCase() === targetName;
+    const isTeam2 = finalMatch.team_2_name?.trim().toLowerCase() === targetName;
+    const targetSide = isTeam1 ? 'team_1' : isTeam2 ? 'team_2' : null;
+
+    if (targetSide) {
+      const names = finalMatch.match_players
+        .filter((p) => p.team_side === targetSide)
+        .map((p) => (p.players?.name || p.guest_name || '').trim())
+        .filter(Boolean);
+
+      if (names.length > 0) {
+        return Array.from(new Set(names));
+      }
+    }
+  }
+
+  // Tier 2: tournament.draft_state.teams
+  const draftTeams = tournament.draft_state?.teams;
+  if (Array.isArray(draftTeams) && draftTeams.length > 0) {
+    const matchedTeam = draftTeams.find(
+      (t) => t.name?.trim().toLowerCase() === targetName
+    );
+    if (matchedTeam && Array.isArray(matchedTeam.players) && matchedTeam.players.length > 0) {
+      const names = matchedTeam.players
+        .map((p) => p.name?.trim())
+        .filter(Boolean);
+
+      if (names.length > 0) {
+        return Array.from(new Set(names));
+      }
+    }
+  }
+
+  // Tier 3: Preceding playoff or group matches
+  const allMatches = [...playoffMatches, ...groupMatches];
+  for (const m of allMatches) {
+    if (!m.match_players || m.match_players.length === 0) continue;
+    const isTeam1 = m.team_1_name?.trim().toLowerCase() === targetName;
+    const isTeam2 = m.team_2_name?.trim().toLowerCase() === targetName;
+    const targetSide = isTeam1 ? 'team_1' : isTeam2 ? 'team_2' : null;
+
+    if (targetSide) {
+      const names = m.match_players
+        .filter((p) => p.team_side === targetSide)
+        .map((p) => (p.players?.name || p.guest_name || '').trim())
+        .filter(Boolean);
+
+      if (names.length > 0) {
+        return Array.from(new Set(names));
+      }
+    }
+  }
+
+  // Tier 4: Fallback
+  return [];
+}
+
