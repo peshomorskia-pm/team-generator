@@ -255,6 +255,13 @@ export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGene
             rating?: number;
             singles_rating?: number;
             doubles_rating?: number;
+            singles_matches_played?: number;
+            singles_wins?: number;
+            singles_losses?: number;
+            doubles_matches_played?: number;
+            doubles_wins?: number;
+            doubles_losses?: number;
+            winRate?: number;
           }
     ) => {
       const exists = activePool.some((p) => p.id === player.id);
@@ -285,6 +292,13 @@ export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGene
           rating: player.rating,
           singles_rating: player.singles_rating,
           doubles_rating: player.doubles_rating,
+          singles_matches_played: player.singles_matches_played,
+          singles_wins: player.singles_wins,
+          singles_losses: player.singles_losses,
+          doubles_matches_played: player.doubles_matches_played,
+          doubles_wins: player.doubles_wins,
+          doubles_losses: player.doubles_losses,
+          winRate: player.winRate,
         };
         setActivePool((prev) => [...prev, newPlayer]);
         setTeams((prevTeams) => {
@@ -328,6 +342,13 @@ export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGene
             rating?: number;
             singles_rating?: number;
             doubles_rating?: number;
+            singles_matches_played?: number;
+            singles_wins?: number;
+            singles_losses?: number;
+            doubles_matches_played?: number;
+            doubles_wins?: number;
+            doubles_losses?: number;
+            winRate?: number;
           }
     ) => {
       const exists = activePool.some((p) => p.id === player.id);
@@ -340,6 +361,13 @@ export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGene
         rating: player.rating,
         singles_rating: player.singles_rating,
         doubles_rating: player.doubles_rating,
+        singles_matches_played: player.singles_matches_played,
+        singles_wins: player.singles_wins,
+        singles_losses: player.singles_losses,
+        doubles_matches_played: player.doubles_matches_played,
+        doubles_wins: player.doubles_wins,
+        doubles_losses: player.doubles_losses,
+        winRate: player.winRate,
       };
       setActivePool((prev) => [...prev, newPlayer]);
       setTeams((prevTeams) => {
