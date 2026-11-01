@@ -87,7 +87,12 @@ describe('RankingsTable Component', () => {
     expect(screen.getByRole('columnheader', { name: 'М' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'П' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'З' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Успеваемост' })).toBeInTheDocument();
+
+    const winRateHeader = screen.getByRole('columnheader', { name: /успеваемост/i });
+    expect(winRateHeader).toBeInTheDocument();
+    expect(winRateHeader).toHaveClass('w-40');
+    expect(winRateHeader).toHaveClass('text-center');
+    expect(winRateHeader).toHaveClass('whitespace-nowrap');
 
     const diffHeader = screen.getByRole('columnheader', { name: 'Геймова разлика' });
     expect(diffHeader).toBeInTheDocument();
@@ -96,6 +101,37 @@ describe('RankingsTable Component', () => {
     expect(screen.queryByText('+/-')).not.toBeInTheDocument();
 
     expect(screen.getByRole('columnheader', { name: 'Форма' })).toBeInTheDocument();
+  });
+
+  it('renders linear alignment and tabular-nums typography for win rate column', () => {
+    const { container } = render(<RankingsTable rankings={mockRankings} />);
+
+    // Progress bar tracks contain w-16 sm:w-20 and shrink-0
+    const tracks = container.querySelectorAll('.w-16.sm\\:w-20');
+    expect(tracks).toHaveLength(3);
+    tracks.forEach((track) => {
+      expect(track).toHaveClass('shrink-0');
+    });
+
+    // Percentage text elements contain w-14, tabular-nums, text-right, and shrink-0
+    const percentSpans = container.querySelectorAll('.tabular-nums');
+    expect(percentSpans).toHaveLength(3);
+    percentSpans.forEach((span) => {
+      expect(span).toHaveClass('w-14');
+      expect(span).toHaveClass('text-right');
+      expect(span).toHaveClass('shrink-0');
+    });
+
+    // Dynamic fill widths match player winRate
+    expect(percentSpans[0].textContent).toBe('90%');
+    expect(percentSpans[1].textContent).toBe('75%');
+    expect(percentSpans[2].textContent).toBe('40%');
+
+    const progressFills = container.querySelectorAll('.bg-emerald-500.transition-all');
+    expect(progressFills).toHaveLength(3);
+    expect(progressFills[0]).toHaveStyle({ width: '90%' });
+    expect(progressFills[1]).toHaveStyle({ width: '75%' });
+    expect(progressFills[2]).toHaveStyle({ width: '40%' });
   });
 
   it('renders clean numeric typography without medal emojis (🥇🥈🥉)', () => {
