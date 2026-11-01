@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { balanceTeams } from '../balance';
+import { balanceTeams, getPlayerWinRate, getPlayerEffectiveSkill } from '../balance';
 import { Player } from '../../types';
 
 describe('balanceTeams', () => {
@@ -228,6 +228,144 @@ describe('balanceTeams', () => {
       expect(teams).toHaveLength(4);
       const sizes = teams.map((t) => t.players.length).sort((a, b) => b - a);
       expect(sizes).toEqual([3, 3, 2, 2]);
+    });
+  });
+
+  describe('Win Rate Balancing & 50% Baseline (Sports Statistics)', () => {
+    describe('getPlayerWinRate', () => {
+      it('computes singles win rate correctly (9 wins / 10 matches -> 90.0)', () => {
+        const player: Player = {
+          id: 'p1',
+          name: 'Player 1',
+          singles_matches_played: 10,
+          singles_wins: 9,
+          singles_losses: 1,
+        };
+        expect(getPlayerWinRate(player, 'singles')).toBe(90.0);
+      });
+
+      it('defaults to 50.0 baseline for unplayed player in singles format (0 matches)', () => {
+        const player: Player = {
+          id: 'p2',
+          name: 'Player 2',
+          singles_matches_played: 0,
+          singles_wins: 0,
+          singles_losses: 0,
+        };
+        expect(getPlayerWinRate(player, 'singles')).toBe(50.0);
+      });
+
+      it('computes doubles win rate correctly (3 wins / 4 matches -> 75.0)', () => {
+        const player: Player = {
+          id: 'p3',
+          name: 'Player 3',
+          doubles_matches_played: 4,
+          doubles_wins: 3,
+          doubles_losses: 1,
+        };
+        expect(getPlayerWinRate(player, 'doubles')).toBe(75.0);
+      });
+
+      it('defaults to 50.0 baseline for unplayed player in doubles format (0 matches)', () => {
+        const player: Player = {
+          id: 'p4',
+          name: 'Player 4',
+          doubles_matches_played: 0,
+          doubles_wins: 0,
+          doubles_losses: 0,
+        };
+        expect(getPlayerWinRate(player, 'doubles')).toBe(50.0);
+      });
+
+      it('aggregates singles and doubles in overall format (2/3 singles + 4/5 doubles -> 6/8 = 75.0)', () => {
+        const player: Player = {
+          id: 'p5',
+          name: 'Player 5',
+          singles_matches_played: 3,
+          singles_wins: 2,
+          singles_losses: 1,
+          doubles_matches_played: 5,
+          doubles_wins: 4,
+          doubles_losses: 1,
+        };
+        expect(getPlayerWinRate(player)).toBe(75.0);
+      });
+
+      it('defaults to 50.0 baseline for guest or unrated player without match counters', () => {
+        const guest: Player = {
+          id: 'g1',
+          name: 'Guest Player',
+        };
+        expect(getPlayerWinRate(guest, 'doubles')).toBe(50.0);
+        expect(getPlayerWinRate(guest, 'singles')).toBe(50.0);
+        expect(getPlayerWinRate(guest)).toBe(50.0);
+      });
+    });
+
+    describe('getPlayerEffectiveSkill', () => {
+      it('returns win rate for active players and 0 for unrated legacy players', () => {
+        const activePlayer: Player = {
+          id: 'p1',
+          name: 'P1',
+          doubles_matches_played: 10,
+          doubles_wins: 8,
+          doubles_losses: 2,
+        };
+        expect(getPlayerEffectiveSkill(activePlayer, 'doubles')).toBe(80.0);
+
+        const unratedLegacy: Player = {
+          id: 'p2',
+          name: 'P2',
+        };
+        expect(getPlayerEffectiveSkill(unratedLegacy, 'doubles')).toBe(0);
+      });
+    });
+
+    describe('Win rate team balancing', () => {
+      it('balances 4 doubles players using snake/inversion pairing based on win rate', () => {
+        const players: Player[] = [
+          { id: '1', name: 'P1', winRate: 90.0, doubles_matches_played: 10, doubles_wins: 9 },
+          { id: '2', name: 'P2', winRate: 80.0, doubles_matches_played: 10, doubles_wins: 8 },
+          { id: '3', name: 'P3', winRate: 40.0, doubles_matches_played: 10, doubles_wins: 4 },
+          { id: '4', name: 'P4', winRate: 30.0, doubles_matches_played: 10, doubles_wins: 3 },
+        ];
+
+        const teams = balanceTeams(players, 2, 'doubles');
+        expect(teams).toHaveLength(2);
+        expect(teams[0].players).toHaveLength(2);
+        expect(teams[1].players).toHaveLength(2);
+
+        // One team must have P1(90) + P4(30) = 120, other must have P2(80) + P3(40) = 120
+        expect(teams[0].totalRating).toBe(120);
+        expect(teams[1].totalRating).toBe(120);
+
+        const team1Ids = new Set(teams[0].players.map((p) => p.id));
+        const team2Ids = new Set(teams[1].players.map((p) => p.id));
+
+        const isPairingValid =
+          (team1Ids.has('1') && team1Ids.has('4') && team2Ids.has('2') && team2Ids.has('3')) ||
+          (team1Ids.has('2') && team1Ids.has('3') && team2Ids.has('1') && team2Ids.has('4'));
+
+        expect(isPairingValid).toBe(true);
+      });
+
+      it('balances teams evenly when mixing unplayed players (50% baseline) with veteran players', () => {
+        const players: Player[] = [
+          { id: '1', name: 'P1', winRate: 100.0, doubles_matches_played: 5, doubles_wins: 5 },
+          { id: '2', name: 'P2', doubles_matches_played: 0, doubles_wins: 0 },
+          { id: '3', name: 'P3', doubles_matches_played: 0, doubles_wins: 0 },
+          { id: '4', name: 'P4', winRate: 0.0, doubles_matches_played: 5, doubles_wins: 0 },
+        ];
+
+        const teams = balanceTeams(players, 2, 'doubles');
+        expect(teams).toHaveLength(2);
+        expect(teams[0].players).toHaveLength(2);
+        expect(teams[1].players).toHaveLength(2);
+
+        // Team 1: {P1(100), P4(0)} = 100, Team 2: {P2(50), P3(50)} = 100
+        expect(teams[0].totalRating).toBe(100);
+        expect(teams[1].totalRating).toBe(100);
+      });
     });
   });
 });
