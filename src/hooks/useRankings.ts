@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { PlayerRow } from '../types/database.types';
+import type { MatchDetail } from '../types/matches';
 import type { MatchFormat } from '../types/match';
 import type { Player } from '../types/player';
 import type { RankingStats } from '../types/rankings';
+import { computePlayerSportsStats } from '../utils/standingsStats';
 
 export interface UseRankingsReturn {
   format: MatchFormat;
@@ -21,6 +23,7 @@ export function useRankings(initialFormat: MatchFormat = 'singles'): UseRankings
   const [format, setFormat] = useState<MatchFormat>(initialFormat);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [players, setPlayers] = useState<PlayerRow[]>([]);
+  const [matches, setMatches] = useState<MatchDetail[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,15 +38,29 @@ export function useRankings(initialFormat: MatchFormat = 'singles'): UseRankings
         return;
       }
 
-      const { data, error: queryError } = await supabase
-        .from('players')
-        .select('*');
+      const [playersRes, matchesRes] = await Promise.all([
+        supabase.from('players').select('*'),
+        supabase.from('matches').select(`
+          *,
+          match_players (
+            *,
+            players (
+              id,
+              name
+            )
+          )
+        `),
+      ]);
 
-      if (queryError) {
-        throw queryError;
+      if (playersRes.error) {
+        throw playersRes.error;
+      }
+      if (matchesRes.error) {
+        throw matchesRes.error;
       }
 
-      setPlayers(data ?? []);
+      setPlayers(playersRes.data ?? []);
+      setMatches((matchesRes.data as MatchDetail[]) ?? []);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Грешка при зареждане на класирането.';
       setError(msg);
@@ -65,16 +82,30 @@ export function useRankings(initialFormat: MatchFormat = 'singles'): UseRankings
           return;
         }
 
-        const { data, error: queryError } = await supabase
-          .from('players')
-          .select('*');
+        const [playersRes, matchesRes] = await Promise.all([
+          supabase.from('players').select('*'),
+          supabase.from('matches').select(`
+            *,
+            match_players (
+              *,
+              players (
+                id,
+                name
+              )
+            )
+          `),
+        ]);
 
-        if (queryError) {
-          throw queryError;
+        if (playersRes.error) {
+          throw playersRes.error;
+        }
+        if (matchesRes.error) {
+          throw matchesRes.error;
         }
 
         if (isMounted) {
-          setPlayers(data ?? []);
+          setPlayers(playersRes.data ?? []);
+          setMatches((matchesRes.data as MatchDetail[]) ?? []);
         }
       } catch (err: unknown) {
         if (isMounted) {
@@ -95,76 +126,53 @@ export function useRankings(initialFormat: MatchFormat = 'singles'): UseRankings
     };
   }, []);
 
-  // Transform players into sorted RankingStats
+  // Compute sports statistics and rankings
   const rawRankings = useMemo<RankingStats[]>(() => {
     const isSingles = format === 'singles';
+    const sportsStats = computePlayerSportsStats(players, matches, format);
 
-    const sortedPlayers = [...players].sort((a, b) => {
-      const matchesA = isSingles
-        ? (a.singles_matches_played ?? 0)
-        : (a.doubles_matches_played ?? 0);
-      const winsA = isSingles ? (a.singles_wins ?? 0) : (a.doubles_wins ?? 0);
-      const winRateA = matchesA > 0 ? Math.round((winsA / matchesA) * 100) : 0;
+    const playerMap = new Map<string, PlayerRow>();
+    for (const p of players) {
+      playerMap.set(p.id, p);
+    }
 
-      const matchesB = isSingles
-        ? (b.singles_matches_played ?? 0)
-        : (b.doubles_matches_played ?? 0);
-      const winsB = isSingles ? (b.singles_wins ?? 0) : (b.doubles_wins ?? 0);
-      const winRateB = matchesB > 0 ? Math.round((winsB / matchesB) * 100) : 0;
-
-      if (winRateB !== winRateA) {
-        return winRateB - winRateA;
-      }
-      if (winsB !== winsA) {
-        return winsB - winsA;
-      }
-      if (matchesB !== matchesA) {
-        return matchesB - matchesA;
-      }
-      return a.name.localeCompare(b.name);
-    });
-
-    return sortedPlayers.map((p, index) => {
-      const matchesPlayed = isSingles
-        ? (p.singles_matches_played ?? 0)
-        : (p.doubles_matches_played ?? 0);
-      const wins = isSingles ? (p.singles_wins ?? 0) : (p.doubles_wins ?? 0);
-      const losses = isSingles ? (p.singles_losses ?? 0) : (p.doubles_losses ?? 0);
-      const rating = isSingles
-        ? (p.singles_rating ?? p.rating ?? 1200)
-        : (p.doubles_rating ?? p.rating ?? 1200);
-      const winRate =
-        matchesPlayed > 0 ? Math.round((wins / matchesPlayed) * 100) : 0;
-
+    return sportsStats.map((s) => {
+      const p = playerMap.get(s.playerId);
       const domainPlayer: Player = {
-        id: p.id,
-        name: p.name,
-        singles_rating: p.singles_rating ?? 1200,
-        doubles_rating: p.doubles_rating ?? 1200,
-        singles_matches_played: p.singles_matches_played ?? 0,
-        singles_wins: p.singles_wins ?? 0,
-        singles_losses: p.singles_losses ?? 0,
-        doubles_matches_played: p.doubles_matches_played ?? 0,
-        doubles_wins: p.doubles_wins ?? 0,
-        doubles_losses: p.doubles_losses ?? 0,
-        rating: p.rating,
-        created_at: p.created_at,
-        updated_at: p.updated_at,
+        id: s.playerId,
+        name: s.name,
+        singles_rating: p?.singles_rating ?? 1200,
+        doubles_rating: p?.doubles_rating ?? 1200,
+        singles_matches_played: p?.singles_matches_played ?? s.matchesPlayed,
+        singles_wins: p?.singles_wins ?? s.wins,
+        singles_losses: p?.singles_losses ?? s.losses,
+        doubles_matches_played: p?.doubles_matches_played ?? s.matchesPlayed,
+        doubles_wins: p?.doubles_wins ?? s.wins,
+        doubles_losses: p?.doubles_losses ?? s.losses,
+        rating: p?.rating,
+        created_at: p?.created_at,
+        updated_at: p?.updated_at,
       };
 
       return {
-        rank: index + 1,
+        rank: s.rank,
         player: domainPlayer,
-        rating,
-        matchesPlayed,
-        wins,
-        losses,
-        winRate,
+        rating: isSingles
+          ? (p?.singles_rating ?? p?.rating ?? 1200)
+          : (p?.doubles_rating ?? p?.rating ?? 1200),
+        matchesPlayed: s.matchesPlayed,
+        wins: s.wins,
+        losses: s.losses,
+        winRate: s.winRate,
+        gamesWon: s.gamesWon,
+        gamesLost: s.gamesLost,
+        gameDifference: s.gameDifference,
+        form: s.form,
       };
     });
-  }, [players, format]);
+  }, [players, matches, format]);
 
-  // Apply search filtering
+  // Apply search filtering while preserving original rank
   const rankings = useMemo<RankingStats[]>(() => {
     const query = searchTerm.toLowerCase().trim();
     if (!query) {

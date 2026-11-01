@@ -3,6 +3,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { useRankings } from '../useRankings';
 import * as supabaseModule from '../../lib/supabase';
 import type { PlayerRow } from '../../types/database.types';
+import type { MatchDetail } from '../../types/matches';
 
 const mockFrom = vi.fn();
 
@@ -62,14 +63,124 @@ describe('useRankings hook', () => {
     },
   ];
 
+  const mockMatches: MatchDetail[] = [
+    {
+      id: 'm-1',
+      match_format: 'singles',
+      team_1_score: 6,
+      team_2_score: 4,
+      played_at: '2026-10-02T10:00:00Z',
+      created_at: '2026-10-02T10:00:00Z',
+      updated_at: '2026-10-02T10:00:00Z',
+      match_players: [
+        {
+          id: 'mp-1',
+          match_id: 'm-1',
+          player_id: 'p-1',
+          team_side: 'team_1',
+          rating_before: null,
+          rating_after: null,
+          guest_name: null,
+        },
+        {
+          id: 'mp-2',
+          match_id: 'm-1',
+          player_id: 'p-2',
+          team_side: 'team_2',
+          rating_before: null,
+          rating_after: null,
+          guest_name: null,
+        },
+      ],
+    },
+    {
+      id: 'm-2',
+      match_format: 'singles',
+      team_1_score: 6,
+      team_2_score: 3,
+      played_at: '2026-10-03T10:00:00Z',
+      created_at: '2026-10-03T10:00:00Z',
+      updated_at: '2026-10-03T10:00:00Z',
+      match_players: [
+        {
+          id: 'mp-3',
+          match_id: 'm-2',
+          player_id: 'p-1',
+          team_side: 'team_1',
+          rating_before: null,
+          rating_after: null,
+          guest_name: null,
+        },
+        {
+          id: 'mp-4',
+          match_id: 'm-2',
+          player_id: 'p-3',
+          team_side: 'team_2',
+          rating_before: null,
+          rating_after: null,
+          guest_name: null,
+        },
+      ],
+    },
+    {
+      id: 'm-3',
+      match_format: 'doubles',
+      team_1_score: 3,
+      team_2_score: 6,
+      played_at: '2026-10-04T10:00:00Z',
+      created_at: '2026-10-04T10:00:00Z',
+      updated_at: '2026-10-04T10:00:00Z',
+      match_players: [
+        {
+          id: 'mp-5',
+          match_id: 'm-3',
+          player_id: 'p-1',
+          team_side: 'team_1',
+          rating_before: null,
+          rating_after: null,
+          guest_name: null,
+        },
+        {
+          id: 'mp-6',
+          match_id: 'm-3',
+          player_id: 'p-2',
+          team_side: 'team_2',
+          rating_before: null,
+          rating_after: null,
+          guest_name: null,
+        },
+      ],
+    },
+  ];
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(supabaseModule.isSupabaseConfigured).mockReturnValue(true);
   });
 
-  it('fetches players on mount and sorts by singles rating by default', async () => {
-    const selectMock = vi.fn().mockResolvedValue({ data: mockPlayers, error: null });
-    mockFrom.mockReturnValue({ select: selectMock });
+  const setupSupabaseMock = (
+    players: PlayerRow[] = mockPlayers,
+    matches: MatchDetail[] = mockMatches
+  ) => {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'players') {
+        return {
+          select: vi.fn().mockResolvedValue({ data: players, error: null }),
+        };
+      }
+      if (table === 'matches') {
+        return {
+          select: vi.fn().mockResolvedValue({ data: matches, error: null }),
+        };
+      }
+      return {
+        select: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
+    });
+  };
+
+  it('fetches players and matches on mount and computes pure sports standings for singles', async () => {
+    setupSupabaseMock();
 
     const { result } = renderHook(() => useRankings());
 
@@ -82,26 +193,124 @@ describe('useRankings hook', () => {
     expect(result.current.format).toBe('singles');
     expect(result.current.rankings).toHaveLength(3);
 
-    // Singles order: Григор (1550) > Димитър (1420) > Адриан (1250)
+    // Singles order based on matches:
+    // Григор Димитров: 2 wins in 2 matches (100% win rate), gameDiff = +5, form = ['W', 'W']
     expect(result.current.rankings[0].player.name).toBe('Григор Димитров');
     expect(result.current.rankings[0].rank).toBe(1);
-    expect(result.current.rankings[0].rating).toBe(1550);
-    expect(result.current.rankings[0].winRate).toBe(80); // (8 / 10) * 100
+    expect(result.current.rankings[0].wins).toBe(2);
+    expect(result.current.rankings[0].losses).toBe(0);
+    expect(result.current.rankings[0].winRate).toBe(100);
+    expect(result.current.rankings[0].gameDifference).toBe(5);
+    expect(result.current.rankings[0].form).toEqual(['W', 'W']);
 
+    // Rank 2: Димитър Кузманов (0 wins, gameDiff = -2)
+    // Rank 3: Адриан Андреев (0 wins, gameDiff = -3)
+    // Tier 3: gameDifference (-2 > -3) breaks tie before Bulgarian collation
     expect(result.current.rankings[1].player.name).toBe('Димитър Кузманов');
     expect(result.current.rankings[1].rank).toBe(2);
-    expect(result.current.rankings[1].rating).toBe(1420);
-    expect(result.current.rankings[1].winRate).toBe(60); // (3 / 5) * 100
+    expect(result.current.rankings[1].wins).toBe(0);
+    expect(result.current.rankings[1].losses).toBe(1);
+    expect(result.current.rankings[1].gameDifference).toBe(-2);
 
     expect(result.current.rankings[2].player.name).toBe('Адриан Андреев');
     expect(result.current.rankings[2].rank).toBe(3);
-    expect(result.current.rankings[2].rating).toBe(1250);
-    expect(result.current.rankings[2].winRate).toBe(0); // 0 matches -> 0%
+    expect(result.current.rankings[2].wins).toBe(0);
+    expect(result.current.rankings[2].losses).toBe(1);
+    expect(result.current.rankings[2].gameDifference).toBe(-3);
   });
 
-  it('switches format to doubles and re-sorts by doubles rating', async () => {
-    const selectMock = vi.fn().mockResolvedValue({ data: mockPlayers, error: null });
-    mockFrom.mockReturnValue({ select: selectMock });
+  it('switches format to doubles and dynamically re-evaluates game differences and form', async () => {
+    const doublesMatches: MatchDetail[] = [
+      {
+        id: 'dm-1',
+        match_format: 'doubles',
+        team_1_score: 3,
+        team_2_score: 6,
+        played_at: '2026-10-04T10:00:00Z',
+        created_at: '2026-10-04T10:00:00Z',
+        updated_at: '2026-10-04T10:00:00Z',
+        match_players: [
+          {
+            id: 'dmp-1',
+            match_id: 'dm-1',
+            player_id: 'p-1',
+            team_side: 'team_1',
+            rating_before: null,
+            rating_after: null,
+            guest_name: null,
+          },
+          {
+            id: 'dmp-2',
+            match_id: 'dm-1',
+            player_id: 'p-2',
+            team_side: 'team_2',
+            rating_before: null,
+            rating_after: null,
+            guest_name: null,
+          },
+        ],
+      },
+      {
+        id: 'dm-2',
+        match_format: 'doubles',
+        team_1_score: 6,
+        team_2_score: 2,
+        played_at: '2026-10-05T10:00:00Z',
+        created_at: '2026-10-05T10:00:00Z',
+        updated_at: '2026-10-05T10:00:00Z',
+        match_players: [
+          {
+            id: 'dmp-3',
+            match_id: 'dm-2',
+            player_id: 'p-3',
+            team_side: 'team_1',
+            rating_before: null,
+            rating_after: null,
+            guest_name: null,
+          },
+          {
+            id: 'dmp-4',
+            match_id: 'dm-2',
+            player_id: 'p-1',
+            team_side: 'team_2',
+            rating_before: null,
+            rating_after: null,
+            guest_name: null,
+          },
+        ],
+      },
+      {
+        id: 'dm-3',
+        match_format: 'doubles',
+        team_1_score: 1,
+        team_2_score: 6,
+        played_at: '2026-10-06T10:00:00Z',
+        created_at: '2026-10-06T10:00:00Z',
+        updated_at: '2026-10-06T10:00:00Z',
+        match_players: [
+          {
+            id: 'dmp-5',
+            match_id: 'dm-3',
+            player_id: 'p-3',
+            team_side: 'team_1',
+            rating_before: null,
+            rating_after: null,
+            guest_name: null,
+          },
+          {
+            id: 'dmp-6',
+            match_id: 'dm-3',
+            player_id: 'p-2',
+            team_side: 'team_2',
+            rating_before: null,
+            rating_after: null,
+            guest_name: null,
+          },
+        ],
+      },
+    ];
+
+    setupSupabaseMock(mockPlayers, doublesMatches);
 
     const { result } = renderHook(() => useRankings());
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -112,21 +321,33 @@ describe('useRankings hook', () => {
 
     expect(result.current.format).toBe('doubles');
 
-    // Doubles order: Димитър (1490) > Григор (1300) > Адриан (1220)
+    // In doubles matches:
+    // Кузманов: 2 wins in 2 matches = 100%, gameDiff = +8, form = ['W', 'W']
+    // Адриан: 1 win in 2 matches = 50%, gameDiff = -1, form = ['W', 'L']
+    // Григор: 0 wins in 2 matches = 0%, gameDiff = -7, form = ['L', 'L']
     expect(result.current.rankings[0].player.name).toBe('Димитър Кузманов');
     expect(result.current.rankings[0].rank).toBe(1);
-    expect(result.current.rankings[0].rating).toBe(1490);
-    expect(result.current.rankings[0].winRate).toBe(75); // (6 / 8) * 100
+    expect(result.current.rankings[0].wins).toBe(2);
+    expect(result.current.rankings[0].winRate).toBe(100);
+    expect(result.current.rankings[0].gameDifference).toBe(8);
+    expect(result.current.rankings[0].form).toEqual(['W', 'W']);
 
-    expect(result.current.rankings[1].player.name).toBe('Григор Димитров');
+    expect(result.current.rankings[1].player.name).toBe('Адриан Андреев');
     expect(result.current.rankings[1].rank).toBe(2);
-    expect(result.current.rankings[1].rating).toBe(1300);
-    expect(result.current.rankings[1].winRate).toBe(50); // (2 / 4) * 100
+    expect(result.current.rankings[1].wins).toBe(1);
+    expect(result.current.rankings[1].winRate).toBe(50);
+    expect(result.current.rankings[1].gameDifference).toBe(-1);
+    expect(result.current.rankings[1].form).toEqual(['W', 'L']);
+
+    expect(result.current.rankings[2].player.name).toBe('Григор Димитров');
+    expect(result.current.rankings[2].rank).toBe(3);
+    expect(result.current.rankings[2].wins).toBe(0);
+    expect(result.current.rankings[2].gameDifference).toBe(-7);
+    expect(result.current.rankings[2].form).toEqual(['L', 'L']);
   });
 
-  it('filters rankings by search term while preserving original rank', async () => {
-    const selectMock = vi.fn().mockResolvedValue({ data: mockPlayers, error: null });
-    mockFrom.mockReturnValue({ select: selectMock });
+  it('filters rankings by search term while preserving original rank position numbers', async () => {
+    setupSupabaseMock();
 
     const { result } = renderHook(() => useRankings());
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -137,10 +358,10 @@ describe('useRankings hook', () => {
 
     expect(result.current.rankings).toHaveLength(1);
     expect(result.current.rankings[0].player.name).toBe('Димитър Кузманов');
-    expect(result.current.rankings[0].rank).toBe(2); // Preserves rank #2
+    expect(result.current.rankings[0].rank).toBe(2); // Preserves original rank #2
   });
 
-  it('handles Supabase not configured', async () => {
+  it('handles Supabase not configured gracefully', async () => {
     vi.mocked(supabaseModule.isSupabaseConfigured).mockReturnValue(false);
 
     const { result } = renderHook(() => useRankings());
@@ -150,69 +371,147 @@ describe('useRankings hook', () => {
     expect(result.current.rankings).toEqual([]);
   });
 
-  it('ranks players by winRate descending, then wins, then matchesPlayed, then alphabetical name', async () => {
+  it('ranks players strictly following the 6-tier sports tie-breaking rules', async () => {
     const testPlayers: PlayerRow[] = [
       {
-        id: 'p-tie-1',
+        id: 'p-boris',
         name: 'Борис',
         rating: 1200,
-        singles_matches_played: 4,
-        singles_wins: 2,
-        singles_losses: 2,
+        singles_matches_played: 0,
+        singles_wins: 0,
+        singles_losses: 0,
         created_at: '2026-10-01T00:00:00Z',
         updated_at: '2026-10-01T00:00:00Z',
       },
       {
-        id: 'p-tie-2',
+        id: 'p-angel',
         name: 'Ангел',
         rating: 1200,
-        singles_matches_played: 4,
-        singles_wins: 2,
-        singles_losses: 2,
+        singles_matches_played: 0,
+        singles_wins: 0,
+        singles_losses: 0,
         created_at: '2026-10-01T00:00:00Z',
         updated_at: '2026-10-01T00:00:00Z',
       },
       {
-        id: 'p-more-wins',
+        id: 'p-georgi',
         name: 'Георги',
         rating: 1200,
-        singles_matches_played: 10,
-        singles_wins: 5,
-        singles_losses: 5,
+        singles_matches_played: 0,
+        singles_wins: 0,
+        singles_losses: 0,
         created_at: '2026-10-01T00:00:00Z',
         updated_at: '2026-10-01T00:00:00Z',
       },
       {
-        id: 'p-high-rate',
+        id: 'p-daniel',
         name: 'Даниел',
         rating: 1200,
-        singles_matches_played: 2,
-        singles_wins: 2,
+        singles_matches_played: 0,
+        singles_wins: 0,
+        singles_losses: 0,
+        created_at: '2026-10-01T00:00:00Z',
+        updated_at: '2026-10-01T00:00:00Z',
+      },
+      {
+        id: 'p-asen',
+        name: 'Асен',
+        rating: 1200,
+        singles_matches_played: 0,
+        singles_wins: 0,
         singles_losses: 0,
         created_at: '2026-10-01T00:00:00Z',
         updated_at: '2026-10-01T00:00:00Z',
       },
     ];
 
-    const selectMock = vi.fn().mockResolvedValue({ data: testPlayers, error: null });
-    mockFrom.mockReturnValue({ select: selectMock });
+    const tieBreakMatches: MatchDetail[] = [];
+    let matchCounter = 1;
+    const addSinglesMatch = (p1Id: string, p2Id: string, s1: number, s2: number) => {
+      tieBreakMatches.push({
+        id: `tbm-${matchCounter}`,
+        match_format: 'singles',
+        team_1_score: s1,
+        team_2_score: s2,
+        played_at: `2026-10-${String(matchCounter).padStart(2, '0')}T10:00:00Z`,
+        created_at: `2026-10-${String(matchCounter).padStart(2, '0')}T10:00:00Z`,
+        updated_at: `2026-10-${String(matchCounter).padStart(2, '0')}T10:00:00Z`,
+        match_players: [
+          {
+            id: `tbmp-${matchCounter}-1`,
+            match_id: `tbm-${matchCounter}`,
+            player_id: p1Id,
+            team_side: 'team_1',
+            rating_before: null,
+            rating_after: null,
+            guest_name: null,
+          },
+          {
+            id: `tbmp-${matchCounter}-2`,
+            match_id: `tbm-${matchCounter}`,
+            player_id: p2Id,
+            team_side: 'team_2',
+            rating_before: null,
+            rating_after: null,
+            guest_name: null,
+          },
+        ],
+      });
+      matchCounter++;
+    };
+
+    // 1. Георги: 5 wins, 5 losses (10 matches, 50% win rate, diff: 0)
+    for (let i = 0; i < 5; i++) {
+      addSinglesMatch('p-georgi', 'p-dummy', 6, 4);
+    }
+    for (let i = 0; i < 5; i++) {
+      addSinglesMatch('p-georgi', 'p-dummy', 4, 6);
+    }
+
+    // 2. Даниел: 2 wins, 0 losses (2 matches, 100% win rate, diff: +4)
+    addSinglesMatch('p-daniel', 'p-dummy', 6, 4);
+    addSinglesMatch('p-daniel', 'p-dummy', 6, 4);
+
+    // 3. Ангел: 2 wins, 2 losses (4 matches, 50% win rate, diff: 0)
+    addSinglesMatch('p-angel', 'p-dummy', 6, 4);
+    addSinglesMatch('p-angel', 'p-dummy', 6, 4);
+    addSinglesMatch('p-angel', 'p-dummy', 4, 6);
+    addSinglesMatch('p-angel', 'p-dummy', 4, 6);
+
+    // 4. Борис: 2 wins, 2 losses (4 matches, 50% win rate, diff: 0)
+    addSinglesMatch('p-boris', 'p-dummy', 6, 4);
+    addSinglesMatch('p-boris', 'p-dummy', 6, 4);
+    addSinglesMatch('p-boris', 'p-dummy', 4, 6);
+    addSinglesMatch('p-boris', 'p-dummy', 4, 6);
+
+    // 5. Асен has 0 matches (inactive player)
+
+    setupSupabaseMock(testPlayers, tieBreakMatches);
 
     const { result } = renderHook(() => useRankings());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    // 1st: Даниел (100% win rate)
-    expect(result.current.rankings[0].player.name).toBe('Даниел');
-    expect(result.current.rankings[0].winRate).toBe(100);
+    // Tier 1: Wins descending
+    // 1st: Георги (5 wins)
+    expect(result.current.rankings[0].player.name).toBe('Георги');
+    expect(result.current.rankings[0].rank).toBe(1);
+    expect(result.current.rankings[0].wins).toBe(5);
 
-    // 2nd: Георги (50% win rate, 5 wins > 2 wins)
-    expect(result.current.rankings[1].player.name).toBe('Георги');
-    expect(result.current.rankings[1].winRate).toBe(50);
-    expect(result.current.rankings[1].wins).toBe(5);
+    // Tier 2: Даниел (2 wins, 100% win rate beats 50%)
+    expect(result.current.rankings[1].player.name).toBe('Даниел');
+    expect(result.current.rankings[1].rank).toBe(2);
+    expect(result.current.rankings[1].winRate).toBe(100);
 
-    // 3rd: Ангел (50% win rate, 2 wins, alphabetical tie-break vs Борис)
+    // Tier 5: Ангел vs Борис (both 2 wins, 50% win rate, diff: 0, 4 matches) -> Bulgarian alphabet 'Ангел' < 'Борис'
     expect(result.current.rankings[2].player.name).toBe('Ангел');
+    expect(result.current.rankings[2].rank).toBe(3);
 
-    // 4th: Борис (50% win rate, 2 wins)
     expect(result.current.rankings[3].player.name).toBe('Борис');
+    expect(result.current.rankings[3].rank).toBe(4);
+
+    // Gate 1: Active Player Priority (active players outrank inactive 'Асен' despite 'А' alphabetical precedence)
+    expect(result.current.rankings[4].player.name).toBe('Асен');
+    expect(result.current.rankings[4].rank).toBe(5);
+    expect(result.current.rankings[4].matchesPlayed).toBe(0);
   });
 });

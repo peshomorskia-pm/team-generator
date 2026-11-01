@@ -1,7 +1,6 @@
 import React from 'react';
 import { Trophy, Search, Loader2, Users } from 'lucide-react';
 import { useRankings } from '../hooks/useRankings';
-import { Podium } from '../components/rankings/Podium';
 import { RankingsTable } from '../components/rankings/RankingsTable';
 import { RankingsMobile } from '../components/rankings/RankingsMobile';
 import { Alert } from '../components/ui/Alert';
@@ -66,11 +65,6 @@ export const RankingsPage: React.FC = () => {
         <div className="mb-6">
           <Alert type="error" message={error} />
         </div>
-      )}
-
-      {/* Podium for Top 3 (Shown when no search term is entered) */}
-      {!loading && !searchTerm && rawRankings.length > 0 && (
-        <Podium topPlayers={rawRankings.slice(0, 3)} />
       )}
 
       {/* Search Input Bar */}

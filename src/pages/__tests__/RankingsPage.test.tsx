@@ -83,64 +83,69 @@ describe('RankingsPage Component', () => {
     vi.mocked(supabaseModule.isSupabaseConfigured).mockReturnValue(true);
   });
 
-  it('renders Podium and top rankings correctly for Singles by default', async () => {
-    const selectMock = vi.fn().mockResolvedValue({ data: mockPlayers, error: null });
-    mockFrom.mockReturnValue({ select: selectMock });
+  const setupSupabaseMock = (players = mockPlayers, matches: unknown[] = []) => {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'players') {
+        return {
+          select: vi.fn().mockResolvedValue({ data: players, error: null }),
+        };
+      }
+      return {
+        select: vi.fn().mockResolvedValue({ data: matches, error: null }),
+      };
+    });
+  };
+
+  it('renders sports standings table directly with absence of podium', async () => {
+    setupSupabaseMock();
 
     render(<RankingsPage />);
 
     expect(screen.getByRole('heading', { name: /класиране/i })).toBeInTheDocument();
     expect(screen.getByText('Класиране и статистика на играчите')).toBeInTheDocument();
 
-    // Wait for data load
-    expect(await screen.findByTestId('rankings-podium')).toBeInTheDocument();
+    // Verify table renders directly and podium is completely absent
+    expect(await screen.findByRole('table')).toBeInTheDocument();
+    expect(screen.queryByTestId('rankings-podium')).not.toBeInTheDocument();
+    expect(screen.queryByText('Шампион')).not.toBeInTheDocument();
 
-    // Check singles 1st place in podium: Григор Димитров (1600)
-    expect(screen.getByText('Шампион')).toBeInTheDocument();
+    // Check player names are visible in the table
     expect(screen.getAllByText('Григор Димитров').length).toBeGreaterThan(0);
-
-    // Check 2nd place in podium: Димитър Кузманов
-    expect(screen.getByText('2-ро място')).toBeInTheDocument();
     expect(screen.getAllByText('Димитър Кузманов').length).toBeGreaterThan(0);
-
-    // Check 3rd place in podium: Адриан Андреев
-    expect(screen.getByText('3-то място')).toBeInTheDocument();
     expect(screen.getAllByText('Адриан Андреев').length).toBeGreaterThan(0);
   });
 
-  it('switches format tabs to Doubles and updates leaderboard', async () => {
+  it('switches format tabs between Singles and Doubles directly updating table', async () => {
     const user = userEvent.setup();
-    const selectMock = vi.fn().mockResolvedValue({ data: mockPlayers, error: null });
-    mockFrom.mockReturnValue({ select: selectMock });
+    setupSupabaseMock();
 
     render(<RankingsPage />);
-    await screen.findByTestId('rankings-podium');
+    await screen.findByRole('table');
 
+    const singlesTab = screen.getByRole('button', { name: /поединично/i });
     const doublesTab = screen.getByRole('button', { name: /по двойки/i });
+
+    expect(singlesTab).toHaveAttribute('aria-pressed', 'true');
+    expect(doublesTab).toHaveAttribute('aria-pressed', 'false');
+
     await user.click(doublesTab);
 
     expect(doublesTab).toHaveAttribute('aria-pressed', 'true');
-
-    // In Doubles, Димитър Кузманов (1550) is #1
-    // Григор Димитров (1300) is #2
-    // Адриан Андреев (1250) is #3
-    const podium = screen.getByTestId('rankings-podium');
-    expect(podium).toBeInTheDocument();
-    expect(screen.getByText('Шампион')).toBeInTheDocument();
+    expect(singlesTab).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByTestId('rankings-podium')).not.toBeInTheDocument();
   });
 
-  it('filters rankings by search input and hides podium during active search', async () => {
+  it('filters rankings by search input without podium dependencies', async () => {
     const user = userEvent.setup();
-    const selectMock = vi.fn().mockResolvedValue({ data: mockPlayers, error: null });
-    mockFrom.mockReturnValue({ select: selectMock });
+    setupSupabaseMock();
 
     render(<RankingsPage />);
-    await screen.findByTestId('rankings-podium');
+    await screen.findByRole('table');
 
     const searchInput = screen.getByLabelText('Търсене на играч');
     await user.type(searchInput, 'Лазаров');
 
-    // Podium is hidden during search
+    // Podium remains absent during search
     expect(screen.queryByTestId('rankings-podium')).not.toBeInTheDocument();
 
     // Only Лазаров should be visible
@@ -150,11 +155,10 @@ describe('RankingsPage Component', () => {
 
   it('displays empty state when no player matches search query', async () => {
     const user = userEvent.setup();
-    const selectMock = vi.fn().mockResolvedValue({ data: mockPlayers, error: null });
-    mockFrom.mockReturnValue({ select: selectMock });
+    setupSupabaseMock();
 
     render(<RankingsPage />);
-    await screen.findByTestId('rankings-podium');
+    await screen.findByRole('table');
 
     const searchInput = screen.getByLabelText('Търсене на играч');
     await user.type(searchInput, 'Несъществуващ');
@@ -163,8 +167,7 @@ describe('RankingsPage Component', () => {
   });
 
   it('displays empty state when no players are in the database', async () => {
-    const selectMock = vi.fn().mockResolvedValue({ data: [], error: null });
-    mockFrom.mockReturnValue({ select: selectMock });
+    setupSupabaseMock([]);
 
     render(<RankingsPage />);
 
