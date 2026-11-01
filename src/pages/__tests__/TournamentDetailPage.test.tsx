@@ -781,6 +781,239 @@ describe('TournamentDetailPage Integration Tests', () => {
       }
     });
   });
+
+  describe('Header Champion Badge with Roster Display', () => {
+    it('TDP-CHP-01: doubles tournament with resolved champion roster displays "🏆 Шампион: Данков, Йов (Отбор 5)"', () => {
+      const completedFinalMatch: MatchDetail = {
+        id: 'm-final-1',
+        match_format: 'doubles',
+        team_1_score: 6,
+        team_2_score: 4,
+        played_at: '2026-04-18T16:00:00Z',
+        team_1_name: 'Отбор 5',
+        team_2_name: 'Отбор 2',
+        group_name: 'Финал',
+        round: 2,
+        tournament_id: 't-1',
+        created_at: '2026-04-18T16:00:00Z',
+        updated_at: '2026-04-18T16:00:00Z',
+        match_players: [
+          {
+            id: 'mp-1',
+            match_id: 'm-final-1',
+            player_id: 'p-1',
+            team_side: 'team_1',
+            guest_name: null,
+            rating_before: null,
+            rating_after: null,
+            players: { id: 'p-1', name: 'Данков' },
+          },
+          {
+            id: 'mp-2',
+            match_id: 'm-final-1',
+            player_id: 'p-2',
+            team_side: 'team_1',
+            guest_name: null,
+            rating_before: null,
+            rating_after: null,
+            players: { id: 'p-2', name: 'Йов' },
+          },
+        ],
+      };
+
+      vi.spyOn(useTournamentsModule, 'useTournaments').mockReturnValue({
+        tournaments: [{ ...dummyTournament, winner_team_name: 'Отбор 5' }],
+        loading: false,
+        error: null,
+        fetchTournaments: vi.fn(),
+        createTournament: vi.fn(),
+        updateTournament: mockUpdateTournament,
+        deleteTournament: mockDeleteTournament,
+        saveTournamentDraft: vi.fn(),
+      });
+
+      vi.spyOn(useMatchesModule, 'useMatches').mockReturnValue({
+        matches: [completedFinalMatch],
+        loading: false,
+        error: null,
+        alert: null,
+        fetchMatches: vi.fn(),
+        createMatch: vi.fn(),
+        updateMatch: mockUpdateMatch,
+        deleteMatch: mockDeleteMatch,
+        bulkCreateMatches: vi.fn(),
+        clearAlert: vi.fn(),
+      });
+
+      renderComponent();
+
+      const badge = screen.getByTestId('tournament-header-champion-badge');
+      expect(badge).toBeInTheDocument();
+      expect(badge).toHaveTextContent('🏆 Шампион: Данков, Йов (Отбор 5)');
+    });
+
+    it('TDP-CHP-02: singles tournament with identical team and player name displays "🏆 Шампион: Иван Иванов" without duplication', () => {
+      const completedFinalMatch: MatchDetail = {
+        id: 'm-final-singles',
+        match_format: 'singles',
+        team_1_score: 6,
+        team_2_score: 2,
+        played_at: '2026-04-18T16:00:00Z',
+        team_1_name: 'Иван Иванов',
+        team_2_name: 'Петър Петров',
+        group_name: 'Финал',
+        round: 2,
+        tournament_id: 't-1',
+        created_at: '2026-04-18T16:00:00Z',
+        updated_at: '2026-04-18T16:00:00Z',
+        match_players: [
+          {
+            id: 'mp-s1',
+            match_id: 'm-final-singles',
+            player_id: 'p-s1',
+            team_side: 'team_1',
+            guest_name: null,
+            rating_before: null,
+            rating_after: null,
+            players: { id: 'p-s1', name: 'Иван Иванов' },
+          },
+        ],
+      };
+
+      vi.spyOn(useTournamentsModule, 'useTournaments').mockReturnValue({
+        tournaments: [{ ...dummyTournament, winner_team_name: 'Иван Иванов' }],
+        loading: false,
+        error: null,
+        fetchTournaments: vi.fn(),
+        createTournament: vi.fn(),
+        updateTournament: mockUpdateTournament,
+        deleteTournament: mockDeleteTournament,
+        saveTournamentDraft: vi.fn(),
+      });
+
+      vi.spyOn(useMatchesModule, 'useMatches').mockReturnValue({
+        matches: [completedFinalMatch],
+        loading: false,
+        error: null,
+        alert: null,
+        fetchMatches: vi.fn(),
+        createMatch: vi.fn(),
+        updateMatch: mockUpdateMatch,
+        deleteMatch: mockDeleteMatch,
+        bulkCreateMatches: vi.fn(),
+        clearAlert: vi.fn(),
+      });
+
+      renderComponent();
+
+      const badge = screen.getByTestId('tournament-header-champion-badge');
+      expect(badge).toBeInTheDocument();
+      expect(badge).toHaveTextContent('🏆 Шампион: Иван Иванов');
+      expect(badge).not.toHaveTextContent('(Иван Иванов)');
+    });
+
+    it('TDP-CHP-03: tournament with winner_team_name but empty roster data falls back to "🏆 Шампион: Отбор 1"', () => {
+      vi.spyOn(useTournamentsModule, 'useTournaments').mockReturnValue({
+        tournaments: [{ ...dummyTournament, winner_team_name: 'Отбор 1' }],
+        loading: false,
+        error: null,
+        fetchTournaments: vi.fn(),
+        createTournament: vi.fn(),
+        updateTournament: mockUpdateTournament,
+        deleteTournament: mockDeleteTournament,
+        saveTournamentDraft: vi.fn(),
+      });
+
+      vi.spyOn(useMatchesModule, 'useMatches').mockReturnValue({
+        matches: [],
+        loading: false,
+        error: null,
+        alert: null,
+        fetchMatches: vi.fn(),
+        createMatch: vi.fn(),
+        updateMatch: mockUpdateMatch,
+        deleteMatch: mockDeleteMatch,
+        bulkCreateMatches: vi.fn(),
+        clearAlert: vi.fn(),
+      });
+
+      renderComponent();
+
+      const badge = screen.getByTestId('tournament-header-champion-badge');
+      expect(badge).toBeInTheDocument();
+      expect(badge).toHaveTextContent('🏆 Шампион: Отбор 1');
+      expect(badge).not.toHaveTextContent('(');
+    });
+
+    it('TDP-CHP-04: reactive resolution from completed final match outcome when winner_team_name is null', () => {
+      const completedFinalMatch: MatchDetail = {
+        id: 'm-final-auto',
+        match_format: 'doubles',
+        team_1_score: 6,
+        team_2_score: 3,
+        played_at: '2026-04-18T16:00:00Z',
+        team_1_name: 'Отбор Шампиони',
+        team_2_name: 'Отбор Финалисти',
+        group_name: 'Финал',
+        round: 2,
+        tournament_id: 't-1',
+        created_at: '2026-04-18T16:00:00Z',
+        updated_at: '2026-04-18T16:00:00Z',
+        match_players: [
+          {
+            id: 'mp-a1',
+            match_id: 'm-final-auto',
+            player_id: 'p-a1',
+            team_side: 'team_1',
+            guest_name: null,
+            rating_before: null,
+            rating_after: null,
+            players: { id: 'p-a1', name: 'Стефан' },
+          },
+          {
+            id: 'mp-a2',
+            match_id: 'm-final-auto',
+            player_id: 'p-a2',
+            team_side: 'team_1',
+            guest_name: null,
+            rating_before: null,
+            rating_after: null,
+            players: { id: 'p-a2', name: 'Николай' },
+          },
+        ],
+      };
+
+      vi.spyOn(useTournamentsModule, 'useTournaments').mockReturnValue({
+        tournaments: [{ ...dummyTournament, winner_team_name: null }],
+        loading: false,
+        error: null,
+        fetchTournaments: vi.fn(),
+        createTournament: vi.fn(),
+        updateTournament: mockUpdateTournament,
+        deleteTournament: mockDeleteTournament,
+        saveTournamentDraft: vi.fn(),
+      });
+
+      vi.spyOn(useMatchesModule, 'useMatches').mockReturnValue({
+        matches: [completedFinalMatch],
+        loading: false,
+        error: null,
+        alert: null,
+        fetchMatches: vi.fn(),
+        createMatch: vi.fn(),
+        updateMatch: mockUpdateMatch,
+        deleteMatch: mockDeleteMatch,
+        bulkCreateMatches: vi.fn(),
+        clearAlert: vi.fn(),
+      });
+
+      renderComponent();
+
+      const badge = screen.getByTestId('tournament-header-champion-badge');
+      expect(badge).toBeInTheDocument();
+      expect(badge).toHaveTextContent('🏆 Шампион: Стефан, Николай (Отбор Шампиони)');
+    });
+  });
 });
 
 

@@ -28,6 +28,8 @@ import {
   propagatePlayoffWinner,
   getDefaultFinalistsCount,
   extractTournamentTeams,
+  resolveChampionPlayers,
+  formatChampionDisplay,
 } from '../utils/playoffs';
 import { useTournaments } from '../hooks/useTournaments';
 import { useMatches } from '../hooks/useMatches';
@@ -133,6 +135,36 @@ export const TournamentDetailPage: React.FC = () => {
     () => tournamentMatches.filter((m) => isPlayoffMatch(m)),
     [tournamentMatches]
   );
+
+  const finalMatch = useMemo(
+    () =>
+      playoffMatches.find((m) =>
+        Boolean(m.group_name && /^финал/i.test(m.group_name.trim()))
+      ),
+    [playoffMatches]
+  );
+
+  const effectiveChampionTeamName = useMemo(() => {
+    if (!tournament) return null;
+    if (finalMatch) {
+      const outcome = getMatchOutcome(finalMatch);
+      if (outcome.isCompleted && (outcome.winner === 'team_1' || outcome.winner === 'team_2')) {
+        return outcome.winner === 'team_1' ? finalMatch.team_1_name : finalMatch.team_2_name;
+      }
+    }
+    return tournament.winner_team_name ?? null;
+  }, [tournament, finalMatch]);
+
+  const championPlayers = useMemo(() => {
+    if (!tournament || !effectiveChampionTeamName) return [];
+    return resolveChampionPlayers(
+      effectiveChampionTeamName,
+      finalMatch,
+      tournament,
+      playoffMatches,
+      groupMatches
+    );
+  }, [tournament, effectiveChampionTeamName, finalMatch, playoffMatches, groupMatches]);
 
   // Available groups for filtering
   const availableGroups = useMemo(() => {
@@ -534,9 +566,12 @@ export const TournamentDetailPage: React.FC = () => {
               <span>{formattedDate}</span>
             </div>
 
-            {tournament.winner_team_name && (
-              <div className="inline-flex items-center px-3 py-1 rounded-xl text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800">
-                🏆 Шампион: {tournament.winner_team_name}
+            {effectiveChampionTeamName && (
+              <div
+                data-testid="tournament-header-champion-badge"
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 font-semibold text-xs sm:text-sm rounded-lg border border-amber-200 dark:border-amber-700/50"
+              >
+                🏆 Шампион: {formatChampionDisplay(effectiveChampionTeamName, championPlayers)}
               </div>
             )}
 
