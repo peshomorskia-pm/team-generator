@@ -22,19 +22,19 @@ describe('PlayerModal Component', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('renders in create mode when player prop is undefined', () => {
+  it('renders in create mode with single name input when player prop is undefined', () => {
     render(<PlayerModal isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />);
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Нов играч' })).toBeInTheDocument();
     expect(screen.getByLabelText(/име на играча/i)).toHaveValue('');
-    expect(screen.getByLabelText(/общ рейтинг/i)).toHaveValue(1200);
-    expect(screen.getByLabelText(/рейтинг поединично/i)).toHaveValue(1200);
-    expect(screen.getByLabelText(/рейтинг по двойки/i)).toHaveValue(1200);
+    expect(screen.queryByLabelText(/общ рейтинг/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/рейтинг поединично/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/рейтинг по двойки/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /създай/i })).toBeInTheDocument();
   });
 
-  it('renders in edit mode when player prop is provided', () => {
+  it('renders in edit mode with populated name when player prop is provided', () => {
     render(
       <PlayerModal
         isOpen={true}
@@ -46,9 +46,9 @@ describe('PlayerModal Component', () => {
 
     expect(screen.getByRole('heading', { name: 'Редактиране на играч' })).toBeInTheDocument();
     expect(screen.getByLabelText(/име на играча/i)).toHaveValue('Иван Петров');
-    expect(screen.getByLabelText(/общ рейтинг/i)).toHaveValue(1450);
-    expect(screen.getByLabelText(/рейтинг поединично/i)).toHaveValue(1500);
-    expect(screen.getByLabelText(/рейтинг по двойки/i)).toHaveValue(1400);
+    expect(screen.queryByLabelText(/общ рейтинг/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/рейтинг поединично/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/рейтинг по двойки/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /запази/i })).toBeInTheDocument();
   });
 
@@ -64,70 +64,7 @@ describe('PlayerModal Component', () => {
     expect(handleSave).not.toHaveBeenCalled();
   });
 
-  it('shows validation error when rating is negative', async () => {
-    const user = userEvent.setup();
-    const handleSave = vi.fn();
-    render(<PlayerModal isOpen={true} onClose={vi.fn()} onSave={handleSave} />);
-
-    const nameInput = screen.getByLabelText(/име на играча/i);
-    const ratingInput = screen.getByLabelText(/общ рейтинг/i);
-
-    await user.type(nameInput, 'Тестов Играч');
-    await user.clear(ratingInput);
-    await user.type(ratingInput, '-50');
-
-    const submitBtn = screen.getByRole('button', { name: /създай/i });
-    await user.click(submitBtn);
-
-    expect(
-      screen.getByText('Рейтингът трябва да бъде положително число или 0.')
-    ).toBeInTheDocument();
-    expect(handleSave).not.toHaveBeenCalled();
-  });
-
-  it('shows validation error when singles rating is negative', async () => {
-    const user = userEvent.setup();
-    const handleSave = vi.fn();
-    render(<PlayerModal isOpen={true} onClose={vi.fn()} onSave={handleSave} />);
-
-    const nameInput = screen.getByLabelText(/име на играча/i);
-    const singlesInput = screen.getByLabelText(/рейтинг поединично/i);
-
-    await user.type(nameInput, 'Тестов Играч');
-    await user.clear(singlesInput);
-    await user.type(singlesInput, '-10');
-
-    const submitBtn = screen.getByRole('button', { name: /създай/i });
-    await user.click(submitBtn);
-
-    expect(
-      screen.getByText('Рейтингът поединично трябва да бъде положително число или 0.')
-    ).toBeInTheDocument();
-    expect(handleSave).not.toHaveBeenCalled();
-  });
-
-  it('shows validation error when doubles rating is negative', async () => {
-    const user = userEvent.setup();
-    const handleSave = vi.fn();
-    render(<PlayerModal isOpen={true} onClose={vi.fn()} onSave={handleSave} />);
-
-    const nameInput = screen.getByLabelText(/име на играча/i);
-    const doublesInput = screen.getByLabelText(/рейтинг по двойки/i);
-
-    await user.type(nameInput, 'Тестов Играч');
-    await user.clear(doublesInput);
-    await user.type(doublesInput, '-25');
-
-    const submitBtn = screen.getByRole('button', { name: /създай/i });
-    await user.click(submitBtn);
-
-    expect(
-      screen.getByText('Рейтингът по двойки трябва да бъде положително число или 0.')
-    ).toBeInTheDocument();
-    expect(handleSave).not.toHaveBeenCalled();
-  });
-
-  it('calls onSave with all three parsed values and closes on success', async () => {
+  it('calls onSave with trimmed name and default ratings on success', async () => {
     const user = userEvent.setup();
     const handleSave = vi.fn().mockResolvedValue(undefined);
     const handleClose = vi.fn();
@@ -135,22 +72,44 @@ describe('PlayerModal Component', () => {
     render(<PlayerModal isOpen={true} onClose={handleClose} onSave={handleSave} />);
 
     const nameInput = screen.getByLabelText(/име на играча/i);
-    const ratingInput = screen.getByLabelText(/общ рейтинг/i);
-    const singlesInput = screen.getByLabelText(/рейтинг поединично/i);
-    const doublesInput = screen.getByLabelText(/рейтинг по двойки/i);
-
     await user.type(nameInput, '  Георги Аспарухов  ');
-    await user.clear(ratingInput);
-    await user.type(ratingInput, '1900');
-    await user.clear(singlesInput);
-    await user.type(singlesInput, '1920');
-    await user.clear(doublesInput);
-    await user.type(doublesInput, '1880');
 
     const submitBtn = screen.getByRole('button', { name: /създай/i });
     await user.click(submitBtn);
 
-    expect(handleSave).toHaveBeenCalledWith('Георги Аспарухов', 1900, 1920, 1880);
+    expect(handleSave).toHaveBeenCalledWith('Георги Аспарухов', 1200, 1200, 1200);
+    await waitFor(() => {
+      expect(handleClose).toHaveBeenCalled();
+    });
+  });
+
+  it('calls onSave with existing player ratings in edit mode', async () => {
+    const user = userEvent.setup();
+    const handleSave = vi.fn().mockResolvedValue(undefined);
+    const handleClose = vi.fn();
+
+    render(
+      <PlayerModal
+        isOpen={true}
+        onClose={handleClose}
+        onSave={handleSave}
+        player={samplePlayer}
+      />
+    );
+
+    const nameInput = screen.getByLabelText(/име на играча/i);
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Иван Петров - обновен');
+
+    const saveBtn = screen.getByRole('button', { name: /запази/i });
+    await user.click(saveBtn);
+
+    expect(handleSave).toHaveBeenCalledWith(
+      'Иван Петров - обновен',
+      1450,
+      1500,
+      1400
+    );
     await waitFor(() => {
       expect(handleClose).toHaveBeenCalled();
     });

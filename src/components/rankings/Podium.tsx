@@ -32,10 +32,6 @@ export const Podium: React.FC<PodiumProps> = ({ topPlayers }) => {
               <h3 className="font-bold text-base text-gray-900 dark:text-white truncate max-w-full">
                 {second.player.name}
               </h3>
-              <div className="mt-2 flex items-center gap-1.5 bg-slate-50 dark:bg-gray-700/50 px-3 py-1 rounded-full text-sm font-extrabold text-slate-700 dark:text-slate-200">
-                <span>{second.rating}</span>
-                <span className="text-xs font-normal text-gray-400">т.</span>
-              </div>
               <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                 {second.wins}П - {second.losses}З ({second.winRate}%)
               </div>
@@ -62,10 +58,6 @@ export const Podium: React.FC<PodiumProps> = ({ topPlayers }) => {
               <h3 className="font-extrabold text-lg text-gray-900 dark:text-white truncate max-w-full">
                 {first.player.name}
               </h3>
-              <div className="mt-2 flex items-center gap-1.5 bg-amber-100/70 dark:bg-amber-900/40 px-3.5 py-1 rounded-full text-base font-black text-amber-800 dark:text-amber-300">
-                <span>{first.rating}</span>
-                <span className="text-xs font-normal text-amber-700 dark:text-amber-400">т.</span>
-              </div>
               <div className="mt-2 text-xs font-medium text-gray-600 dark:text-gray-300">
                 {first.wins}П - {first.losses}З ({first.winRate}%)
               </div>
@@ -92,10 +84,6 @@ export const Podium: React.FC<PodiumProps> = ({ topPlayers }) => {
               <h3 className="font-bold text-base text-gray-900 dark:text-white truncate max-w-full">
                 {third.player.name}
               </h3>
-              <div className="mt-2 flex items-center gap-1.5 bg-amber-50 dark:bg-gray-700/50 px-3 py-1 rounded-full text-sm font-extrabold text-amber-900 dark:text-amber-200">
-                <span>{third.rating}</span>
-                <span className="text-xs font-normal text-gray-400">т.</span>
-              </div>
               <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                 {third.wins}П - {third.losses}З ({third.winRate}%)
               </div>

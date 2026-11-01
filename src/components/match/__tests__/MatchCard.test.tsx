@@ -98,14 +98,18 @@ describe('MatchCard Component', () => {
     expect(handleDelete).toHaveBeenCalledWith(sampleMatch);
   });
 
-  it('renders format badge and delta chips for completed matches with ratings', () => {
+  it('renders format badge and verifies rating delta chips are removed for completed matches', () => {
     render(<MatchCard match={sampleMatch} onEdit={vi.fn()} onDelete={vi.fn()} />);
 
     // Format badge defaults to singles
     expect(screen.getByText('Поединично')).toBeInTheDocument();
 
-    // Rating delta chip for Димитър Бербатов (1215 - 1200 = +15)
-    expect(screen.getByText('+15')).toBeInTheDocument();
+    // Rating delta chips (+15, -10) must NOT be rendered
+    expect(screen.queryByText('+15')).not.toBeInTheDocument();
+    expect(screen.queryByText('-10')).not.toBeInTheDocument();
+
+    // Player name renders cleanly
+    expect(screen.getByText('Димитър Бербатов')).toBeInTheDocument();
   });
 
   it('renders doubles format badge when match_format is doubles', () => {

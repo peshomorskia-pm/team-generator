@@ -58,12 +58,6 @@ export const RankingsMobile: React.FC<RankingsMobileProps> = ({ rankings }) => {
                 </span>
               </div>
             </div>
-            <div className="text-right">
-              <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
-                {stat.rating}
-              </span>
-              <span className="text-xs text-gray-400 ml-1">т.</span>
-            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-2 pt-2 border-t border-gray-100 dark:border-gray-700/60 text-xs">

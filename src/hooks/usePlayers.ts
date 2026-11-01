@@ -23,7 +23,7 @@ export interface UsePlayersReturn {
   updatePlayer: (
     id: string,
     name: string,
-    rating: number,
+    rating?: number,
     singlesRating?: number,
     doublesRating?: number
   ) => Promise<void>;
@@ -156,7 +156,7 @@ export function usePlayers(): UsePlayersReturn {
     async (
       id: string,
       name: string,
-      rating: number,
+      rating?: number,
       singlesRating?: number,
       doublesRating?: number
     ) => {
@@ -171,7 +171,8 @@ export function usePlayers(): UsePlayersReturn {
         }
 
         const trimmedName = name.trim();
-        const finalRating = Number.isFinite(rating) && rating >= 0 ? rating : 1200;
+        const finalRating =
+          rating !== undefined && Number.isFinite(rating) && rating >= 0 ? rating : 1200;
         const finalSinglesRating =
           singlesRating !== undefined && Number.isFinite(singlesRating) && singlesRating >= 0
             ? singlesRating
