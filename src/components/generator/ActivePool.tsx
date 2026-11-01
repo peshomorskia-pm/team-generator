@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
-import { User, X, Star, Users, Trash2 } from 'lucide-react';
+import { User, X, Users, Trash2 } from 'lucide-react';
 import { GeneratorPlayer } from '../../types/generator';
 import { GeneratorMode } from '../../types';
 import { Badge, Button } from '../ui';
 import { sortPlayersByName } from '../../utils/playerSort';
+import { getPlayerWinRate } from '../../utils/balance';
 
 export interface ActivePoolProps {
   activePool: GeneratorPlayer[];
@@ -76,12 +77,7 @@ export const ActivePool: React.FC<ActivePoolProps> = ({
         >
           {sortedActivePool.map((player) => {
             const isRegistered = player.source === 'registered';
-            const displayRating =
-              format === 'singles'
-                ? (player.singles_rating ?? player.rating)
-                : format === 'doubles'
-                  ? (player.doubles_rating ?? player.rating)
-                  : player.rating;
+            const winRateInfo = isRegistered ? getPlayerWinRate(player, format) : null;
 
             return (
               <Badge
@@ -99,10 +95,15 @@ export const ActivePool: React.FC<ActivePoolProps> = ({
                 <span className="max-w-[130px] truncate font-medium">{player.name}</span>
 
                 {isRegistered ? (
-                  mode !== 'generic' && displayRating !== undefined && (
-                    <span className="ml-1.5 inline-flex items-center text-xs text-amber-600 dark:text-amber-400 font-semibold">
-                      <Star className="w-3 h-3 fill-current inline mr-0.5" />
-                      {displayRating}
+                  mode !== 'generic' && winRateInfo && (
+                    <span
+                      className={`ml-1.5 inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        winRateInfo.isNew
+                          ? 'bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                          : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400'
+                      }`}
+                    >
+                      {winRateInfo.label}
                     </span>
                   )
                 ) : (
