@@ -54,12 +54,11 @@ describe('MatchScheduleList Component', () => {
     expect(screen.getByRole('heading', { level: 3, name: 'Кръг 1' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 3, name: 'Кръг 2' })).toBeInTheDocument();
 
-    // Team names and ratings
+    // Team names
     expect(screen.getAllByText('Отбор 1').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Отбор 2').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Отбор 3').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('★ 1200').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('★ 1300').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/★/)).not.toBeInTheDocument();
 
     // Resting team badges
     expect(screen.getByText('Почива: Отбор 3')).toBeInTheDocument();

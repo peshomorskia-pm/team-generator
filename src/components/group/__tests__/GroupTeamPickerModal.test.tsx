@@ -152,4 +152,77 @@ describe('GroupTeamPickerModal Component', () => {
     fireEvent.click(closeBtn);
     expect(onCloseMock).toHaveBeenCalledTimes(1);
   });
+
+  it('T-MODAL-RATING-PURGE: does not render star icons or totalRating badges', () => {
+    render(
+      <GroupTeamPickerModal
+        isOpen={true}
+        onClose={vi.fn()}
+        groupId="group-0"
+        unassignedTeams={dummyTeams}
+        onSelectTeam={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByText(/★/)).not.toBeInTheDocument();
+    expect(screen.queryByText('2500')).not.toBeInTheDocument();
+    expect(screen.queryByText('2400')).not.toBeInTheDocument();
+    expect(screen.queryByText('2200')).not.toBeInTheDocument();
+  });
+
+  it('T-MODAL-BADGE-WINRATE: renders guest badge and format win rate badge accurately', () => {
+    const teamsWithStats: Team[] = [
+      {
+        id: 'team-stats',
+        name: 'Отбор Статистика',
+        players: [
+          {
+            id: 'p-reg',
+            name: 'Иван Статистиков',
+            singles_matches_played: 10,
+            singles_wins: 8,
+          },
+          {
+            id: 'p-guest',
+            name: 'Гост Гостов',
+            isGuest: true,
+          },
+        ],
+      },
+    ];
+
+    render(
+      <GroupTeamPickerModal
+        isOpen={true}
+        onClose={vi.fn()}
+        groupId="group-0"
+        format="singles"
+        unassignedTeams={teamsWithStats}
+        onSelectTeam={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Иван Статистиков')).toBeInTheDocument();
+    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.getByText('Гост Гостов')).toBeInTheDocument();
+    expect(screen.getByText('Гост')).toBeInTheDocument();
+  });
+
+  it('T-MODAL-SEARCH-EXCLUDE-RATING: search query matching totalRating returns no teams', () => {
+    render(
+      <GroupTeamPickerModal
+        isOpen={true}
+        onClose={vi.fn()}
+        groupId="group-0"
+        unassignedTeams={dummyTeams}
+        onSelectTeam={vi.fn()}
+      />
+    );
+
+    const searchInput = screen.getByRole('textbox', { name: /търсене на отбор/i });
+    fireEvent.change(searchInput, { target: { value: '2500' } });
+
+    expect(screen.getByText('Няма намерени отбори с име "2500".')).toBeInTheDocument();
+    expect(screen.queryByText('Левски')).not.toBeInTheDocument();
+  });
 });

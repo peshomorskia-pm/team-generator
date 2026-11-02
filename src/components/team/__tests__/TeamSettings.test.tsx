@@ -257,7 +257,7 @@ describe('TeamSettings', () => {
       );
 
       expect(
-        screen.queryByLabelText(/балансирай отборите по рейтинг/i)
+        screen.queryByLabelText(/балансирай отборите по процент победи/i)
       ).not.toBeInTheDocument();
 
       rerender(
@@ -269,7 +269,7 @@ describe('TeamSettings', () => {
         />
       );
 
-      const checkbox = screen.getByLabelText(/балансирай отборите по рейтинг/i);
+      const checkbox = screen.getByLabelText(/балансирай отборите по процент победи/i);
       expect(checkbox).toBeInTheDocument();
       expect(checkbox).not.toBeChecked();
 
@@ -288,7 +288,7 @@ describe('TeamSettings', () => {
       );
 
       expect(
-        screen.queryByLabelText(/балансирай отборите по рейтинг/i)
+        screen.queryByLabelText(/балансирай отборите по процент победи/i)
       ).not.toBeInTheDocument();
     });
 

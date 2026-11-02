@@ -196,7 +196,7 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
 
     // Balance by rating checkbox appears in tennis mode because ratings exist in pool
     const balanceCheckbox = screen.getByRole('checkbox', {
-      name: /балансирай отборите по рейтинг на играчите/i,
+      name: /балансирай отборите по процент победи на играчите/i,
     });
     expect(balanceCheckbox).toBeInTheDocument();
     await user.click(balanceCheckbox);
@@ -206,7 +206,7 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
     await user.click(screen.getByRole('button', { name: '🎲 Универсален' }));
     expect(
       screen.queryByRole('checkbox', {
-        name: /балансирай отборите по рейтинг на играчите/i,
+        name: /балансирай отборите по процент победи на играчите/i,
       })
     ).not.toBeInTheDocument();
 
@@ -1009,6 +1009,45 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
       expect(screen.getByText('Отбор 1')).toBeInTheDocument();
       expect(screen.getByText('Отбор 10')).toBeInTheDocument();
     }, 40000);
+
+    it('T-GEN-HASRATINGS-WINRATE: enables balance checkbox for players with match stats even without legacy rating', async () => {
+      const user = userEvent.setup();
+      const playersWithMatchStats = [
+        {
+          id: 'db-stats-1',
+          name: 'Статистик Иванов',
+          singles_matches_played: 5,
+          singles_wins: 4,
+          created_at: '2026-01-01',
+          updated_at: '2026-01-01',
+        },
+      ];
+
+      vi.spyOn(usePlayersModule, 'usePlayers').mockReturnValue({
+        players: playersWithMatchStats as unknown as ReturnType<typeof usePlayersModule.usePlayers>['players'],
+        loading: false,
+        error: null,
+        alert: null,
+        fetchPlayers: vi.fn(),
+        createPlayer: vi.fn(),
+        updatePlayer: vi.fn(),
+        deletePlayer: vi.fn(),
+        clearAlert: vi.fn(),
+      });
+
+      renderComponent();
+
+      // Select the player
+      const dbCheckbox = screen.getByRole('checkbox', { name: 'Статистик Иванов' });
+      await user.click(dbCheckbox);
+
+      // Balance by win rate toggle should be present
+      expect(
+        screen.getByRole('checkbox', {
+          name: /балансирай отборите по процент победи на играчите/i,
+        })
+      ).toBeInTheDocument();
+    });
   });
 });
 

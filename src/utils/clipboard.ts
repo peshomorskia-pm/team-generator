@@ -1,4 +1,5 @@
 import { Team, GeneratorMode, TournamentGroup, TournamentMatch } from '../types';
+import { getPlayerWinRate } from './balance';
 
 /**
  * Copies plain text to system clipboard using modern Clipboard API with
@@ -186,27 +187,14 @@ export function formatTeamsForClipboard(
   const lines: string[] = [header, ''];
 
   teams.forEach((team, index) => {
-    const teamHasRatings = team.players.some((p) => {
-      const r = isTennis
-        ? (format === 'singles' ? p.singles_rating : p.doubles_rating) ?? p.rating
-        : p.rating;
-      return r !== undefined && r !== null;
-    });
-
-    const teamHeader =
-      teamHasRatings && team.totalRating
-        ? `${team.name} (Общ рейтинг: ${team.totalRating}):`
-        : `${team.name}:`;
-
-    lines.push(teamHeader);
+    lines.push(`${team.name}:`);
 
     team.players.forEach((player) => {
-      const r = isTennis
-        ? (format === 'singles' ? player.singles_rating : player.doubles_rating) ?? player.rating
-        : player.rating;
-
-      if (r !== undefined && r !== null) {
-        lines.push(`- ${player.name} (★ ${r})`);
+      if (isTennis) {
+        const isGuest = Boolean(player.isGuest || player.source === 'guest');
+        const winRateInfo = getPlayerWinRate(player, format);
+        const badgeLabel = isGuest ? 'Гост' : winRateInfo.isNew ? 'Нов' : `${Math.round(winRateInfo.winRate)}%`;
+        lines.push(`- ${player.name} (${badgeLabel})`);
       } else {
         lines.push(`- ${player.name}`);
       }
@@ -258,10 +246,13 @@ export function formatGroupsForClipboard(
     group.teams.forEach((team) => {
       const playerDescriptions = team.players
         .map((p) => {
-          const r = isTennis
-            ? (format === 'singles' ? p.singles_rating : p.doubles_rating) ?? p.rating
-            : p.rating;
-          return r !== undefined && r !== null ? `${p.name} (★ ${r})` : p.name;
+          if (isTennis) {
+            const isGuest = Boolean(p.isGuest || p.source === 'guest');
+            const winRateInfo = getPlayerWinRate(p, format);
+            const badgeLabel = isGuest ? 'Гост' : winRateInfo.isNew ? 'Нов' : `${Math.round(winRateInfo.winRate)}%`;
+            return `${p.name} (${badgeLabel})`;
+          }
+          return p.name;
         })
         .join(', ');
 
