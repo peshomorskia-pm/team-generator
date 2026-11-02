@@ -31,9 +31,16 @@ export interface ResolvablePlayerLike {
   singles_rating?: number;
   doubles_rating?: number;
 }
-
-export { shuffleTeamsBalanced } from './shuffle';
-
+/**
+ * Shuffles an array of players and partitions them into balanced teams.
+ */
+export function shuffleTeamsBalanced(
+  players: Player[],
+  numTeams: number,
+  format?: 'singles' | 'doubles' | boolean
+): Team[] {
+  return balanceTeams(fisherYatesShuffle(players), numTeams, format);
+}
 /**
  * Resolves effective numeric skill or win rate for a player.
  * - Players with match history or explicit winRate return format-aware win rate (0-100%).
