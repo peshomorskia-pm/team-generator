@@ -1,6 +1,3 @@
-import { Player, Team } from '../types';
-import { balanceTeams } from './balance';
-
 /**
  * Randomizes the order of an array using the Fisher-Yates (Knuth) algorithm.
  * Pure function: does not mutate the source array.
@@ -14,15 +11,4 @@ export function fisherYatesShuffle<T>(array: T[]): T[] {
     result[j] = temp;
   }
   return result;
-}
-
-/**
- * Shuffles an array of players and partitions them into balanced teams.
- */
-export function shuffleTeamsBalanced(
-  players: Player[],
-  numTeams: number,
-  format?: 'singles' | 'doubles' | boolean
-): Team[] {
-  return balanceTeams(fisherYatesShuffle(players), numTeams, format);
 }
