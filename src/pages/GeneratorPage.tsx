@@ -17,6 +17,7 @@ import { useTeamGenerator } from '../hooks/useTeamGenerator';
 import { usePlayers } from '../hooks/usePlayers';
 import { useMatches } from '../hooks/useMatches';
 import { useTournaments } from '../hooks/useTournaments';
+import { resolvePlayerRating } from '../utils/balance';
 import type { Team } from '../types';
 import type { MatchFormData } from '../types/matches';
 import type { GeneratorPlayer } from '../types/generator';
@@ -210,11 +211,12 @@ export const GeneratorPage: React.FC = () => {
 
   const hasRatings = useMemo(
     () =>
-      activePool.some((p) =>
-        mode === 'tennis'
-          ? ((format === 'doubles' ? p.doubles_rating : p.singles_rating) ?? p.rating) !== undefined
-          : p.rating !== undefined
-      ),
+      activePool.some((p) => {
+        if (mode === 'generic') {
+          return p.rating !== undefined;
+        }
+        return resolvePlayerRating(p, format) !== undefined;
+      }),
     [activePool, mode, format]
   );
 

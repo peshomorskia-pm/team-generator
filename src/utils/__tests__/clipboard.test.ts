@@ -191,8 +191,8 @@ describe('clipboard utils', () => {
       const output = formatTeamsForClipboard(sampleTeamsWithoutRatings, 'tennis', 'doubles');
 
       expect(output).toContain('🎾 Тенис - По двойки');
-      expect(output).toContain('Отбор 1:\n- Иван\n- Петър');
-      expect(output).toContain('Отбор 2:\n- Георги\n- Стоян');
+      expect(output).toContain('Отбор 1:\n- Иван (Нов)\n- Петър (Нов)');
+      expect(output).toContain('Отбор 2:\n- Георги (Нов)\n- Стоян (Нов)');
       expect(output).toContain('Среща: Отбор 1 vs Отбор 2');
     });
 
@@ -205,8 +205,8 @@ describe('clipboard utils', () => {
       const output = formatTeamsForClipboard(singlesTeams, 'tennis', 'singles');
 
       expect(output).toContain('🎾 Тенис - Поединично');
-      expect(output).toContain('Отбор 1:\n- Иван');
-      expect(output).toContain('Отбор 2:\n- Георги');
+      expect(output).toContain('Отбор 1:\n- Иван (Нов)');
+      expect(output).toContain('Отбор 2:\n- Георги (Нов)');
       expect(output).toContain('Среща: Отбор 1 vs Отбор 2');
     });
 
@@ -228,44 +228,52 @@ describe('clipboard utils', () => {
       const output = formatTeamsForClipboard(threeTeams, 'tennis', 'doubles');
 
       expect(output).toContain('🎾 Тенис - По двойки');
-      expect(output).toContain('Отбор 3:\n- Димитър');
+      expect(output).toContain('Отбор 3:\n- Димитър (Нов)');
       expect(output).not.toContain('Среща:');
     });
 
-    it('includes player ratings and team total rating when ratings exist', () => {
-      const output = formatTeamsForClipboard(sampleTeamsWithRatings, 'tennis', 'doubles');
-
-      expect(output).toContain('Отбор 1 (Общ рейтинг: 3200):');
-      expect(output).toContain('- Иван (★ 1600)');
-      expect(output).toContain('- Петър (★ 1600)');
-      expect(output).toContain('Отбор 2 (Общ рейтинг: 2800):');
-      expect(output).toContain('- Георги (★ 1400)');
-      expect(output).toContain('- Стоян (★ 1400)');
-    });
-
-    it('uses singles ratings in tennis singles mode when available', () => {
-      const singlesWithRatings: Team[] = [
+    it('formats clean team headers and win rate / guest badges in tennis mode', () => {
+      const sampleTeamsWithStats: Team[] = [
         {
           id: 'team-1',
           name: 'Отбор 1',
-          totalRating: 1650,
-          players: [{ id: 'p1', name: 'Иван', singles_rating: 1650, doubles_rating: 1600, rating: 1500 }],
+          totalRating: 3200,
+          players: [
+            { id: 'p1', name: 'Иван', doubles_matches_played: 10, doubles_wins: 8 },
+            { id: 'p2', name: 'Петър', isGuest: true },
+          ],
         },
         {
           id: 'team-2',
           name: 'Отбор 2',
-          totalRating: 1400,
-          players: [{ id: 'p2', name: 'Георги', singles_rating: 1400, doubles_rating: 1300, rating: 1350 }],
+          totalRating: 2800,
+          players: [
+            { id: 'p3', name: 'Георги', doubles_matches_played: 10, doubles_wins: 6 },
+            { id: 'p4', name: 'Стоян' },
+          ],
         },
       ];
 
-      const output = formatTeamsForClipboard(singlesWithRatings, 'tennis', 'singles');
+      const output = formatTeamsForClipboard(sampleTeamsWithStats, 'tennis', 'doubles');
 
-      expect(output).toContain('🎾 Тенис - Поединично');
-      expect(output).toContain('Отбор 1 (Общ рейтинг: 1650):');
-      expect(output).toContain('- Иван (★ 1650)');
-      expect(output).toContain('Отбор 2 (Общ рейтинг: 1400):');
-      expect(output).toContain('- Георги (★ 1400)');
+      expect(output).toContain('Отбор 1:');
+      expect(output).not.toContain('Общ рейтинг');
+      expect(output).toContain('- Иван (80%)');
+      expect(output).toContain('- Петър (Гост)');
+      expect(output).toContain('Отбор 2:');
+      expect(output).toContain('- Георги (60%)');
+      expect(output).toContain('- Стоян (Нов)');
+      expect(output).not.toContain('★');
+    });
+
+    it('formats generic mode cleanly without badges even when players have ratings and stats', () => {
+      const output = formatTeamsForClipboard(sampleTeamsWithRatings, 'generic');
+
+      expect(output).toContain('🎲 Универсални отбори');
+      expect(output).toContain('Отбор 1:\n- Иван\n- Петър');
+      expect(output).toContain('Отбор 2:\n- Георги\n- Стоян');
+      expect(output).not.toContain('★');
+      expect(output).not.toContain('Общ рейтинг');
     });
   });
 
@@ -274,7 +282,48 @@ describe('clipboard utils', () => {
       expect(formatGroupsForClipboard([])).toBe('');
     });
 
-    it('formats tournament groups into structured Bulgarian plaintext', () => {
+    it('formats tournament groups into structured Bulgarian plaintext with win rates', () => {
+      const dummyGroups: TournamentGroup[] = [
+        {
+          id: 'group-0',
+          name: 'Група А',
+          teams: [
+            {
+              id: 'team-1',
+              name: 'Отбор 1',
+              players: [{ id: 'p1', name: 'Иван', singles_matches_played: 10, singles_wins: 8 }],
+            },
+            {
+              id: 'team-2',
+              name: 'Отбор 2',
+              players: [{ id: 'p2', name: 'Петър' }],
+            },
+          ],
+        },
+        {
+          id: 'group-1',
+          name: 'Група Б',
+          teams: [
+            {
+              id: 'team-3',
+              name: 'Отбор 3',
+              players: [{ id: 'p3', name: 'Георги', isGuest: true }],
+            },
+          ],
+        },
+      ];
+
+      const text = formatGroupsForClipboard(dummyGroups, 'tennis', 'singles');
+      expect(text).toContain('🏆 Турнирни групи');
+      expect(text).toContain('📌 Група А:');
+      expect(text).toContain('- Отбор 1: Иван (80%)');
+      expect(text).toContain('- Отбор 2: Петър (Нов)');
+      expect(text).toContain('📌 Група Б:');
+      expect(text).toContain('- Отбор 3: Георги (Гост)');
+      expect(text).not.toContain('★');
+    });
+
+    it('formats generic mode groups without badges', () => {
       const dummyGroups: TournamentGroup[] = [
         {
           id: 'group-0',
@@ -292,26 +341,13 @@ describe('clipboard utils', () => {
             },
           ],
         },
-        {
-          id: 'group-1',
-          name: 'Група Б',
-          teams: [
-            {
-              id: 'team-3',
-              name: 'Отбор 3',
-              players: [{ id: 'p3', name: 'Георги', rating: 1600 }],
-            },
-          ],
-        },
       ];
 
-      const text = formatGroupsForClipboard(dummyGroups, 'tennis');
-      expect(text).toContain('🏆 Турнирни групи');
-      expect(text).toContain('📌 Група А:');
-      expect(text).toContain('- Отбор 1: Иван (★ 1500)');
-      expect(text).toContain('- Отбор 2: Петър (★ 1400)');
-      expect(text).toContain('📌 Група Б:');
-      expect(text).toContain('- Отбор 3: Георги (★ 1600)');
+      const text = formatGroupsForClipboard(dummyGroups, 'generic');
+      expect(text).toContain('- Отбор 1: Иван');
+      expect(text).toContain('- Отбор 2: Петър');
+      expect(text).not.toContain('★');
+      expect(text).not.toContain('1500');
     });
 
     it('appends match schedule with rounds, byes, and player names to groups clipboard text', () => {

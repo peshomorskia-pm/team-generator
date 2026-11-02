@@ -291,7 +291,7 @@ export const TeamSettings = memo(function TeamSettings({
           <div className="flex items-center space-x-2">
             <Sliders className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             <label htmlFor="balanceToggle" className="text-sm font-medium text-amber-900 dark:text-amber-200 cursor-pointer">
-              Балансирай отборите по рейтинг на играчите
+              Балансирай отборите по процент победи на играчите
             </label>
           </div>
           <input

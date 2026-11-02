@@ -75,21 +75,21 @@ export const LandingPage: React.FC = () => {
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-bold text-sm text-indigo-900 dark:text-indigo-200">Отбор 1</span>
                   <Badge variant="indigo" size="sm">
-                    Рейтинг: 4200
+                    Победи: 67%
                   </Badge>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 p-1.5 rounded-lg bg-white dark:bg-slate-800 shadow-xs text-xs font-medium">
                     <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">1</span>
-                    <span className="truncate">Иван (★ 1500)</span>
+                    <span className="truncate">Иван (75%)</span>
                   </div>
                   <div className="flex items-center gap-2 p-1.5 rounded-lg bg-white dark:bg-slate-800 shadow-xs text-xs font-medium">
                     <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">2</span>
-                    <span className="truncate">Георги (★ 1400)</span>
+                    <span className="truncate">Георги (65%)</span>
                   </div>
                   <div className="flex items-center gap-2 p-1.5 rounded-lg bg-white dark:bg-slate-800 shadow-xs text-xs font-medium">
                     <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">3</span>
-                    <span className="truncate">Николай (★ 1300)</span>
+                    <span className="truncate">Николай (60%)</span>
                   </div>
                 </div>
               </div>
@@ -99,21 +99,21 @@ export const LandingPage: React.FC = () => {
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-bold text-sm text-purple-900 dark:text-purple-200">Отбор 2</span>
                   <Badge variant="purple" size="sm">
-                    Рейтинг: 4200
+                    Победи: 67%
                   </Badge>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 p-1.5 rounded-lg bg-white dark:bg-slate-800 shadow-xs text-xs font-medium">
                     <span className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px]">1</span>
-                    <span className="truncate">Димитър (★ 1550)</span>
+                    <span className="truncate">Димитър (80%)</span>
                   </div>
                   <div className="flex items-center gap-2 p-1.5 rounded-lg bg-white dark:bg-slate-800 shadow-xs text-xs font-medium">
                     <span className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px]">2</span>
-                    <span className="truncate">Александър (★ 1400)</span>
+                    <span className="truncate">Александър (65%)</span>
                   </div>
                   <div className="flex items-center gap-2 p-1.5 rounded-lg bg-white dark:bg-slate-800 shadow-xs text-xs font-medium">
                     <span className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px]">3</span>
-                    <span className="truncate">Стефан (★ 1250)</span>
+                    <span className="truncate">Стефан (55%)</span>
                   </div>
                 </div>
               </div>
@@ -168,7 +168,7 @@ export const LandingPage: React.FC = () => {
               Балансирани отбори
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-              Интелигентно автоматично разпределение според реален ELO рейтинг на играчите. Край на неравностойните състави.
+              Интелигентно автоматично разпределение според реален процент победи и игрова статистика. Край на неравностойните състави.
             </p>
           </div>
 

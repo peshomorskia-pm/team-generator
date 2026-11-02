@@ -2,12 +2,14 @@ import { useState, useCallback, useRef, useMemo } from 'react';
 import { Team, AlertNotification, GeneratorMode, TournamentGroup, TournamentMatch, UseTeamGeneratorReturn, TournamentDraftState, UseTeamGeneratorOptions } from '../types';
 import { GeneratorPlayer, DatabasePlayer, TeamFormationMode } from '../types/generator';
 import { fisherYatesShuffle } from '../utils/shuffle';
-import { balanceTeams, getPlayerWinRate } from '../utils/balance';
+import { balanceTeams, resolvePlayerRating } from '../utils/balance';
 import { saveMatchup, generateTeamsFingerprint, areTeamConfigsEqual } from '../utils/history';
 import { copyTextToClipboard, formatTeamsForClipboard } from '../utils/clipboard';
 import { drawTournamentGroups, calculateGroupSizes, getBulgarianGroupLabel } from '../utils/groupPartition';
 import { generateTournamentSchedule } from '../utils/roundRobin';
 import { sortPlayersByName } from '../utils/playerSort';
+
+export { resolvePlayerRating } from '../utils/balance';
 
 export function generateGuestId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -19,27 +21,6 @@ export function generateGuestId(): string {
     return v.toString(16);
   });
 }
-
-const resolvePlayerRating = (
-  player: GeneratorPlayer,
-  fmt?: 'singles' | 'doubles'
-): number | undefined => {
-  if (
-    player.singles_matches_played !== undefined ||
-    player.doubles_matches_played !== undefined ||
-    typeof player.winRate === 'number'
-  ) {
-    return getPlayerWinRate(player, fmt).winRate;
-  }
-  if (player.source === 'guest') return undefined;
-  if (fmt === 'singles') {
-    return player.singles_rating ?? player.rating;
-  }
-  if (fmt === 'doubles') {
-    return player.doubles_rating ?? player.rating;
-  }
-  return player.rating;
-};
 
 export function getTargetTeamSize(
   mode: GeneratorMode,

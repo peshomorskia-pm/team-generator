@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { balanceTeams, getPlayerWinRate, getPlayerEffectiveSkill } from '../balance';
+import { balanceTeams, getPlayerWinRate, getPlayerEffectiveSkill, resolvePlayerRating } from '../balance';
 import { Player } from '../../types';
 
 describe('balanceTeams', () => {
@@ -440,6 +440,41 @@ describe('getPlayerWinRate', () => {
       isNew: true,
       label: 'Нов',
     });
+  });
+});
+
+describe('resolvePlayerRating', () => {
+  it('resolves format-aware win rate for player with match history', () => {
+    const player = {
+      singles_matches_played: 10,
+      singles_wins: 8,
+      doubles_matches_played: 10,
+      doubles_wins: 4,
+    };
+    expect(resolvePlayerRating(player, 'singles')).toBe(80);
+    expect(resolvePlayerRating(player, 'doubles')).toBe(40);
+  });
+
+  it('resolves explicit winRate when present', () => {
+    const player = { winRate: 65.5 };
+    expect(resolvePlayerRating(player)).toBe(65.5);
+  });
+
+  it('returns 50.0 neutral prior for unplayed registered player with 0 matches', () => {
+    const player = { singles_matches_played: 0, singles_wins: 0 };
+    expect(resolvePlayerRating(player, 'singles')).toBe(50.0);
+  });
+
+  it('returns undefined for guest player without match stats', () => {
+    expect(resolvePlayerRating({ source: 'guest' })).toBeUndefined();
+    expect(resolvePlayerRating({ isGuest: true })).toBeUndefined();
+  });
+
+  it('falls back to legacy rating for registered player without match history', () => {
+    const player = { singles_rating: 1650, doubles_rating: 1550, rating: 1500 };
+    expect(resolvePlayerRating(player, 'singles')).toBe(1650);
+    expect(resolvePlayerRating(player, 'doubles')).toBe(1550);
+    expect(resolvePlayerRating(player)).toBe(1500);
   });
 });
 
