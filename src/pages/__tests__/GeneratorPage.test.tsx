@@ -464,7 +464,7 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
     expect(modalSinglesBtn).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('updates PlayerSelector badges when format toggles and respects format-aware ratings', () => {
+  it('updates PlayerSelector badges when format toggles and respects format-aware win rates', () => {
     vi.spyOn(usePlayersModule, 'usePlayers').mockReturnValue({
       players: [
         {
@@ -473,6 +473,10 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
           rating: 1200,
           singles_rating: 1750,
           doubles_rating: 1450,
+          singles_matches_played: 10,
+          singles_wins: 8,
+          doubles_matches_played: 10,
+          doubles_wins: 6,
           created_at: '2026-01-01',
           updated_at: '2026-01-01',
         },
@@ -489,21 +493,25 @@ describe('GeneratorPage Integration Tests', { timeout: 20000 }, () => {
 
     renderComponent();
 
-    // Default doubles format: displays 1450
-    expect(screen.getByText('1450')).toBeInTheDocument();
-    expect(screen.queryByText('1750')).not.toBeInTheDocument();
+    // Default doubles format: displays 60%
+    expect(screen.getByText('60%')).toBeInTheDocument();
+    expect(screen.queryByText('80%')).not.toBeInTheDocument();
+    expect(screen.queryByText('1450')).not.toBeInTheDocument();
 
-    // Toggle format to singles: displays 1750
+    // Toggle format to singles: displays 80%
     const singlesFormatBtn = screen.getByRole('button', { name: 'Поединично' });
     fireEvent.click(singlesFormatBtn);
 
-    expect(screen.getByText('1750')).toBeInTheDocument();
-    expect(screen.queryByText('1450')).not.toBeInTheDocument();
+    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.queryByText('60%')).not.toBeInTheDocument();
+    expect(screen.queryByText('1750')).not.toBeInTheDocument();
 
-    // Toggle mode to generic: player ratings are stripped/hidden
+    // Toggle mode to generic: player ratings and win rates are stripped/hidden
     const genericModeBtn = screen.getByRole('button', { name: '🎲 Универсален' });
     fireEvent.click(genericModeBtn);
 
+    expect(screen.queryByText('60%')).not.toBeInTheDocument();
+    expect(screen.queryByText('80%')).not.toBeInTheDocument();
     expect(screen.queryByText('1200')).not.toBeInTheDocument();
     expect(screen.queryByText('1750')).not.toBeInTheDocument();
     expect(screen.queryByText('1450')).not.toBeInTheDocument();
