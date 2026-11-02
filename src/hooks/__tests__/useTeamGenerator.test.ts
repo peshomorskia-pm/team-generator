@@ -2409,6 +2409,85 @@ describe('useTeamGenerator', () => {
       }
     });
   });
+
+  describe('Sports Win Rate Balancing & Stats Preservation', () => {
+    it('preserves match stats and winRate when toggling a registered player', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+      const playerWithStats: DatabasePlayer = {
+        id: 'p-stat-1',
+        name: 'Стефан',
+        rating: 1200,
+        doubles_matches_played: 10,
+        doubles_wins: 8,
+        doubles_losses: 2,
+        winRate: 80.0,
+      };
+
+      act(() => {
+        result.current.toggleRegisteredPlayer(playerWithStats);
+      });
+
+      expect(result.current.activePool).toHaveLength(1);
+      expect(result.current.activePool[0].doubles_matches_played).toBe(10);
+      expect(result.current.activePool[0].doubles_wins).toBe(8);
+      expect(result.current.activePool[0].doubles_losses).toBe(2);
+      expect(result.current.activePool[0].winRate).toBe(80.0);
+    });
+
+    it('balances teams using format-aware win rates when balanceByRating is true', () => {
+      const { result } = renderHook(() => useTeamGenerator());
+
+      act(() => {
+        result.current.setMode('tennis');
+        result.current.setFormat('doubles');
+        result.current.setBalanceByRating(true);
+        result.current.toggleRegisteredPlayer({
+          id: 'p1',
+          name: 'P1',
+          rating: 1000,
+          doubles_matches_played: 10,
+          doubles_wins: 9,
+          doubles_losses: 1,
+        }); // 90%
+        result.current.toggleRegisteredPlayer({
+          id: 'p2',
+          name: 'P2',
+          rating: 1000,
+          doubles_matches_played: 10,
+          doubles_wins: 8,
+          doubles_losses: 2,
+        }); // 80%
+        result.current.toggleRegisteredPlayer({
+          id: 'p3',
+          name: 'P3',
+          rating: 1000,
+          doubles_matches_played: 10,
+          doubles_wins: 4,
+          doubles_losses: 6,
+        }); // 40%
+        result.current.toggleRegisteredPlayer({
+          id: 'p4',
+          name: 'P4',
+          rating: 1000,
+          doubles_matches_played: 10,
+          doubles_wins: 3,
+          doubles_losses: 7,
+        }); // 30%
+      });
+
+      act(() => {
+        result.current.generateTeams();
+      });
+
+      expect(result.current.teams).toHaveLength(2);
+      expect(result.current.teams[0].players).toHaveLength(2);
+      expect(result.current.teams[1].players).toHaveLength(2);
+
+      // Both teams should have totalRating 120 (90 + 30 = 120 and 80 + 40 = 120)
+      expect(result.current.teams[0].totalRating).toBe(120);
+      expect(result.current.teams[1].totalRating).toBe(120);
+    });
+  });
 });
 
 

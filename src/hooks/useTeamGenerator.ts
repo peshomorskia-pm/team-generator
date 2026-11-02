@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useMemo } from 'react';
 import { Team, AlertNotification, GeneratorMode, TournamentGroup, TournamentMatch, UseTeamGeneratorReturn, TournamentDraftState, UseTeamGeneratorOptions } from '../types';
 import { GeneratorPlayer, DatabasePlayer, TeamFormationMode } from '../types/generator';
 import { fisherYatesShuffle } from '../utils/shuffle';
-import { balanceTeams } from '../utils/balance';
+import { balanceTeams, getPlayerWinRate } from '../utils/balance';
 import { saveMatchup, generateTeamsFingerprint, areTeamConfigsEqual } from '../utils/history';
 import { copyTextToClipboard, formatTeamsForClipboard } from '../utils/clipboard';
 import { drawTournamentGroups, calculateGroupSizes, getBulgarianGroupLabel } from '../utils/groupPartition';
@@ -24,6 +24,13 @@ const resolvePlayerRating = (
   player: GeneratorPlayer,
   fmt?: 'singles' | 'doubles'
 ): number | undefined => {
+  if (
+    player.singles_matches_played !== undefined ||
+    player.doubles_matches_played !== undefined ||
+    typeof player.winRate === 'number'
+  ) {
+    return getPlayerWinRate(player, fmt).winRate;
+  }
   if (player.source === 'guest') return undefined;
   if (fmt === 'singles') {
     return player.singles_rating ?? player.rating;
@@ -55,13 +62,29 @@ export function getTargetTeamSize(
 }
 
 export const calculateTeamRating = (
-  players: (GeneratorPlayer | { rating?: number; singles_rating?: number; doubles_rating?: number; source?: string })[],
+  players: (
+    | GeneratorPlayer
+    | {
+        rating?: number;
+        singles_rating?: number;
+        doubles_rating?: number;
+        source?: string;
+        singles_matches_played?: number;
+        singles_wins?: number;
+        singles_losses?: number;
+        doubles_matches_played?: number;
+        doubles_wins?: number;
+        doubles_losses?: number;
+        winRate?: number;
+      }
+  )[],
   fmt?: 'singles' | 'doubles'
 ): number => {
-  return players.reduce((sum, p) => {
+  const sum = players.reduce((acc, p) => {
     const r = resolvePlayerRating(p as GeneratorPlayer, fmt);
-    return sum + (r ?? 0);
+    return acc + (r ?? 0);
   }, 0);
+  return Number(sum.toFixed(1));
 };
 
 export function useTeamGenerator(options?: UseTeamGeneratorOptions): UseTeamGeneratorReturn {

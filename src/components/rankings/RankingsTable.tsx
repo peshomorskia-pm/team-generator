@@ -28,8 +28,8 @@ export const RankingsTable: React.FC<RankingsTableProps> = ({ rankings }) => {
             <th className="py-3.5 px-3 text-center w-14 text-rose-600 dark:text-rose-400">
               З
             </th>
-            <th className="py-3.5 px-4 text-right w-28">
-              Успеваемост
+            <th className="text-center font-bold text-gray-700 dark:text-gray-300 px-4 py-3.5 whitespace-nowrap w-40">
+              УСПЕВАЕМОСТ
             </th>
             <th
               className="py-3.5 px-3 text-center whitespace-nowrap"
@@ -74,15 +74,17 @@ export const RankingsTable: React.FC<RankingsTableProps> = ({ rankings }) => {
                   {stat.losses}
                 </span>
               </td>
-              <td className="py-3 px-4 text-right font-bold text-gray-900 dark:text-white">
-                <div className="flex items-center justify-end gap-2">
-                  <div className="w-16 bg-gray-100 dark:bg-gray-700 rounded-full h-1.5 hidden sm:block">
+              <td className="py-3 px-4 text-center font-bold text-gray-900 dark:text-white">
+                <div className="flex items-center justify-center gap-3">
+                  <div className="w-16 sm:w-20 bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden shrink-0">
                     <div
-                      className="bg-emerald-500 h-1.5 rounded-full"
+                      className="bg-emerald-500 h-2 rounded-full transition-all"
                       style={{ width: `${stat.winRate}%` }}
                     />
                   </div>
-                  <span>{stat.winRate}%</span>
+                  <span className="w-14 tabular-nums text-right font-bold text-gray-900 dark:text-white shrink-0">
+                    {stat.winRate}%
+                  </span>
                 </div>
               </td>
               <td className="py-3 px-3 text-center whitespace-nowrap">
