@@ -11,6 +11,8 @@ describe('ActivePool Component', () => {
       name: 'Христо',
       source: 'registered',
       rating: 1520,
+      singles_matches_played: 10,
+      singles_wins: 8,
     },
     {
       id: 'guest-1',
@@ -31,7 +33,7 @@ describe('ActivePool Component', () => {
 
   it('renders correct badges for registered vs guest players', () => {
     const onRemove = vi.fn();
-    render(<ActivePool activePool={samplePool} onRemovePlayer={onRemove} />);
+    render(<ActivePool activePool={samplePool} onRemovePlayer={onRemove} format="singles" />);
 
     // Roster count summary
     expect(screen.getByText('1 регистрирани')).toBeInTheDocument();
@@ -40,7 +42,8 @@ describe('ActivePool Component', () => {
     // Registered player badge
     const regBadge = screen.getByTestId('player-badge-reg-1');
     expect(regBadge).toHaveTextContent('Христо');
-    expect(regBadge).toHaveTextContent('1520');
+    expect(regBadge).toHaveTextContent('80%');
+    expect(regBadge).not.toHaveTextContent('1520');
     expect(regBadge.className).toContain('indigo');
 
     // Guest player badge
@@ -80,15 +83,17 @@ describe('ActivePool Component', () => {
     expect(onClear).toHaveBeenCalledTimes(1);
   });
 
-  it('renders rating badge corresponding to the active format context', () => {
+  it('renders win rate badge corresponding to the active format context', () => {
     const dualPool: GeneratorPlayer[] = [
       {
         id: 'reg-dual',
         name: 'Димитър',
         source: 'registered',
         rating: 1500,
-        singles_rating: 1750,
-        doubles_rating: 1350,
+        singles_matches_played: 10,
+        singles_wins: 8,
+        doubles_matches_played: 10,
+        doubles_wins: 6,
       },
     ];
 
@@ -101,8 +106,9 @@ describe('ActivePool Component', () => {
     );
 
     const badge = screen.getByTestId('player-badge-reg-dual');
-    expect(badge).toHaveTextContent('1750');
-    expect(badge).not.toHaveTextContent('1350');
+    expect(badge).toHaveTextContent('80%');
+    expect(badge).not.toHaveTextContent('60%');
+    expect(badge).not.toHaveTextContent('1500');
 
     rerender(
       <ActivePool
@@ -112,17 +118,20 @@ describe('ActivePool Component', () => {
       />
     );
 
-    expect(badge).toHaveTextContent('1350');
-    expect(badge).not.toHaveTextContent('1750');
+    expect(badge).toHaveTextContent('60%');
+    expect(badge).not.toHaveTextContent('80%');
+    expect(badge).not.toHaveTextContent('1500');
   });
 
-  it('hides player ratings/stars when mode is generic', () => {
+  it('hides win rate badges when mode is generic', () => {
     const poolWithRatings: GeneratorPlayer[] = [
       {
         id: 'reg-1',
         name: 'Христо',
         source: 'registered',
         rating: 1520,
+        singles_matches_played: 10,
+        singles_wins: 8,
       },
     ];
 
@@ -136,6 +145,7 @@ describe('ActivePool Component', () => {
 
     const badge = screen.getByTestId('player-badge-reg-1');
     expect(badge).toHaveTextContent('Христо');
+    expect(badge).not.toHaveTextContent('80%');
     expect(badge).not.toHaveTextContent('1520');
   });
 

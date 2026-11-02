@@ -29,7 +29,7 @@ const resolvePlayerRating = (
     player.doubles_matches_played !== undefined ||
     typeof player.winRate === 'number'
   ) {
-    return getPlayerWinRate(player, fmt);
+    return getPlayerWinRate(player, fmt).winRate;
   }
   if (player.source === 'guest') return undefined;
   if (fmt === 'singles') {

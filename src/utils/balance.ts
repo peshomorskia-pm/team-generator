@@ -1,66 +1,81 @@
 import { Player, Team } from '../types';
 import { fisherYatesShuffle } from './shuffle';
 
+export interface PlayerWinRateInfo {
+  winRate: number; // e.g. 80.0, 50.0 (neutral baseline for 0 matches)
+  isNew: boolean;  // true when total matches in context === 0
+  label: string;  // e.g. "80%", "100%", "Нов"
+}
+
+export interface PlayerLike {
+  singles_matches_played?: number | null;
+  singles_wins?: number | null;
+  doubles_matches_played?: number | null;
+  doubles_wins?: number | null;
+  matches_played?: number | null;
+  wins?: number | null;
+  winRate?: number | null;
+}
+
 export { shuffleTeamsBalanced } from './shuffle';
 
 /**
- * Calculates a player's win rate percentage (0.0 - 100.0) based on match format.
- * - singles: uses singles_matches_played and singles_wins; unplayed defaults to 50.0.
- * - doubles: uses doubles_matches_played and doubles_wins; unplayed defaults to 50.0.
- * - overall (undefined): aggregates singles + doubles; unplayed defaults to 50.0.
- * - explicit winRate property is respected.
- * - fallback baseline is 50.0.
+ * Calculates win rate percentage and display metadata for a player.
+ * Uses format-specific match counters first, then aggregates across all match formats.
+ * Unplayed players default to a neutral prior (50.0%) and "Нов" badge.
+ *
+ * @param player - Object with singles/doubles or generic match count statistics
+ * @param format - Optional context format ('singles' | 'doubles')
+ * @returns PlayerWinRateInfo with winRate number, isNew boolean, and formatted label
  */
 export function getPlayerWinRate(
-  player: Player,
+  player?: PlayerLike | null,
   format?: 'singles' | 'doubles'
-): number {
-  if (format === 'singles') {
-    if (player.singles_matches_played !== undefined) {
-      if (player.singles_matches_played > 0) {
-        return Number((((player.singles_wins ?? 0) / player.singles_matches_played) * 100).toFixed(1));
-      }
-      return 50.0;
-    }
-    if (typeof player.winRate === 'number') {
-      return player.winRate;
-    }
-    return 50.0;
+): PlayerWinRateInfo {
+  if (!player) {
+    return { winRate: 50.0, isNew: true, label: 'Нов' };
   }
 
-  if (format === 'doubles') {
-    if (player.doubles_matches_played !== undefined) {
-      if (player.doubles_matches_played > 0) {
-        return Number((((player.doubles_wins ?? 0) / player.doubles_matches_played) * 100).toFixed(1));
-      }
-      return 50.0;
-    }
-    if (typeof player.winRate === 'number') {
-      return player.winRate;
-    }
-    return 50.0;
+  let rate: number | null = null;
+
+  // Tier 1: Format-Specific Check
+  if (format === 'singles' && (player.singles_matches_played ?? 0) > 0) {
+    rate = ((player.singles_wins ?? 0) / player.singles_matches_played!) * 100;
+  } else if (format === 'doubles' && (player.doubles_matches_played ?? 0) > 0) {
+    rate = ((player.doubles_wins ?? 0) / player.doubles_matches_played!) * 100;
   }
 
-  const hasSingles = player.singles_matches_played !== undefined;
-  const hasDoubles = player.doubles_matches_played !== undefined;
+  // Tier 2: Aggregate Fallback
+  if (rate === null) {
+    const totalMatches =
+      ((player.singles_matches_played ?? 0) + (player.doubles_matches_played ?? 0)) ||
+      (player.matches_played ?? 0);
+    const totalWins =
+      ((player.singles_wins ?? 0) + (player.doubles_wins ?? 0)) ||
+      (player.wins ?? 0);
 
-  if (hasSingles || hasDoubles) {
-    const totalMatches = (player.singles_matches_played ?? 0) + (player.doubles_matches_played ?? 0);
     if (totalMatches > 0) {
-      const totalWins = (player.singles_wins ?? 0) + (player.doubles_wins ?? 0);
-      return Number(((totalWins / totalMatches) * 100).toFixed(1));
+      rate = (totalWins / totalMatches) * 100;
+    } else if (typeof player.winRate === 'number' && !isNaN(player.winRate)) {
+      rate = player.winRate;
     }
-    if (typeof player.winRate === 'number') {
-      return player.winRate;
-    }
-    return 50.0;
   }
 
-  if (typeof player.winRate === 'number') {
-    return player.winRate;
+  // Tier 3: Result Formatting / Neutral Prior
+  if (rate !== null) {
+    const rounded = Math.round(rate * 10) / 10;
+    return {
+      winRate: rounded,
+      isNew: false,
+      label: `${Math.round(rounded)}%`,
+    };
   }
 
-  return 50.0;
+  return {
+    winRate: 50.0,
+    isNew: true,
+    label: 'Нов',
+  };
 }
 
 /**
@@ -80,7 +95,7 @@ export function getPlayerEffectiveSkill(
     typeof player.winRate === 'number';
 
   if (hasMatchHistory) {
-    return getPlayerWinRate(player, format);
+    return getPlayerWinRate(player, format).winRate;
   }
 
   const isExplicitUnplayed =

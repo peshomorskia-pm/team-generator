@@ -241,7 +241,7 @@ describe('balanceTeams', () => {
           singles_wins: 9,
           singles_losses: 1,
         };
-        expect(getPlayerWinRate(player, 'singles')).toBe(90.0);
+        expect(getPlayerWinRate(player, 'singles').winRate).toBe(90.0);
       });
 
       it('defaults to 50.0 baseline for unplayed player in singles format (0 matches)', () => {
@@ -252,7 +252,7 @@ describe('balanceTeams', () => {
           singles_wins: 0,
           singles_losses: 0,
         };
-        expect(getPlayerWinRate(player, 'singles')).toBe(50.0);
+        expect(getPlayerWinRate(player, 'singles').winRate).toBe(50.0);
       });
 
       it('computes doubles win rate correctly (3 wins / 4 matches -> 75.0)', () => {
@@ -263,7 +263,7 @@ describe('balanceTeams', () => {
           doubles_wins: 3,
           doubles_losses: 1,
         };
-        expect(getPlayerWinRate(player, 'doubles')).toBe(75.0);
+        expect(getPlayerWinRate(player, 'doubles').winRate).toBe(75.0);
       });
 
       it('defaults to 50.0 baseline for unplayed player in doubles format (0 matches)', () => {
@@ -274,7 +274,7 @@ describe('balanceTeams', () => {
           doubles_wins: 0,
           doubles_losses: 0,
         };
-        expect(getPlayerWinRate(player, 'doubles')).toBe(50.0);
+        expect(getPlayerWinRate(player, 'doubles').winRate).toBe(50.0);
       });
 
       it('aggregates singles and doubles in overall format (2/3 singles + 4/5 doubles -> 6/8 = 75.0)', () => {
@@ -288,7 +288,7 @@ describe('balanceTeams', () => {
           doubles_wins: 4,
           doubles_losses: 1,
         };
-        expect(getPlayerWinRate(player)).toBe(75.0);
+        expect(getPlayerWinRate(player).winRate).toBe(75.0);
       });
 
       it('defaults to 50.0 baseline for guest or unrated player without match counters', () => {
@@ -296,9 +296,9 @@ describe('balanceTeams', () => {
           id: 'g1',
           name: 'Guest Player',
         };
-        expect(getPlayerWinRate(guest, 'doubles')).toBe(50.0);
-        expect(getPlayerWinRate(guest, 'singles')).toBe(50.0);
-        expect(getPlayerWinRate(guest)).toBe(50.0);
+        expect(getPlayerWinRate(guest, 'doubles').winRate).toBe(50.0);
+        expect(getPlayerWinRate(guest, 'singles').winRate).toBe(50.0);
+        expect(getPlayerWinRate(guest).winRate).toBe(50.0);
       });
     });
 
@@ -369,3 +369,77 @@ describe('balanceTeams', () => {
     });
   });
 });
+
+describe('getPlayerWinRate', () => {
+  it('calculates format-specific win rate for singles format', () => {
+    const player = { singles_matches_played: 10, singles_wins: 8 };
+    expect(getPlayerWinRate(player, 'singles')).toEqual({
+      winRate: 80,
+      isNew: false,
+      label: '80%',
+    });
+  });
+
+  it('calculates format-specific win rate for doubles format', () => {
+    const player = { doubles_matches_played: 4, doubles_wins: 3 };
+    expect(getPlayerWinRate(player, 'doubles')).toEqual({
+      winRate: 75,
+      isNew: false,
+      label: '75%',
+    });
+  });
+
+  it('falls back to aggregate matches when format-specific matches are 0', () => {
+    const player = { singles_matches_played: 0, doubles_matches_played: 5, doubles_wins: 4 };
+    expect(getPlayerWinRate(player, 'singles')).toEqual({
+      winRate: 80,
+      isNew: false,
+      label: '80%',
+    });
+  });
+
+  it('returns neutral prior (50.0%) and "Нов" label for unplayed players', () => {
+    const player = { singles_matches_played: 0, doubles_matches_played: 0 };
+    expect(getPlayerWinRate(player, 'singles')).toEqual({
+      winRate: 50.0,
+      isNew: true,
+      label: 'Нов',
+    });
+  });
+
+  it('handles zero wins / 100% loss rate gracefully', () => {
+    const player = { singles_matches_played: 5, singles_wins: 0 };
+    expect(getPlayerWinRate(player, 'singles')).toEqual({
+      winRate: 0,
+      isNew: false,
+      label: '0%',
+    });
+  });
+
+  it('rounds precision to 1 decimal place and rounds label to integer percentage', () => {
+    const player = { singles_matches_played: 3, singles_wins: 1 };
+    const res = getPlayerWinRate(player, 'singles');
+    expect(res.winRate).toBe(33.3);
+    expect(res.isNew).toBe(false);
+    expect(res.label).toBe('33%');
+  });
+
+  it('handles empty or undefined player object with neutral prior', () => {
+    expect(getPlayerWinRate({})).toEqual({
+      winRate: 50.0,
+      isNew: true,
+      label: 'Нов',
+    });
+    expect(getPlayerWinRate(null)).toEqual({
+      winRate: 50.0,
+      isNew: true,
+      label: 'Нов',
+    });
+    expect(getPlayerWinRate(undefined)).toEqual({
+      winRate: 50.0,
+      isNew: true,
+      label: 'Нов',
+    });
+  });
+});
+
