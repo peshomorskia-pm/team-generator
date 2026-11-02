@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { X, Search, User, Star, UserPlus } from 'lucide-react';
+import { X, Search, User, UserPlus } from 'lucide-react';
 import { GeneratorPlayer } from '../../types/generator';
 import { generateGuestId } from '../../hooks/useTeamGenerator';
-import { Button } from '../ui/Button';
+import { Button, Badge } from '../ui';
 import { sortPlayersByName } from '../../utils/playerSort';
+import { getPlayerWinRate } from '../../utils/balance';
 
 export interface TeamSlotPickerModalProps {
   isOpen: boolean;
@@ -134,12 +135,8 @@ export const TeamSlotPickerModal: React.FC<TeamSlotPickerModalProps> = ({
         <div className="flex-1 overflow-y-auto p-4 space-y-2 min-h-[160px] max-h-[320px]">
           {filteredPlayers.length > 0 ? (
             filteredPlayers.map((player) => {
-              const rating =
-                format === 'singles'
-                  ? (player.singles_rating ?? player.rating)
-                  : format === 'doubles'
-                    ? (player.doubles_rating ?? player.rating)
-                    : player.rating;
+              const isRegistered = player.source === 'registered';
+              const winRateInfo = isRegistered ? getPlayerWinRate(player, format) : null;
 
               return (
                 <button
@@ -159,11 +156,14 @@ export const TeamSlotPickerModal: React.FC<TeamSlotPickerModalProps> = ({
                       </span>
                     )}
                   </div>
-                  {rating !== undefined && (
-                    <span className="text-xs text-amber-500 font-semibold ml-2 shrink-0 flex items-center">
-                      <Star className="w-3 h-3 mr-0.5 fill-current" />
-                      {rating}
-                    </span>
+                  {winRateInfo && (
+                    <Badge
+                      variant={winRateInfo.isNew ? 'slate' : 'emerald'}
+                      size="sm"
+                      className="ml-2 shrink-0 font-semibold"
+                    >
+                      {winRateInfo.label}
+                    </Badge>
                   )}
                 </button>
               );

@@ -10,6 +10,8 @@ describe('PlayerSelector Component', () => {
       id: 'p-1',
       name: 'Александър',
       rating: 1550,
+      singles_matches_played: 10,
+      singles_wins: 8,
       created_at: '2026-01-01',
       updated_at: '2026-01-01',
     },
@@ -17,26 +19,33 @@ describe('PlayerSelector Component', () => {
       id: 'p-2',
       name: 'Борис',
       rating: 1400,
+      singles_matches_played: 0,
+      singles_wins: 0,
       created_at: '2026-01-01',
       updated_at: '2026-01-01',
     },
   ];
 
-  it('renders registered players with ratings and checkboxes', () => {
+  it('renders registered players with win rate badges and checkboxes, without raw ELO numbers', () => {
     const onToggle = vi.fn();
     render(
       <PlayerSelector
         players={samplePlayers}
         selectedIds={new Set(['p-1'])}
         onTogglePlayer={onToggle}
+        format="singles"
       />
     );
 
     expect(screen.getByRole('heading', { name: 'Регистрирани играчи' })).toBeInTheDocument();
     expect(screen.getByText('Александър')).toBeInTheDocument();
-    expect(screen.getByText('1550')).toBeInTheDocument();
+    expect(screen.getByText('80%')).toBeInTheDocument();
     expect(screen.getByText('Борис')).toBeInTheDocument();
-    expect(screen.getByText('1400')).toBeInTheDocument();
+    expect(screen.getByText('Нов')).toBeInTheDocument();
+
+    // Verify raw ratings are not displayed
+    expect(screen.queryByText('1550')).not.toBeInTheDocument();
+    expect(screen.queryByText('1400')).not.toBeInTheDocument();
 
     const checkbox1 = screen.getByRole('checkbox', { name: 'Александър' });
     const checkbox2 = screen.getByRole('checkbox', { name: 'Борис' });
@@ -168,14 +177,16 @@ describe('PlayerSelector Component', () => {
     expect(onSearchChange).toHaveBeenCalled();
   });
 
-  it('displays format-specific ratings based on format prop with fallback to rating', () => {
-    const playersWithDualRatings: PlayerRow[] = [
+  it('displays format-specific win rates based on format prop with fallback to aggregate stats', () => {
+    const playersWithDualStats: PlayerRow[] = [
       {
         id: 'p-1',
         name: 'Димитър',
         rating: 1200,
-        singles_rating: 1600,
-        doubles_rating: 1400,
+        singles_matches_played: 10,
+        singles_wins: 8,
+        doubles_matches_played: 10,
+        doubles_wins: 6,
         created_at: '2026-01-01',
         updated_at: '2026-01-01',
       },
@@ -183,6 +194,10 @@ describe('PlayerSelector Component', () => {
         id: 'p-2',
         name: 'Елена',
         rating: 1350,
+        singles_matches_played: 0,
+        singles_wins: 0,
+        doubles_matches_played: 4,
+        doubles_wins: 3,
         created_at: '2026-01-01',
         updated_at: '2026-01-01',
       },
@@ -190,33 +205,33 @@ describe('PlayerSelector Component', () => {
 
     const { rerender } = render(
       <PlayerSelector
-        players={playersWithDualRatings}
+        players={playersWithDualStats}
         selectedIds={new Set()}
         onTogglePlayer={vi.fn()}
         format="singles"
       />
     );
 
-    // Singles: Димитър has 1600, Елена falls back to 1350
-    expect(screen.getByText('1600')).toBeInTheDocument();
-    expect(screen.getByText('1350')).toBeInTheDocument();
+    // Singles: Димитър has 80%, Елена has 0 singles matches so falls back to aggregate (3/4 = 75%)
+    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.getByText('75%')).toBeInTheDocument();
 
     // Rerender with doubles format
     rerender(
       <PlayerSelector
-        players={playersWithDualRatings}
+        players={playersWithDualStats}
         selectedIds={new Set()}
         onTogglePlayer={vi.fn()}
         format="doubles"
       />
     );
 
-    // Doubles: Димитър has 1400, Елена falls back to 1350
-    expect(screen.getByText('1400')).toBeInTheDocument();
-    expect(screen.getByText('1350')).toBeInTheDocument();
+    // Doubles: Димитър has 60%, Елена has 75%
+    expect(screen.getByText('60%')).toBeInTheDocument();
+    expect(screen.getByText('75%')).toBeInTheDocument();
   });
 
-  it('hides player ratings and stars when mode is generic', () => {
+  it('hides win rate badges when mode is generic', () => {
     render(
       <PlayerSelector
         players={samplePlayers}
@@ -230,7 +245,9 @@ describe('PlayerSelector Component', () => {
     expect(screen.getByText('Александър')).toBeInTheDocument();
     expect(screen.getByText('Борис')).toBeInTheDocument();
 
-    // Ratings are stripped/hidden
+    // Win rate badges and ratings are stripped/hidden
+    expect(screen.queryByText('80%')).not.toBeInTheDocument();
+    expect(screen.queryByText('Нов')).not.toBeInTheDocument();
     expect(screen.queryByText('1550')).not.toBeInTheDocument();
     expect(screen.queryByText('1400')).not.toBeInTheDocument();
   });

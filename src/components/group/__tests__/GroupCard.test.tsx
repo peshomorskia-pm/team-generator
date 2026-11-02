@@ -62,10 +62,70 @@ describe('GroupCard component', () => {
     expect(screen.getByText('Няма разпределени отбори в групата')).toBeInTheDocument();
   });
 
-  it('T-CARD-4: hides ratings when mode is generic', () => {
-    render(<GroupCard group={dummyGroup} mode="generic" />);
+  // T-GC-1: Absence of Team Total Rating in Group
+  it('does not render total rating badges on teams in group', () => {
+    render(<GroupCard group={dummyGroup} mode="tennis" format="doubles" />);
+    expect(screen.queryByText('3100')).not.toBeInTheDocument();
+    expect(screen.queryByText('2800')).not.toBeInTheDocument();
+    expect(screen.queryByText(/★/)).not.toBeInTheDocument();
+  });
 
-    expect(screen.getByText('Иван Иванов')).toBeInTheDocument();
+  // T-GC-2: Win Rate Badges rendered for group roster players
+  it('renders format-aware win rate badges for players in tournament groups', () => {
+    const groupWithStats: TournamentGroup = {
+      id: 'grp-1',
+      name: 'Група А',
+      teams: [
+        {
+          id: 't-1',
+          name: 'Отбор 1',
+          players: [
+            {
+              id: 'p-1',
+              name: 'Иван Иванов',
+              doubles_matches_played: 5,
+              doubles_wins: 4, // 80%
+            },
+            {
+              id: 'p-2',
+              name: 'Георги Димитров', // 0 matches -> Нов
+            },
+            {
+              id: 'p-3',
+              name: 'Гост Играч',
+              isGuest: true,
+            },
+          ],
+        },
+      ],
+    };
+    render(<GroupCard group={groupWithStats} mode="tennis" format="doubles" />);
+    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.getByText('Нов')).toBeInTheDocument();
+    expect(screen.getByText('Гост')).toBeInTheDocument();
+  });
+
+  // T-GC-3: Generic Mode Isolation in GroupCard
+  it('hides all win rate and guest badges when mode is generic', () => {
+    const groupWithStats: TournamentGroup = {
+      id: 'grp-1',
+      name: 'Група А',
+      teams: [
+        {
+          id: 't-1',
+          name: 'Отбор 1',
+          players: [
+            { id: 'p-1', name: 'Иван Иванов', doubles_matches_played: 5, doubles_wins: 4 },
+            { id: 'p-2', name: 'Георги Димитров' },
+            { id: 'p-3', name: 'Гост Играч', isGuest: true },
+          ],
+        },
+      ],
+    };
+    render(<GroupCard group={groupWithStats} mode="generic" />);
+    expect(screen.queryByText('80%')).not.toBeInTheDocument();
+    expect(screen.queryByText('Нов')).not.toBeInTheDocument();
+    expect(screen.queryByText('Гост')).not.toBeInTheDocument();
     expect(screen.queryByText(/★/)).not.toBeInTheDocument();
   });
 

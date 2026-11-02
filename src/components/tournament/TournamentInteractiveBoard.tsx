@@ -255,6 +255,12 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
           rating: p.rating,
           singles_rating: p.singles_rating,
           doubles_rating: p.doubles_rating,
+          singles_matches_played: p.singles_matches_played,
+          singles_wins: p.singles_wins,
+          singles_losses: p.singles_losses,
+          doubles_matches_played: p.doubles_matches_played,
+          doubles_wins: p.doubles_wins,
+          doubles_losses: p.doubles_losses,
         });
       }
     });

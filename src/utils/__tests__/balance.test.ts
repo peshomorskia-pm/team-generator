@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { balanceTeams } from '../balance';
+import { balanceTeams, getPlayerWinRate } from '../balance';
 import { Player } from '../../types';
 
 describe('balanceTeams', () => {
@@ -231,3 +231,77 @@ describe('balanceTeams', () => {
     });
   });
 });
+
+describe('getPlayerWinRate', () => {
+  it('calculates format-specific win rate for singles format', () => {
+    const player = { singles_matches_played: 10, singles_wins: 8 };
+    expect(getPlayerWinRate(player, 'singles')).toEqual({
+      winRate: 80,
+      isNew: false,
+      label: '80%',
+    });
+  });
+
+  it('calculates format-specific win rate for doubles format', () => {
+    const player = { doubles_matches_played: 4, doubles_wins: 3 };
+    expect(getPlayerWinRate(player, 'doubles')).toEqual({
+      winRate: 75,
+      isNew: false,
+      label: '75%',
+    });
+  });
+
+  it('falls back to aggregate matches when format-specific matches are 0', () => {
+    const player = { singles_matches_played: 0, doubles_matches_played: 5, doubles_wins: 4 };
+    expect(getPlayerWinRate(player, 'singles')).toEqual({
+      winRate: 80,
+      isNew: false,
+      label: '80%',
+    });
+  });
+
+  it('returns neutral prior (50.0%) and "Нов" label for unplayed players', () => {
+    const player = { singles_matches_played: 0, doubles_matches_played: 0 };
+    expect(getPlayerWinRate(player, 'singles')).toEqual({
+      winRate: 50.0,
+      isNew: true,
+      label: 'Нов',
+    });
+  });
+
+  it('handles zero wins / 100% loss rate gracefully', () => {
+    const player = { singles_matches_played: 5, singles_wins: 0 };
+    expect(getPlayerWinRate(player, 'singles')).toEqual({
+      winRate: 0,
+      isNew: false,
+      label: '0%',
+    });
+  });
+
+  it('rounds precision to 1 decimal place and rounds label to integer percentage', () => {
+    const player = { singles_matches_played: 3, singles_wins: 1 };
+    const res = getPlayerWinRate(player, 'singles');
+    expect(res.winRate).toBe(33.3);
+    expect(res.isNew).toBe(false);
+    expect(res.label).toBe('33%');
+  });
+
+  it('handles empty or undefined player object with neutral prior', () => {
+    expect(getPlayerWinRate({})).toEqual({
+      winRate: 50.0,
+      isNew: true,
+      label: 'Нов',
+    });
+    expect(getPlayerWinRate(null)).toEqual({
+      winRate: 50.0,
+      isNew: true,
+      label: 'Нов',
+    });
+    expect(getPlayerWinRate(undefined)).toEqual({
+      winRate: 50.0,
+      isNew: true,
+      label: 'Нов',
+    });
+  });
+});
+

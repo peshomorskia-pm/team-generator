@@ -6,6 +6,15 @@ export interface Player {
   rating?: number;
   singles_rating?: number;
   doubles_rating?: number;
+  singles_matches_played?: number;
+  singles_wins?: number;
+  singles_losses?: number;
+  doubles_matches_played?: number;
+  doubles_wins?: number;
+  doubles_losses?: number;
+  winRate?: number;
+  isGuest?: boolean;
+  source?: 'registered' | 'guest';
 }
 
 export interface Team {

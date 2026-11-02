@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Star, Users, CheckSquare, Square, X } from 'lucide-react';
+import { Search, Users, CheckSquare, Square, X } from 'lucide-react';
 import { PlayerRow } from '../../types/database.types';
 import { GeneratorMode } from '../../types';
 import { Badge, Input, Button } from '../ui';
 import { sortPlayersByName } from '../../utils/playerSort';
+import { getPlayerWinRate } from '../../utils/balance';
 
 export interface PlayerSelectorProps {
   players: PlayerRow[];
@@ -210,18 +211,17 @@ export const PlayerSelector: React.FC<PlayerSelectorProps> = ({
                 {(() => {
                   if (mode === 'generic') return null;
 
-                  const playerRating =
-                    format === 'doubles'
-                      ? (player.doubles_rating ?? player.rating)
-                      : format === 'singles'
-                        ? (player.singles_rating ?? player.rating)
-                        : player.rating;
+                  const winRateInfo = getPlayerWinRate(player, format);
 
-                  return playerRating !== undefined ? (
-                    <Badge variant="amber" size="sm" icon={Star} className="ml-2 shrink-0">
-                      {playerRating}
+                  return (
+                    <Badge
+                      variant={winRateInfo.isNew ? 'slate' : 'emerald'}
+                      size="sm"
+                      className="ml-2 shrink-0 font-semibold"
+                    >
+                      {winRateInfo.label}
                     </Badge>
-                  ) : null;
+                  );
                 })()}
               </label>
             );

@@ -6,8 +6,23 @@ import { GeneratorPlayer } from '../../../types/generator';
 
 describe('TeamSlotPickerModal', () => {
   const mockPlayers: GeneratorPlayer[] = [
-    { id: 'p-1', name: 'Иван Иванов', rating: 1200, source: 'registered' },
-    { id: 'p-2', name: 'Петър Петров', singles_rating: 1400, doubles_rating: 1350, source: 'registered' },
+    {
+      id: 'p-1',
+      name: 'Иван Иванов',
+      rating: 1200,
+      source: 'registered',
+      singles_matches_played: 10,
+      singles_wins: 8,
+      doubles_matches_played: 10,
+      doubles_wins: 5,
+    },
+    {
+      id: 'p-2',
+      name: 'Петър Петров',
+      source: 'registered',
+      singles_matches_played: 0,
+      singles_wins: 0,
+    },
     { id: 'p-3', name: 'Георги Гост', source: 'guest' },
   ];
 
@@ -33,7 +48,7 @@ describe('TeamSlotPickerModal', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('renders modal with title and lists all unassigned players', () => {
+  it('renders modal with title and lists all unassigned players with win rate badges', () => {
     render(
       <TeamSlotPickerModal
         isOpen={true}
@@ -41,15 +56,21 @@ describe('TeamSlotPickerModal', () => {
         teamId="team-1"
         teamName="Отбор 1"
         unassignedPlayers={mockPlayers}
+        format="singles"
       />
     );
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('Избери играч за Отбор 1')).toBeInTheDocument();
     expect(screen.getByText('Иван Иванов')).toBeInTheDocument();
+    expect(screen.getByText('80%')).toBeInTheDocument();
     expect(screen.getByText('Петър Петров')).toBeInTheDocument();
+    expect(screen.getByText('Нов')).toBeInTheDocument();
     expect(screen.getByText('Георги Гост')).toBeInTheDocument();
     expect(screen.getByText('гост')).toBeInTheDocument();
+
+    // Verify raw ratings and star icons are not rendered
+    expect(screen.queryByText('1200')).not.toBeInTheDocument();
   });
 
   it('filters unassigned players based on search query', async () => {
@@ -178,5 +199,35 @@ describe('TeamSlotPickerModal', () => {
     expect(texts[0]).toContain('Ангел');
     expect(texts[1]).toContain('Борис');
     expect(texts[2]).toContain('Явор');
+  });
+
+  it('switches win rate badge when format prop changes', () => {
+    const { rerender } = render(
+      <TeamSlotPickerModal
+        isOpen={true}
+        onClose={vi.fn()}
+        teamId="team-1"
+        unassignedPlayers={mockPlayers}
+        format="singles"
+      />
+    );
+
+    // Singles: Иван has 80% (8/10)
+    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.queryByText('50%')).not.toBeInTheDocument();
+
+    rerender(
+      <TeamSlotPickerModal
+        isOpen={true}
+        onClose={vi.fn()}
+        teamId="team-1"
+        unassignedPlayers={mockPlayers}
+        format="doubles"
+      />
+    );
+
+    // Doubles: Иван has 50% (5/10)
+    expect(screen.getByText('50%')).toBeInTheDocument();
+    expect(screen.queryByText('80%')).not.toBeInTheDocument();
   });
 });

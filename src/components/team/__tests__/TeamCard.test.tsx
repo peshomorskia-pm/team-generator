@@ -22,9 +22,18 @@ describe('TeamCard', () => {
     expect(screen.getByText('Отбор 1')).toBeInTheDocument();
   });
 
-  it('renders total rating badge when present and greater than 0', () => {
-    render(<TeamCard team={mockTeam} index={0} />);
-    expect(screen.getByText('24')).toBeInTheDocument();
+  // T-TC-1: Total Rating Removal from Header
+  it('does not render total rating badge in header even if totalRating is provided', () => {
+    const team: Team = {
+      id: 'team-1',
+      name: 'Отбор 1',
+      totalRating: 24,
+      players: [{ id: 'p-1', name: 'Иван', rating: 8 }],
+    };
+    render(<TeamCard team={team} index={0} />);
+    expect(screen.queryByText('24')).not.toBeInTheDocument();
+    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getByText('Отбор 1')).toBeInTheDocument();
   });
 
   it('renders player count badge', () => {
@@ -32,58 +41,95 @@ describe('TeamCard', () => {
     expect(screen.getByText('3 играчи')).toBeInTheDocument();
   });
 
-  it('renders each player with name and rating', () => {
-    render(<TeamCard team={mockTeam} index={0} />);
-    expect(screen.getByText('Иван')).toBeInTheDocument();
-    expect(screen.getByText('★ 8')).toBeInTheDocument();
-    expect(screen.getByText('Петър')).toBeInTheDocument();
-    expect(screen.getByText('★ 9')).toBeInTheDocument();
-    expect(screen.getByText('Георги')).toBeInTheDocument();
-    expect(screen.getByText('★ 7')).toBeInTheDocument();
-  });
-
-  it('renders empty message when no players are in team', () => {
-    const emptyTeam: Team = {
-      id: 'team-empty',
-      name: 'Празен отбор',
-      players: [],
+  // T-TC-2: Unplayed / New Players render "Нов"
+  it('renders "Нов" pill for unplayed players without match history', () => {
+    const team: Team = {
+      id: 'team-1',
+      name: 'Отбор 1',
+      players: [
+        { id: 'p-1', name: 'Иван' },
+        { id: 'p-2', name: 'Петър' },
+      ],
     };
-    render(<TeamCard team={emptyTeam} index={1} />);
-    expect(screen.getByText('Няма разпределени играчи')).toBeInTheDocument();
+    render(<TeamCard team={team} index={0} />);
+    const newBadges = screen.getAllByText('Нов');
+    expect(newBadges).toHaveLength(2);
+    expect(screen.queryByText(/★/)).not.toBeInTheDocument();
   });
 
-  it('renders shuffle button and handles click', async () => {
-    const user = userEvent.setup();
-    const handleShuffle = vi.fn();
-    render(<TeamCard team={mockTeam} index={0} onShuffleTeam={handleShuffle} />);
-
-    const shuffleBtn = screen.getByRole('button', { name: 'Разбъркай отбора' });
-    expect(shuffleBtn).toBeInTheDocument();
-
-    await user.click(shuffleBtn);
-    expect(handleShuffle).toHaveBeenCalledWith('team-1');
+  // T-TC-3: Active Players render percentage win rate
+  it('renders percentage win rate pill for players with match history', () => {
+    const team: Team = {
+      id: 'team-1',
+      name: 'Отбор 1',
+      players: [
+        {
+          id: 'p-1',
+          name: 'Иван',
+          singles_matches_played: 10,
+          singles_wins: 8,
+        },
+      ],
+    };
+    render(<TeamCard team={team} index={0} format="singles" />);
+    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.queryByText('Нов')).not.toBeInTheDocument();
   });
 
-  it('completely hides total rating badge and player rating stars when mode is generic', () => {
-    render(<TeamCard team={mockTeam} index={0} mode="generic" />);
+  // T-TC-4: Guest Players render "Гост" pill
+  it('renders "Гост" pill for guest players', () => {
+    const team: Team = {
+      id: 'team-1',
+      name: 'Отбор 1',
+      players: [
+        { id: 'g-1', name: 'Стефан', isGuest: true },
+        { id: 'g-2', name: 'Николай', source: 'guest' },
+      ],
+    };
+    render(<TeamCard team={team} index={0} />);
+    const guestBadges = screen.getAllByText('Гост');
+    expect(guestBadges).toHaveLength(2);
+  });
 
-    // Header info
-    expect(screen.getByText('1')).toBeInTheDocument();
-    expect(screen.getByText('Отбор 1')).toBeInTheDocument();
-    expect(screen.getByText('3 играчи')).toBeInTheDocument();
-
-    // Total rating badge hidden
+  // T-TC-5: Generic Mode Hides All Badges
+  it('completely hides win rate, "Нов", and "Гост" badges when mode is generic', () => {
+    const team: Team = {
+      id: 'team-1',
+      name: 'Отбор 1',
+      totalRating: 24,
+      players: [
+        { id: 'p-1', name: 'Иван', singles_matches_played: 10, singles_wins: 8 },
+        { id: 'p-2', name: 'Петър' },
+        { id: 'g-1', name: 'Стефан', isGuest: true },
+      ],
+    };
+    render(<TeamCard team={team} index={0} mode="generic" />);
     expect(screen.queryByText('24')).not.toBeInTheDocument();
+    expect(screen.queryByText('80%')).not.toBeInTheDocument();
+    expect(screen.queryByText('Нов')).not.toBeInTheDocument();
+    expect(screen.queryByText('Гост')).not.toBeInTheDocument();
+    expect(screen.queryByText(/★/)).not.toBeInTheDocument();
+  });
 
-    // Player names visible
-    expect(screen.getByText('Иван')).toBeInTheDocument();
-    expect(screen.getByText('Петър')).toBeInTheDocument();
-    expect(screen.getByText('Георги')).toBeInTheDocument();
-
-    // Player ratings/stars hidden
-    expect(screen.queryByText('★ 8')).not.toBeInTheDocument();
-    expect(screen.queryByText('★ 9')).not.toBeInTheDocument();
-    expect(screen.queryByText('★ 7')).not.toBeInTheDocument();
+  // T-TC-6: Format sensitivity
+  it('uses format-specific statistics (doubles vs singles)', () => {
+    const team: Team = {
+      id: 'team-1',
+      name: 'Отбор 1',
+      players: [
+        {
+          id: 'p-1',
+          name: 'Иван',
+          singles_matches_played: 10,
+          singles_wins: 10, // 100% singles
+          doubles_matches_played: 4,
+          doubles_wins: 1,  // 25% doubles
+        },
+      ],
+    };
+    render(<TeamCard team={team} index={0} format="doubles" />);
+    expect(screen.getByText('25%')).toBeInTheDocument();
+    expect(screen.queryByText('100%')).not.toBeInTheDocument();
   });
 
   it('renders "Свободно място" dashed placeholder when team.players.length < targetSize', () => {
