@@ -1,30 +1,21 @@
-# 5_documentation.md: Documentation & PR Summary for feat/replace-player-selection-elo-with-winrate
+# 6_documentation.md: Documentation & PR Summary for feat/replace-player-selection-elo-with-winrate
 
 ## 1. Documentation Updates Log
-- **Created ADR-0049**: `docs/adr/0049-player-selection-winrate-badges.md` documenting the architectural decision to replace chess star ratings and raw ELO numbers (`⭐ 1260`) with format-aware sports win rate badges (`80%`) and neutral baseline priors (`"Нов"`).
-- **Player Selection & Pool Surfaces**: Updated [`PlayerSelector.tsx`](file:///D:/Projects/team-generator/src/components/generator/PlayerSelector.tsx), [`ActivePool.tsx`](file:///D:/Projects/team-generator/src/components/generator/ActivePool.tsx), and [`TeamSlotPickerModal.tsx`](file:///D:/Projects/team-generator/src/components/team/TeamSlotPickerModal.tsx) to render format-aware win rate badges and neutral priors, adhering strictly to Bulgarian localization requirements (`"Нов"`, `"Гост"`, `"гост"`).
-- **Core Balance Utilities**: Extended [`balance.ts`](file:///D:/Projects/team-generator/src/utils/balance.ts) with `getPlayerWinRate(player, format)` supporting 3-tier cascade (singles, doubles, and aggregate fallback).
+- **[ADR-0049](file:///D:/Projects/team-generator/docs/adr/0049-player-selection-winrate-badges.md)**: Created and finalized, documenting the removal of aggregate team rating badges and the replacement of roster player legacy ELO star badges with format-aware sports win rate badges (`{winRate}%`, `"Нов"`, `"Гост"`).
+- **Component Documentation & Inline Comments**: Updated `TeamCard.tsx` and `GroupCard.tsx` docstrings to reflect clean player-level win rate indicators.
 
 ## 2. Test Suite & Verification Summary
-- **Test Execution**: **899 / 899 tests passing** across 69 test files (100% pass rate).
-- **TypeScript & Linting**: 0 TypeScript compiler errors (`tsc --noEmit`), 0 ESLint errors/warnings.
-- **Production Build**: Clean Vite production build.
-- **Verification Matrices**: Fully validated against all 8 acceptance criteria in `.agent_handoffs/feat/replace-player-selection-elo-with-winrate/5_acceptance_gate.md`.
+- **Test Execution**: 69 test suites executed via Vitest, **902 / 902 tests passed successfully (100% pass rate)**.
+- **TypeScript Typecheck**: `tsc --noEmit` exited cleanly with 0 errors.
+- **ESLint**: `eslint src` exited with 0 warnings or errors.
+- **Build Verification**: `vite build` produced a clean production bundle.
 
 ## 3. Pull Request Details
 - **Branch**: `feat/replace-player-selection-elo-with-winrate`
-- **Base**: `dev`
-- **Pull Request URL**: [PR #82](https://github.com/peshomorskia-pm/team-generator/pull/82)
-- **Title**: `feat: replace player selection elo numbers and stars with sports win rate badges (ADR-0049)`
-- **Files Committed**:
-  - `src/utils/balance.ts` & `src/utils/__tests__/balance.test.ts`
-  - `src/types/generator.ts` & `src/types/index.ts`
-  - `src/hooks/useTeamGenerator.ts`
-  - `src/components/generator/PlayerSelector.tsx` & test suite
-  - `src/components/generator/ActivePool.tsx` & test suite
-  - `src/components/team/TeamSlotPickerModal.tsx` & test suite
-  - `src/components/tournament/TournamentInteractiveBoard.tsx`
-  - `docs/adr/0049-player-selection-winrate-badges.md`
+- **Remote Push**: Pushed upstream to `origin/feat/replace-player-selection-elo-with-winrate`.
+- **Commit Message**: `feat: remove aggregate team rating badges and replace roster player elo stars with win rate badges (ADR-0049)`
+- **Associated PR**: PR #82 updated and verified against `dev`.
 
 ## 4. Lifecycle Conclusion (Summon Orchestrator)
-- **Status**: Completed successfully. Ready for merge review by Orchestrator / Project Owner.
+- All implementation tasks, intake/acceptance gating, architectural reviews, documentation updates, staging/commit/push steps, and verification gates completed successfully.
+- Summoning Orchestrator to merge PR #82 into `dev`.
