@@ -13,6 +13,8 @@ export interface Player {
   doubles_wins?: number;
   doubles_losses?: number;
   winRate?: number;
+  isGuest?: boolean;
+  source?: 'registered' | 'guest';
 }
 
 export interface Team {

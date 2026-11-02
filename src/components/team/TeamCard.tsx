@@ -1,7 +1,8 @@
 import React from 'react';
-import { User, Shuffle, Star, X, UserPlus, Trash2 } from 'lucide-react';
+import { User, Shuffle, X, UserPlus, Trash2 } from 'lucide-react';
 import { TeamCardProps } from '../../types';
 import { Badge } from '../ui/Badge';
+import { getPlayerWinRate } from '../../utils/balance';
 
 export const TeamCard: React.FC<TeamCardProps> = ({
   team,
@@ -18,21 +19,6 @@ export const TeamCard: React.FC<TeamCardProps> = ({
     targetSize !== undefined && targetSize > team.players.length
       ? targetSize - team.players.length
       : 0;
-  const displayTotalRating = React.useMemo(() => {
-    if (team.totalRating !== undefined && team.totalRating > 0 && !format) {
-      return team.totalRating;
-    }
-    const sum = team.players.reduce((acc, p) => {
-      const r =
-        format === 'singles'
-          ? (p.singles_rating ?? p.rating ?? 0)
-          : format === 'doubles'
-            ? (p.doubles_rating ?? p.rating ?? 0)
-            : (p.rating ?? 0);
-      return acc + r;
-    }, 0);
-    return sum > 0 ? sum : team.totalRating;
-  }, [team, format]);
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden transform transition-all duration-300 hover:shadow-md">
@@ -45,11 +31,6 @@ export const TeamCard: React.FC<TeamCardProps> = ({
           {team.name}
         </h3>
         <div className="flex items-center space-x-2">
-          {mode !== 'generic' && displayTotalRating !== undefined && displayTotalRating > 0 && (
-            <Badge variant="amber" size="sm" icon={Star}>
-              {displayTotalRating}
-            </Badge>
-          )}
           <Badge variant="slate" size="sm">
             {team.players.length} играчи
           </Badge>
@@ -83,12 +64,8 @@ export const TeamCard: React.FC<TeamCardProps> = ({
       <div className="p-5">
         <ul className="space-y-2">
           {team.players.map((player) => {
-            const playerRating =
-              format === 'singles'
-                ? (player.singles_rating ?? player.rating)
-                : format === 'doubles'
-                  ? (player.doubles_rating ?? player.rating)
-                  : player.rating;
+            const isGuest = Boolean(player.isGuest || player.source === 'guest');
+            const winRateInfo = getPlayerWinRate(player, format);
 
             return (
               <li
@@ -100,10 +77,20 @@ export const TeamCard: React.FC<TeamCardProps> = ({
                   <span className="truncate">{player.name}</span>
                 </div>
                 <div className="flex items-center space-x-1.5 shrink-0">
-                  {mode !== 'generic' && playerRating !== undefined && (
-                    <span className="text-xs text-amber-500 font-medium ml-2 shrink-0">
-                      ★ {playerRating}
-                    </span>
+                  {mode !== 'generic' && (
+                    isGuest ? (
+                      <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 shrink-0">
+                        Гост
+                      </span>
+                    ) : winRateInfo.isNew ? (
+                      <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 shrink-0">
+                        Нов
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 shrink-0">
+                        {Math.round(winRateInfo.winRate)}%
+                      </span>
+                    )
                   )}
                   {onRemovePlayer && (
                     <button
