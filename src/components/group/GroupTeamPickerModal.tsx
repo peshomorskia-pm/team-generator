@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { X, Search, Users, User, Star } from 'lucide-react';
+import { X, Search, Users, User } from 'lucide-react';
 import type { Team } from '../../types';
-import { Badge } from '../ui/Badge';
+import { getPlayerWinRate } from '../../utils/balance';
 
 export interface GroupTeamPickerModalProps {
   isOpen: boolean;
@@ -55,7 +55,6 @@ export const GroupTeamPickerModal: React.FC<GroupTeamPickerModalProps> = ({
     return unassignedTeams.filter((t) => {
       if (t.name.toLowerCase().includes(q)) return true;
       if (t.players.some((p) => p.name.toLowerCase().includes(q))) return true;
-      if (t.totalRating !== undefined && String(t.totalRating).includes(q)) return true;
       return false;
     });
   }, [unassignedTeams, searchQuery]);
@@ -106,7 +105,7 @@ export const GroupTeamPickerModal: React.FC<GroupTeamPickerModalProps> = ({
             type="button"
             onClick={handleClose}
             aria-label="Затвори"
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-lg transition-colors cursor-pointer"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <X className="w-5 h-5" />
           </button>
@@ -137,75 +136,56 @@ export const GroupTeamPickerModal: React.FC<GroupTeamPickerModalProps> = ({
                 : 'Няма налични свободни отбори за разпределение.'}
             </div>
           ) : (
-            filteredTeams.map((team) => {
-              const displayTotalRating = (() => {
-                if (team.totalRating !== undefined && team.totalRating > 0 && !format) {
-                  return team.totalRating;
-                }
-                const sum = team.players.reduce((acc, p) => {
-                  const r =
-                    format === 'singles'
-                      ? (p.singles_rating ?? p.rating ?? 0)
-                      : format === 'doubles'
-                        ? (p.doubles_rating ?? p.rating ?? 0)
-                        : (p.rating ?? 0);
-                  return acc + r;
-                }, 0);
-                return sum > 0 ? sum : team.totalRating;
-              })();
+            filteredTeams.map((team) => (
+              <button
+                key={team.id}
+                type="button"
+                onClick={() => handleSelect(team)}
+                data-testid={`select-team-${team.id}`}
+                className="w-full text-left p-3.5 rounded-xl border border-gray-100 dark:border-slate-700/80 hover:border-indigo-300 dark:hover:border-indigo-600 bg-white dark:bg-slate-800 hover:bg-indigo-50/40 dark:hover:bg-slate-700/50 transition-all flex flex-col gap-2 group cursor-pointer shadow-2xs hover:shadow-sm"
+              >
+                <div className="flex items-center justify-between w-full">
+                  <span className="font-semibold text-gray-900 dark:text-white text-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    {team.name}
+                  </span>
+                </div>
 
-              return (
-                <button
-                  key={team.id}
-                  type="button"
-                  onClick={() => handleSelect(team)}
-                  data-testid={`select-team-${team.id}`}
-                  className="w-full text-left p-3.5 rounded-xl border border-gray-100 dark:border-slate-700/80 hover:border-indigo-300 dark:hover:border-indigo-600 bg-white dark:bg-slate-800 hover:bg-indigo-50/40 dark:hover:bg-slate-700/50 transition-all flex flex-col gap-2 group cursor-pointer shadow-2xs hover:shadow-sm"
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="font-semibold text-gray-900 dark:text-white text-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                      {team.name}
-                    </span>
-                    {displayTotalRating !== undefined && displayTotalRating > 0 && (
-                      <Badge variant="amber" size="sm" icon={Star}>
-                        {displayTotalRating}
-                      </Badge>
-                    )}
-                  </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {team.players.map((p) => {
+                    const isGuest = Boolean(p.isGuest || p.source === 'guest');
+                    const winRateInfo = getPlayerWinRate(p, format);
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    {team.players.map((p) => {
-                      const playerRating =
-                        format === 'singles'
-                          ? (p.singles_rating ?? p.rating)
-                          : format === 'doubles'
-                            ? (p.doubles_rating ?? p.rating)
-                            : p.rating;
-
-                      return (
-                        <span
-                          key={p.id}
-                          className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300"
-                        >
-                          <User className="w-3 h-3 mr-1 text-indigo-400" />
-                          <span>{p.name}</span>
-                          {playerRating !== undefined && (
-                            <span className="ml-1 text-amber-500 font-medium">
-                              ★{playerRating}
-                            </span>
-                          )}
-                        </span>
-                      );
-                    })}
-                    {team.players.length === 0 && (
-                      <span className="text-xs text-gray-400 italic">
-                        Няма играчи в отбора
+                    return (
+                      <span
+                        key={p.id}
+                        className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-300"
+                      >
+                        <User className="w-3 h-3 mr-1 text-indigo-400" />
+                        <span>{p.name}</span>
+                        {isGuest ? (
+                          <span className="ml-1.5 px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+                            Гост
+                          </span>
+                        ) : winRateInfo.isNew ? (
+                          <span className="ml-1.5 px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                            Нов
+                          </span>
+                        ) : (
+                          <span className="ml-1.5 px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+                            {Math.round(winRateInfo.winRate)}%
+                          </span>
+                        )}
                       </span>
-                    )}
-                  </div>
-                </button>
-              );
-            })
+                    );
+                  })}
+                  {team.players.length === 0 && (
+                    <span className="text-xs text-gray-400 italic">
+                      Няма играчи в отбора
+                    </span>
+                  )}
+                </div>
+              </button>
+            ))
           )}
         </div>
       </div>

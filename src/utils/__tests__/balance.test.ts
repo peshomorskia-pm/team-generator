@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { balanceTeams, getPlayerWinRate, getPlayerEffectiveSkill } from '../balance';
+import { balanceTeams, getPlayerWinRate, getPlayerEffectiveSkill, resolvePlayerRating, shuffleTeamsBalanced } from '../balance';
 import { Player } from '../../types';
 
 describe('balanceTeams', () => {
@@ -440,6 +440,87 @@ describe('getPlayerWinRate', () => {
       isNew: true,
       label: 'Нов',
     });
+  });
+});
+
+describe('resolvePlayerRating', () => {
+  it('resolves format-aware win rate for player with match history', () => {
+    const player = {
+      singles_matches_played: 10,
+      singles_wins: 8,
+      doubles_matches_played: 10,
+      doubles_wins: 4,
+    };
+    expect(resolvePlayerRating(player, 'singles')).toBe(80);
+    expect(resolvePlayerRating(player, 'doubles')).toBe(40);
+  });
+
+  it('resolves explicit winRate when present', () => {
+    const player = { winRate: 65.5 };
+    expect(resolvePlayerRating(player)).toBe(65.5);
+  });
+
+  it('returns 50.0 neutral prior for unplayed registered player with 0 matches', () => {
+    const player = { singles_matches_played: 0, singles_wins: 0 };
+    expect(resolvePlayerRating(player, 'singles')).toBe(50.0);
+  });
+
+  it('returns undefined for guest player without match stats', () => {
+    expect(resolvePlayerRating({ source: 'guest' })).toBeUndefined();
+    expect(resolvePlayerRating({ isGuest: true })).toBeUndefined();
+  });
+
+  it('falls back to legacy rating for registered player without match history', () => {
+    const player = { singles_rating: 1650, doubles_rating: 1550, rating: 1500 };
+    expect(resolvePlayerRating(player, 'singles')).toBe(1650);
+    expect(resolvePlayerRating(player, 'doubles')).toBe(1550);
+    expect(resolvePlayerRating(player)).toBe(1500);
+  });
+});
+
+describe('shuffleTeamsBalanced', () => {
+  const players: Player[] = [
+    { id: '1', name: 'P1', winRate: 90.0, doubles_matches_played: 10, doubles_wins: 9 },
+    { id: '2', name: 'P2', winRate: 80.0, doubles_matches_played: 10, doubles_wins: 8 },
+    { id: '3', name: 'P3', winRate: 40.0, doubles_matches_played: 10, doubles_wins: 4 },
+    { id: '4', name: 'P4', winRate: 30.0, doubles_matches_played: 10, doubles_wins: 3 },
+  ];
+
+  it('takes array of 4 players and returns 2 teams of 2 players', () => {
+    const teams = shuffleTeamsBalanced(players, 2, 'doubles');
+    expect(teams).toHaveLength(2);
+    expect(teams[0].players).toHaveLength(2);
+    expect(teams[1].players).toHaveLength(2);
+  });
+
+  it('preserves all player assignments and balances win rates', () => {
+    const teams = shuffleTeamsBalanced(players, 2, 'doubles');
+    const allAssignedIds = teams.flatMap((t) => t.players.map((p) => p.id));
+    expect(allAssignedIds.sort()).toEqual(['1', '2', '3', '4']);
+
+    // Balanced sum: {90, 30} = 120 and {80, 40} = 120
+    expect(teams[0].totalRating).toBe(120);
+    expect(teams[1].totalRating).toBe(120);
+  });
+
+  it('repeated runs exhibit non-deterministic team ordering while maintaining balanced sums', () => {
+    let p1OnTeam1 = 0;
+    let p1OnTeam2 = 0;
+
+    for (let i = 0; i < 30; i++) {
+      const teams = shuffleTeamsBalanced(players, 2, 'doubles');
+      expect(teams[0].totalRating).toBe(120);
+      expect(teams[1].totalRating).toBe(120);
+
+      if (teams[0].players.some((p) => p.id === '1')) {
+        p1OnTeam1++;
+      } else {
+        p1OnTeam2++;
+      }
+    }
+
+    expect(p1OnTeam1).toBeGreaterThan(0);
+    expect(p1OnTeam2).toBeGreaterThan(0);
   });
 });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateGroupStandings, calculateAllGroupStandings, formatMatchScoreDisplay } from '../standings';
+import { calculateGroupStandings, calculateAllGroupStandings } from '../standings';
 import type { StandingsMatchInput } from '../../types/standings';
 
 describe('calculateGroupStandings Engine', () => {
@@ -324,35 +324,5 @@ describe('calculateGroupStandings Engine', () => {
     // Despite rowA having -9 gameDiff and rowB having +5 gameDiff,
     // Team A beat Team B in H2H multi-set match, so Team A must rank above Team B!
     expect(rowA.rank).toBeLessThan(rowB.rank);
-  });
-
-  // Scenario 9: formatMatchScoreDisplay formatting
-  it('formats single and multi-set match scores correctly', () => {
-    expect(
-      formatMatchScoreDisplay({
-        team_1_score: 6,
-        team_2_score: 4,
-        sets: null,
-      })
-    ).toBe('6 : 4');
-
-    expect(
-      formatMatchScoreDisplay({
-        team_1_score: 2,
-        team_2_score: 1,
-        sets: [
-          { set_number: 1, team_1_score: 6, team_2_score: 4 },
-          { set_number: 2, team_1_score: 3, team_2_score: 6 },
-          { set_number: 3, team_1_score: 10, team_2_score: 7 },
-        ],
-      })
-    ).toBe('6:4, 3:6, 10:7');
-
-    expect(
-      formatMatchScoreDisplay({
-        team_1_score: null,
-        team_2_score: null,
-      })
-    ).toBe('- : -');
   });
 });

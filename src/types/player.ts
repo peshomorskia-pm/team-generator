@@ -1,8 +1,8 @@
 export interface Player {
   id: string;
   name: string;
-  singles_rating: number;
-  doubles_rating: number;
+  singles_rating?: number;
+  doubles_rating?: number;
   singles_matches_played: number;
   singles_wins: number;
   singles_losses: number;

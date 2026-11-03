@@ -199,11 +199,6 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
                           <span className="font-semibold text-sm text-gray-800 dark:text-gray-100">
                             {match.team1.name}
                           </span>
-                          {match.team1.totalRating !== undefined && match.team1.totalRating > 0 && (
-                            <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
-                              ★ {match.team1.totalRating}
-                            </span>
-                          )}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                           {match.team1.players.map((p) => p.name).join(', ')}
@@ -220,11 +215,6 @@ export const MatchScheduleList: React.FC<MatchScheduleListProps> = ({
                       {/* Team 2 */}
                       <div className="space-y-1 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {match.team2.totalRating !== undefined && match.team2.totalRating > 0 && (
-                            <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
-                              ★ {match.team2.totalRating}
-                            </span>
-                          )}
                           <span className="font-semibold text-sm text-gray-800 dark:text-gray-100">
                             {match.team2.name}
                           </span>

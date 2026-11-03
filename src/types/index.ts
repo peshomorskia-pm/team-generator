@@ -24,15 +24,6 @@ export interface Team {
   players: Player[];
   totalRating?: number;
 }
-
-export interface PlayerInputProps {
-  onAddPlayer: (name: string, rating?: number) => void;
-  isLoading?: boolean;
-  value?: string;
-  onChange?: (val: string) => void;
-  playerCount?: number;
-}
-
 export type GeneratorMode = 'tennis' | 'generic';
 
 export interface TeamSettingsProps {

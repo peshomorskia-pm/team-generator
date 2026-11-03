@@ -1,6 +1,5 @@
 import type { Team } from '../types';
 import type { GroupStandingRow, GroupStanding, StandingsMatchInput } from '../types/standings';
-import type { MatchSet } from '../types/match';
 
 export interface MatchOutcome {
   isCompleted: boolean;
@@ -71,20 +70,6 @@ export function getMatchOutcome(m: StandingsMatchInput): MatchOutcome {
     team1SetsWon: s1 > s2 ? 1 : 0,
     team2SetsWon: s2 > s1 ? 1 : 0,
   };
-}
-
-export function formatMatchScoreDisplay(match: {
-  team_1_score: number | null;
-  team_2_score: number | null;
-  sets?: MatchSet[] | null;
-}): string {
-  if (match.sets && match.sets.length > 0) {
-    return match.sets.map((s) => `${s.team_1_score}:${s.team_2_score}`).join(', ');
-  }
-  if (match.team_1_score !== null && match.team_2_score !== null) {
-    return `${match.team_1_score} : ${match.team_2_score}`;
-  }
-  return '- : -';
 }
 
 /**

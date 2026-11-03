@@ -17,7 +17,63 @@ export interface PlayerLike {
   winRate?: number | null;
 }
 
-export { shuffleTeamsBalanced } from './shuffle';
+export interface ResolvablePlayerLike {
+  singles_matches_played?: number | null;
+  singles_wins?: number | null;
+  doubles_matches_played?: number | null;
+  doubles_wins?: number | null;
+  matches_played?: number | null;
+  wins?: number | null;
+  winRate?: number | null;
+  source?: string;
+  isGuest?: boolean;
+  rating?: number;
+  singles_rating?: number;
+  doubles_rating?: number;
+}
+/**
+ * Shuffles an array of players and partitions them into balanced teams.
+ */
+export function shuffleTeamsBalanced(
+  players: Player[],
+  numTeams: number,
+  format?: 'singles' | 'doubles' | boolean
+): Team[] {
+  return balanceTeams(fisherYatesShuffle(players), numTeams, format);
+}
+/**
+ * Resolves effective numeric skill or win rate for a player.
+ * - Players with match history or explicit winRate return format-aware win rate (0-100%).
+ * - Unplayed registered players with 0 matches return 50.0% neutral prior.
+ * - Guest players without statistics return undefined.
+ * - Registered players with legacy rating fields return legacy rating.
+ */
+export function resolvePlayerRating(
+  player: ResolvablePlayerLike,
+  fmt?: 'singles' | 'doubles'
+): number | undefined {
+  const hasMatchHistory =
+    (player.singles_matches_played !== undefined && player.singles_matches_played !== null) ||
+    (player.doubles_matches_played !== undefined && player.doubles_matches_played !== null) ||
+    (player.matches_played !== undefined && player.matches_played !== null) ||
+    (typeof player.winRate === 'number' && !isNaN(player.winRate));
+
+  if (hasMatchHistory) {
+    return getPlayerWinRate(player, fmt).winRate;
+  }
+
+  if (player.source === 'guest' || player.isGuest) {
+    return undefined;
+  }
+
+  if (fmt === 'singles') {
+    return player.singles_rating ?? player.rating;
+  }
+  if (fmt === 'doubles') {
+    return player.doubles_rating ?? player.rating;
+  }
+  return player.rating;
+}
 
 /**
  * Calculates win rate percentage and display metadata for a player.

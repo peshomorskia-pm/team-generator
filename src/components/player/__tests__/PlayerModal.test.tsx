@@ -77,7 +77,7 @@ describe('PlayerModal Component', () => {
     const submitBtn = screen.getByRole('button', { name: /създай/i });
     await user.click(submitBtn);
 
-    expect(handleSave).toHaveBeenCalledWith('Георги Аспарухов', 1200, 1200, 1200);
+    expect(handleSave).toHaveBeenCalledWith('Георги Аспарухов');
     await waitFor(() => {
       expect(handleClose).toHaveBeenCalled();
     });
@@ -104,12 +104,7 @@ describe('PlayerModal Component', () => {
     const saveBtn = screen.getByRole('button', { name: /запази/i });
     await user.click(saveBtn);
 
-    expect(handleSave).toHaveBeenCalledWith(
-      'Иван Петров - обновен',
-      1450,
-      1500,
-      1400
-    );
+    expect(handleSave).toHaveBeenCalledWith('Иван Петров - обновен');
     await waitFor(() => {
       expect(handleClose).toHaveBeenCalled();
     });

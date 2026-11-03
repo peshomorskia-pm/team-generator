@@ -5,7 +5,7 @@ export type FormOutcome = 'W' | 'L';
 export interface RankingStats {
   rank: number;
   player: Player;
-  rating: number; // Backward compatibility fallback (1200)
+  rating?: number; // Optional fallback; pure sports standings drive rankings
   matchesPlayed: number;
   wins: number;
   losses: number;
