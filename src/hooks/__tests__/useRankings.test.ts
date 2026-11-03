@@ -514,4 +514,88 @@ describe('useRankings hook', () => {
     expect(result.current.rankings[4].rank).toBe(5);
     expect(result.current.rankings[4].matchesPlayed).toBe(0);
   });
+
+  describe('error handling & refresh', () => {
+    it('handles playersRes.error during initialization', async () => {
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'players') {
+          return {
+            select: vi.fn().mockResolvedValue({
+              data: null,
+              error: new Error('Failed to load players'),
+            }),
+          };
+        }
+        return {
+          select: vi.fn().mockResolvedValue({ data: [], error: null }),
+        };
+      });
+
+      const { result } = renderHook(() => useRankings());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.error).toBe('Failed to load players');
+      expect(result.current.rankings).toEqual([]);
+    });
+
+    it('handles matchesRes.error during initialization', async () => {
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'players') {
+          return {
+            select: vi.fn().mockResolvedValue({ data: mockPlayers, error: null }),
+          };
+        }
+        if (table === 'matches') {
+          return {
+            select: vi.fn().mockResolvedValue({
+              data: null,
+              error: new Error('Failed to load matches'),
+            }),
+          };
+        }
+        return {
+          select: vi.fn().mockResolvedValue({ data: [], error: null }),
+        };
+      });
+
+      const { result } = renderHook(() => useRankings());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.error).toBe('Failed to load matches');
+    });
+
+    it('handles isSupabaseConfigured() === false during refresh()', async () => {
+      setupSupabaseMock();
+
+      const { result } = renderHook(() => useRankings());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.error).toBeNull();
+
+      vi.mocked(supabaseModule.isSupabaseConfigured).mockReturnValue(false);
+
+      await act(async () => {
+        await result.current.refresh();
+      });
+
+      expect(result.current.error).toBe('Supabase не е конфигуриран.');
+    });
+
+    it('handles generic non-Error rejection gracefully', async () => {
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'players') {
+          return {
+            select: vi.fn().mockRejectedValue('Unknown failure'),
+          };
+        }
+        return {
+          select: vi.fn().mockResolvedValue({ data: [], error: null }),
+        };
+      });
+
+      const { result } = renderHook(() => useRankings());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.error).toBe('Грешка при зареждане на класирането.');
+    });
+  });
 });

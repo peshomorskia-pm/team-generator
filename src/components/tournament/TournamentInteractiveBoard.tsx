@@ -672,7 +672,7 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
                 aria-label="Намали брой отбори"
                 onClick={() => handleUpdateTargetTeams(targetTeamCount - 1)}
                 disabled={targetTeamCount <= 2}
-                className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 font-bold text-base sm:text-sm hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                className="w-11 h-11 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 font-bold text-base sm:text-sm hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
               >
                 -
               </button>
@@ -697,7 +697,7 @@ export const TournamentInteractiveBoard: React.FC<TournamentInteractiveBoardProp
                 aria-label="Увеличи брой отбори"
                 onClick={() => handleUpdateTargetTeams(targetTeamCount + 1)}
                 disabled={targetTeamCount >= 32}
-                className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 font-bold text-base sm:text-sm hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                className="w-11 h-11 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 font-bold text-base sm:text-sm hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
               >
                 +
               </button>

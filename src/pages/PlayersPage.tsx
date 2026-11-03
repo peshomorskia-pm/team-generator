@@ -36,23 +36,12 @@ export const PlayersPage: React.FC = () => {
     return sortPlayersByName(matches);
   }, [players, searchQuery]);
 
-  const handleSavePlayer = async (
-    name: string,
-    rating?: number,
-    singlesRating?: number,
-    doublesRating?: number
-  ) => {
+  const handleSavePlayer = async (name: string) => {
     if (editingPlayer) {
-      await updatePlayer(
-        editingPlayer.id,
-        name,
-        rating,
-        singlesRating,
-        doublesRating
-      );
+      await updatePlayer(editingPlayer.id, name);
       setEditingPlayer(undefined);
     } else {
-      await createPlayer(name, rating, singlesRating, doublesRating);
+      await createPlayer(name);
       setIsCreateModalOpen(false);
     }
   };
@@ -246,7 +235,7 @@ export const PlayersPage: React.FC = () => {
                       type="button"
                       onClick={() => setEditingPlayer(player)}
                       aria-label={`Редактирай ${player.name}`}
-                      className="p-2 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                      className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                     >
                       <Pencil className="w-5 h-5" />
                     </button>
@@ -254,7 +243,7 @@ export const PlayersPage: React.FC = () => {
                       type="button"
                       onClick={() => setDeletingPlayer(player)}
                       aria-label={`Изтрий ${player.name}`}
-                      className="p-2 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                      className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>

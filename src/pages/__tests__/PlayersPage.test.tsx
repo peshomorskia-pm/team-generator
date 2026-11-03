@@ -227,7 +227,7 @@ describe('PlayersPage', () => {
       await user.click(submitBtn);
 
       await waitFor(() => {
-        expect(createPlayerMock).toHaveBeenCalledWith('Стилиян Петров', 1200, 1200, 1200);
+        expect(createPlayerMock).toHaveBeenCalledWith('Стилиян Петров');
       });
     });
 
@@ -254,13 +254,7 @@ describe('PlayersPage', () => {
       await user.click(saveBtn);
 
       await waitFor(() => {
-        expect(updatePlayerMock).toHaveBeenCalledWith(
-          'p-1',
-          'Христо Стоичков - обновен',
-          1950,
-          1200,
-          1200
-        );
+        expect(updatePlayerMock).toHaveBeenCalledWith('p-1', 'Христо Стоичков - обновен');
       });
     });
 
