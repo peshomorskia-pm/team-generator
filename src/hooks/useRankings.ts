@@ -141,8 +141,8 @@ export function useRankings(initialFormat: MatchFormat = 'singles'): UseRankings
       const domainPlayer: Player = {
         id: s.playerId,
         name: s.name,
-        singles_rating: p?.singles_rating ?? 1200,
-        doubles_rating: p?.doubles_rating ?? 1200,
+        singles_rating: p?.singles_rating,
+        doubles_rating: p?.doubles_rating,
         singles_matches_played: p?.singles_matches_played ?? s.matchesPlayed,
         singles_wins: p?.singles_wins ?? s.wins,
         singles_losses: p?.singles_losses ?? s.losses,
@@ -158,8 +158,8 @@ export function useRankings(initialFormat: MatchFormat = 'singles'): UseRankings
         rank: s.rank,
         player: domainPlayer,
         rating: isSingles
-          ? (p?.singles_rating ?? p?.rating ?? 1200)
-          : (p?.doubles_rating ?? p?.rating ?? 1200),
+          ? (p?.singles_rating ?? p?.rating)
+          : (p?.doubles_rating ?? p?.rating),
         matchesPlayed: s.matchesPlayed,
         wins: s.wins,
         losses: s.losses,

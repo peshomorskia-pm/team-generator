@@ -14,19 +14,8 @@ export interface UsePlayersReturn {
   error: string | null;
   alert: AlertNotification | null;
   fetchPlayers: () => Promise<void>;
-  createPlayer: (
-    name: string,
-    rating?: number,
-    singlesRating?: number,
-    doublesRating?: number
-  ) => Promise<void>;
-  updatePlayer: (
-    id: string,
-    name: string,
-    rating?: number,
-    singlesRating?: number,
-    doublesRating?: number
-  ) => Promise<void>;
+  createPlayer: (name: string) => Promise<void>;
+  updatePlayer: (id: string, name: string) => Promise<void>;
   deletePlayer: (id: string) => Promise<void>;
   clearAlert: () => void;
 }
@@ -88,12 +77,7 @@ export function usePlayers(): UsePlayersReturn {
   }, []);
 
   const createPlayer = useCallback(
-    async (
-      name: string,
-      rating?: number,
-      singlesRating?: number,
-      doublesRating?: number
-    ) => {
+    async (name: string) => {
       setLoading(true);
       setError(null);
       try {
@@ -105,24 +89,11 @@ export function usePlayers(): UsePlayersReturn {
         }
 
         const trimmedName = name.trim();
-        const finalRating =
-          rating !== undefined && Number.isFinite(rating) && rating >= 0 ? rating : 1200;
-        const finalSinglesRating =
-          singlesRating !== undefined && Number.isFinite(singlesRating) && singlesRating >= 0
-            ? singlesRating
-            : finalRating;
-        const finalDoublesRating =
-          doublesRating !== undefined && Number.isFinite(doublesRating) && doublesRating >= 0
-            ? doublesRating
-            : finalRating;
 
         const { data, error: insertError } = await supabase
           .from('players')
           .insert({
             name: trimmedName,
-            rating: finalRating,
-            singles_rating: finalSinglesRating,
-            doubles_rating: finalDoublesRating,
           })
           .select()
           .single();
@@ -153,13 +124,7 @@ export function usePlayers(): UsePlayersReturn {
   );
 
   const updatePlayer = useCallback(
-    async (
-      id: string,
-      name: string,
-      rating?: number,
-      singlesRating?: number,
-      doublesRating?: number
-    ) => {
+    async (id: string, name: string) => {
       setLoading(true);
       setError(null);
       try {
@@ -171,24 +136,11 @@ export function usePlayers(): UsePlayersReturn {
         }
 
         const trimmedName = name.trim();
-        const finalRating =
-          rating !== undefined && Number.isFinite(rating) && rating >= 0 ? rating : 1200;
-        const finalSinglesRating =
-          singlesRating !== undefined && Number.isFinite(singlesRating) && singlesRating >= 0
-            ? singlesRating
-            : finalRating;
-        const finalDoublesRating =
-          doublesRating !== undefined && Number.isFinite(doublesRating) && doublesRating >= 0
-            ? doublesRating
-            : finalRating;
 
         const { data, error: updateError } = await supabase
           .from('players')
           .update({
             name: trimmedName,
-            rating: finalRating,
-            singles_rating: finalSinglesRating,
-            doubles_rating: finalDoublesRating,
           })
           .eq('id', id)
           .select()

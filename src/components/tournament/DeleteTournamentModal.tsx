@@ -120,7 +120,7 @@ export const DeleteTournamentModal: React.FC<DeleteTournamentModalProps> = ({
             onClick={onClose}
             disabled={effectiveIsDeleting}
             aria-label="Затвори"
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors disabled:opacity-50"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2.5 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700/60 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <X className="w-5 h-5" />
           </button>

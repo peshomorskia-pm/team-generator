@@ -28,8 +28,8 @@ export interface MatchPlayer {
   player_id: string | null;
   guest_name: string | null;
   team: 'team_1' | 'team_2';
-  rating_before: number | null;
-  rating_after: number | null;
+  rating_before?: number | null;
+  rating_after?: number | null;
 }
 
 export interface CreateMatchInput {
