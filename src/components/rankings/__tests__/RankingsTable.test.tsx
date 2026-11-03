@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import { RankingsTable } from '../RankingsTable';
 import type { RankingStats } from '../../../types/rankings';
 
@@ -163,5 +163,51 @@ describe('RankingsTable Component', () => {
 
     const formContainers = screen.getAllByLabelText('Форма от последните 5 мача');
     expect(formContainers).toHaveLength(3);
+  });
+
+  it('calls onSelectPlayer when a row is clicked', () => {
+    const handleSelect = vi.fn();
+    render(<RankingsTable rankings={mockRankings} onSelectPlayer={handleSelect} />);
+
+    const playerRow = screen.getByRole('button', { name: 'Преглед на профила на Григор Димитров' });
+    fireEvent.click(playerRow);
+
+    expect(handleSelect).toHaveBeenCalledTimes(1);
+    expect(handleSelect).toHaveBeenCalledWith('p-1', 'Григор Димитров');
+  });
+
+  it('calls onSelectPlayer when Enter key is pressed on a row', () => {
+    const handleSelect = vi.fn();
+    render(<RankingsTable rankings={mockRankings} onSelectPlayer={handleSelect} />);
+
+    const playerRow = screen.getByRole('button', { name: 'Преглед на профила на Григор Димитров' });
+    fireEvent.keyDown(playerRow, { key: 'Enter' });
+
+    expect(handleSelect).toHaveBeenCalledTimes(1);
+    expect(handleSelect).toHaveBeenCalledWith('p-1', 'Григор Димитров');
+  });
+
+  it('calls onSelectPlayer when Space key is pressed on a row and prevents default', () => {
+    const handleSelect = vi.fn();
+    render(<RankingsTable rankings={mockRankings} onSelectPlayer={handleSelect} />);
+
+    const playerRow = screen.getByRole('button', { name: 'Преглед на профила на Димитър Кузманов' });
+    fireEvent.keyDown(playerRow, { key: ' ' });
+
+    expect(handleSelect).toHaveBeenCalledTimes(1);
+    expect(handleSelect).toHaveBeenCalledWith('p-2', 'Димитър Кузманов');
+  });
+
+  it('maintains backward compatibility when onSelectPlayer is not provided', () => {
+    render(<RankingsTable rankings={mockRankings} />);
+
+    // Rows should not have role="button" or tabIndex
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    const rows = screen.getAllByRole('row');
+    // Header is index 0, player rows are 1-3
+    for (let i = 1; i < rows.length; i++) {
+      expect(rows[i]).not.toHaveAttribute('tabindex');
+      expect(rows[i]).not.toHaveAttribute('aria-label');
+    }
   });
 });

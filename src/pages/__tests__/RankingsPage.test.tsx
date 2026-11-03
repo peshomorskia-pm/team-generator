@@ -91,7 +91,19 @@ describe('RankingsPage Component', () => {
         };
       }
       return {
-        select: vi.fn().mockResolvedValue({ data: matches, error: null }),
+        select: vi.fn().mockImplementation(() => {
+          const promise = Promise.resolve({ data: matches, error: null }) as Promise<{
+            data: unknown[];
+            error: null;
+          }> & {
+            order: (
+              column: string,
+              options?: { ascending?: boolean }
+            ) => Promise<{ data: unknown[]; error: null }>;
+          };
+          promise.order = vi.fn().mockResolvedValue({ data: matches, error: null });
+          return promise;
+        }),
       };
     });
   };
@@ -173,5 +185,28 @@ describe('RankingsPage Component', () => {
 
     expect(await screen.findByText('Все още няма добавени играчи')).toBeInTheDocument();
     expect(screen.queryByTestId('rankings-podium')).not.toBeInTheDocument();
+  });
+
+  it('opens PlayerProfileModal when a player row is clicked and closes on close button', async () => {
+    const user = userEvent.setup();
+    setupSupabaseMock();
+
+    render(<RankingsPage />);
+    await screen.findByRole('table');
+
+    // Click on player row for Григор Димитров (desktop row is index 0)
+    const playerRows = screen.getAllByRole('button', { name: 'Преглед на профила на Григор Димитров' });
+    await user.click(playerRows[0]);
+
+    // Profile modal opens as dialog with player name heading
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Григор Димитров' })).toBeInTheDocument();
+
+    // Close button dismisses the modal
+    const closeBtn = screen.getByRole('button', { name: 'Затвори' });
+    await user.click(closeBtn);
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

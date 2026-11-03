@@ -5,9 +5,11 @@ import { FormBadge } from './FormBadge';
 
 export interface RankingsTableProps {
   rankings: RankingStats[];
+  /** Optional callback triggered when clicking or pressing Enter/Space on a player row */
+  onSelectPlayer?: (playerId: string, playerName?: string) => void;
 }
 
-export const RankingsTable: React.FC<RankingsTableProps> = ({ rankings }) => {
+export const RankingsTable: React.FC<RankingsTableProps> = ({ rankings, onSelectPlayer }) => {
   return (
     <div className="overflow-x-auto rounded-2xl border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xs">
       <table className="w-full text-left border-collapse text-sm">
@@ -46,7 +48,21 @@ export const RankingsTable: React.FC<RankingsTableProps> = ({ rankings }) => {
           {rankings.map((stat) => (
             <tr
               key={stat.player.id}
-              className="hover:bg-gray-50/50 dark:hover:bg-gray-700/20 transition-colors"
+              role={onSelectPlayer ? 'button' : undefined}
+              tabIndex={onSelectPlayer ? 0 : undefined}
+              aria-label={onSelectPlayer ? `Преглед на профила на ${stat.player.name}` : undefined}
+              onClick={() => onSelectPlayer?.(stat.player.id, stat.player.name)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onSelectPlayer?.(stat.player.id, stat.player.name);
+                }
+              }}
+              className={
+                onSelectPlayer
+                  ? 'cursor-pointer hover:bg-indigo-50/50 dark:hover:bg-slate-700/40 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-colors'
+                  : 'hover:bg-gray-50/50 dark:hover:bg-gray-700/20 transition-colors'
+              }
             >
               <td className="py-3 px-3 text-center">
                 <span className="font-bold text-gray-700 dark:text-gray-300 w-10 text-center inline-block">

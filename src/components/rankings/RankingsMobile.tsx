@@ -5,15 +5,31 @@ import { FormBadge } from './FormBadge';
 
 export interface RankingsMobileProps {
   rankings: RankingStats[];
+  /** Optional callback triggered when clicking or pressing Enter/Space on a mobile card */
+  onSelectPlayer?: (playerId: string, playerName?: string) => void;
 }
 
-export const RankingsMobile: React.FC<RankingsMobileProps> = ({ rankings }) => {
+export const RankingsMobile: React.FC<RankingsMobileProps> = ({ rankings, onSelectPlayer }) => {
   return (
     <div className="space-y-3">
       {rankings.map((stat) => (
         <div
           key={stat.player.id}
-          className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 shadow-xs"
+          role={onSelectPlayer ? 'button' : undefined}
+          tabIndex={onSelectPlayer ? 0 : undefined}
+          aria-label={onSelectPlayer ? `Преглед на профила на ${stat.player.name}` : undefined}
+          onClick={() => onSelectPlayer?.(stat.player.id, stat.player.name)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onSelectPlayer?.(stat.player.id, stat.player.name);
+            }
+          }}
+          className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 shadow-xs transition-colors ${
+            onSelectPlayer
+              ? 'cursor-pointer hover:bg-indigo-50/50 dark:hover:bg-slate-700/40 focus:outline-none focus:ring-2 focus:ring-indigo-500'
+              : ''
+          }`}
         >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2.5">
