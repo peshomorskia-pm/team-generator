@@ -59,6 +59,7 @@ describe('playerProfileStats engine', () => {
         wins: 0,
         losses: 0,
         winRate: 50.0,
+        displayWinRate: 0.0,
         gamesWon: 0,
         gamesLost: 0,
         gameDifference: 0,
@@ -69,6 +70,7 @@ describe('playerProfileStats engine', () => {
         wins: 0,
         losses: 0,
         winRate: 50.0,
+        displayWinRate: 0.0,
         gamesWon: 0,
         gamesLost: 0,
         gameDifference: 0,
@@ -79,12 +81,21 @@ describe('playerProfileStats engine', () => {
         wins: 0,
         losses: 0,
         winRate: 50.0,
+        displayWinRate: 0.0,
         gamesWon: 0,
         gamesLost: 0,
         gameDifference: 0,
         form: [],
       });
       expect(result.timeline).toEqual([]);
+      expect(result.doublesPartners).toEqual([]);
+      expect(result.doublesFavoritePartner).toBeNull();
+      expect(result.doublesRivals).toEqual([]);
+      expect(result.doublesTopRival).toBeNull();
+      expect(result.singlesRivals).toEqual([]);
+      expect(result.singlesTopRival).toBeNull();
+      expect(result.doublesTitles).toEqual([]);
+      expect(result.singlesTitles).toEqual([]);
       expect(result.partners).toEqual([]);
       expect(result.rivals).toEqual([]);
       expect(result.titles).toEqual([]);
@@ -176,6 +187,7 @@ describe('playerProfileStats engine', () => {
         wins: 1,
         losses: 1,
         winRate: 50.0,
+        displayWinRate: 50.0,
         gamesWon: 10,
         gamesLost: 9,
         gameDifference: 1,
@@ -236,6 +248,7 @@ describe('playerProfileStats engine', () => {
         wins: 0,
         losses: 0,
         winRate: 50.0,
+        displayWinRate: 0.0,
         gamesWon: 0,
         gamesLost: 0,
         gameDifference: 0,
@@ -758,6 +771,204 @@ describe('playerProfileStats engine', () => {
       expect(resolveTimelineStageLabel('semi_final', 'Полуфинал 1')).toBe('Полуфинал');
       expect(resolveTimelineStageLabel('final', 'Финал')).toBe('Финал');
       expect(resolveTimelineStageLabel(undefined, undefined)).toBeUndefined();
+    });
+  });
+
+  describe('15. Format-Scoped Aggregations (Iteration 2)', () => {
+    // T-STAT-01: Format-Scoped Rivals Segregation
+    it('T-STAT-01: segregates doubles and singles rivals strictly by match format', () => {
+      const matchDoubles1 = createMockMatch({
+        id: 'm-d-1',
+        match_format: 'doubles',
+        team_1_score: 6,
+        team_2_score: 4,
+        match_players: [
+          { id: 'mp-1', match_id: 'm-d-1', player_id: targetId, team_side: 'team_1', guest_name: null, rating_before: null, rating_after: null },
+          { id: 'mp-2', match_id: 'm-d-1', player_id: 'p-partner', team_side: 'team_1', guest_name: null, rating_before: null, rating_after: null, players: { id: 'p-partner', name: 'Партньор' } },
+          { id: 'mp-3', match_id: 'm-d-1', player_id: 'p-opp-a', team_side: 'team_2', guest_name: null, rating_before: null, rating_after: null, players: { id: 'p-opp-a', name: 'Opponent A' } },
+        ],
+      });
+      const matchDoubles2 = createMockMatch({
+        id: 'm-d-2',
+        match_format: 'doubles',
+        team_1_score: 4,
+        team_2_score: 6,
+        match_players: [
+          { id: 'mp-4', match_id: 'm-d-2', player_id: targetId, team_side: 'team_1', guest_name: null, rating_before: null, rating_after: null },
+          { id: 'mp-5', match_id: 'm-d-2', player_id: 'p-partner', team_side: 'team_1', guest_name: null, rating_before: null, rating_after: null, players: { id: 'p-partner', name: 'Партньор' } },
+          { id: 'mp-6', match_id: 'm-d-2', player_id: 'p-opp-a', team_side: 'team_2', guest_name: null, rating_before: null, rating_after: null, players: { id: 'p-opp-a', name: 'Opponent A' } },
+        ],
+      });
+      const matchSingles1 = createMockMatch({
+        id: 'm-s-1',
+        match_format: 'singles',
+        team_1_score: 6,
+        team_2_score: 3,
+        match_players: [
+          { id: 'mp-7', match_id: 'm-s-1', player_id: targetId, team_side: 'team_1', guest_name: null, rating_before: null, rating_after: null },
+          { id: 'mp-8', match_id: 'm-s-1', player_id: 'p-opp-b', team_side: 'team_2', guest_name: null, rating_before: null, rating_after: null, players: { id: 'p-opp-b', name: 'Opponent B' } },
+        ],
+      });
+      const matchSingles2 = createMockMatch({
+        id: 'm-s-2',
+        match_format: 'singles',
+        team_1_score: 2,
+        team_2_score: 6,
+        match_players: [
+          { id: 'mp-9', match_id: 'm-s-2', player_id: targetId, team_side: 'team_1', guest_name: null, rating_before: null, rating_after: null },
+          { id: 'mp-10', match_id: 'm-s-2', player_id: 'p-opp-b', team_side: 'team_2', guest_name: null, rating_before: null, rating_after: null, players: { id: 'p-opp-b', name: 'Opponent B' } },
+        ],
+      });
+
+      const result = calculatePlayerProfileData(
+        [matchDoubles1, matchDoubles2, matchSingles1, matchSingles2],
+        targetId
+      );
+
+      // Doubles rivals must strictly contain Opponent A
+      expect(result.doublesRivals).toHaveLength(1);
+      expect(result.doublesRivals[0].rivalId).toBe('p-opp-a');
+      expect(result.doublesTopRival?.rivalName).toBe('Opponent A');
+      expect(result.doublesTopRival?.encounters).toBe(2);
+
+      // Singles rivals must strictly contain Opponent B
+      expect(result.singlesRivals).toHaveLength(1);
+      expect(result.singlesRivals[0].rivalId).toBe('p-opp-b');
+      expect(result.singlesTopRival?.rivalName).toBe('Opponent B');
+      expect(result.singlesTopRival?.encounters).toBe(2);
+
+      // Legacy global rivals contains both opponents
+      expect(result.rivals).toHaveLength(2);
+      expect(result.rivals.map((r) => r.rivalId)).toEqual(
+        expect.arrayContaining(['p-opp-a', 'p-opp-b'])
+      );
+    });
+
+    // T-STAT-02: Format Isolation Empty Fallback
+    it('T-STAT-02: isolates format rivals when player has matches in only one format', () => {
+      const matchDoubles = createMockMatch({
+        id: 'm-d-solo',
+        match_format: 'doubles',
+        team_1_score: 6,
+        team_2_score: 3,
+        match_players: [
+          { id: 'mp-1', match_id: 'm-d-solo', player_id: targetId, team_side: 'team_1', guest_name: null, rating_before: null, rating_after: null },
+          { id: 'mp-2', match_id: 'm-d-solo', player_id: 'p-part', team_side: 'team_1', guest_name: null, rating_before: null, rating_after: null, players: { id: 'p-part', name: 'Партньор' } },
+          { id: 'mp-3', match_id: 'm-d-solo', player_id: 'p-opp-d', team_side: 'team_2', guest_name: null, rating_before: null, rating_after: null, players: { id: 'p-opp-d', name: 'Съперник Двойки' } },
+        ],
+      });
+
+      const result = calculatePlayerProfileData([matchDoubles], targetId);
+
+      expect(result.doublesTopRival).not.toBeNull();
+      expect(result.doublesTopRival?.rivalName).toBe('Съперник Двойки');
+      expect(result.singlesRivals).toEqual([]);
+      expect(result.singlesTopRival).toBeNull();
+    });
+
+    // T-STAT-03: Composite Key Title Deduplication
+    it('T-STAT-03: deduplicates titles by composite key tournamentId:format and preserves both formats', () => {
+      const tournamentMap = new Map<string, Tournament>();
+      tournamentMap.set(
+        't-dual',
+        createMockTournament({ id: 't-dual', title: 'Grand Open', date: '2026-05-01' })
+      );
+
+      // Final win in doubles for t-dual
+      const finalDoubles = createMockMatch({
+        id: 'm-fin-d',
+        tournament_id: 't-dual',
+        match_format: 'doubles',
+        group_name: 'Финал',
+        team_1_score: 6,
+        team_2_score: 4,
+        played_at: '2026-05-01T15:00:00Z',
+        match_players: [
+          { id: 'mp-1', match_id: 'm-fin-d', player_id: targetId, team_side: 'team_1', guest_name: null, rating_before: null, rating_after: null },
+          { id: 'mp-2', match_id: 'm-fin-d', player_id: 'p-part', team_side: 'team_1', guest_name: null, rating_before: null, rating_after: null, players: { id: 'p-part', name: 'Партньор' } },
+          { id: 'mp-3', match_id: 'm-fin-d', player_id: 'p-opp-1', team_side: 'team_2', guest_name: null, rating_before: null, rating_after: null, players: { id: 'p-opp-1', name: 'Опонент 1' } },
+        ],
+      });
+
+      // Duplicate final win in doubles for t-dual (e.g. rescheduled/replayed or multi-flight)
+      const finalDoublesDuplicate = createMockMatch({
+        id: 'm-fin-d-dup',
+        tournament_id: 't-dual',
+        match_format: 'doubles',
+        group_name: 'Финал',
+        team_1_score: 6,
+        team_2_score: 2,
+        played_at: '2026-05-01T16:00:00Z',
+        match_players: [
+          { id: 'mp-4', match_id: 'm-fin-d-dup', player_id: targetId, team_side: 'team_1', guest_name: null, rating_before: null, rating_after: null },
+          { id: 'mp-5', match_id: 'm-fin-d-dup', player_id: 'p-part', team_side: 'team_1', guest_name: null, rating_before: null, rating_after: null, players: { id: 'p-part', name: 'Партньор' } },
+          { id: 'mp-6', match_id: 'm-fin-d-dup', player_id: 'p-opp-2', team_side: 'team_2', guest_name: null, rating_before: null, rating_after: null, players: { id: 'p-opp-2', name: 'Опонент 2' } },
+        ],
+      });
+
+      // Final win in singles for t-dual
+      const finalSingles = createMockMatch({
+        id: 'm-fin-s',
+        tournament_id: 't-dual',
+        match_format: 'singles',
+        group_name: 'Финал',
+        team_1_score: 6,
+        team_2_score: 3,
+        played_at: '2026-05-01T17:00:00Z',
+        match_players: [
+          { id: 'mp-7', match_id: 'm-fin-s', player_id: targetId, team_side: 'team_1', guest_name: null, rating_before: null, rating_after: null },
+          { id: 'mp-8', match_id: 'm-fin-s', player_id: 'p-opp-3', team_side: 'team_2', guest_name: null, rating_before: null, rating_after: null, players: { id: 'p-opp-3', name: 'Опонент 3' } },
+        ],
+      });
+
+      const result = calculatePlayerProfileData(
+        [finalDoubles, finalDoublesDuplicate, finalSingles],
+        targetId,
+        tournamentMap
+      );
+
+      // Composite key preserves both doubles and singles title for t-dual, while deduplicating doubles to 1
+      expect(result.titles).toHaveLength(2);
+      expect(result.doublesTitles).toHaveLength(1);
+      expect(result.singlesTitles).toHaveLength(1);
+      expect(result.doublesTitles[0].tournamentId).toBe('t-dual');
+      expect(result.singlesTitles[0].tournamentId).toBe('t-dual');
+      expect(result.doublesTitles[0].format).toBe('doubles');
+      expect(result.singlesTitles[0].format).toBe('singles');
+    });
+
+    // T-STAT-04: Zero-Match displayWinRate
+    it('T-STAT-04: computes displayWinRate as 0.0 for zero matches and matches winRate when matches > 0', () => {
+      // Zero matches
+      const emptyResult = calculatePlayerProfileData([], targetId);
+      expect(emptyResult.summary.all.winRate).toBe(50.0);
+      expect(emptyResult.summary.all.displayWinRate).toBe(0.0);
+      expect(emptyResult.summary.doubles.winRate).toBe(50.0);
+      expect(emptyResult.summary.doubles.displayWinRate).toBe(0.0);
+      expect(emptyResult.summary.singles.winRate).toBe(50.0);
+      expect(emptyResult.summary.singles.displayWinRate).toBe(0.0);
+
+      // Single match won (100% win rate)
+      const wonMatch = createMockMatch({
+        id: 'm-win',
+        match_format: 'singles',
+        team_1_score: 6,
+        team_2_score: 0,
+        match_players: [
+          { id: 'mp-1', match_id: 'm-win', player_id: targetId, team_side: 'team_1', guest_name: null, rating_before: null, rating_after: null },
+          { id: 'mp-2', match_id: 'm-win', player_id: 'p-opp', team_side: 'team_2', guest_name: null, rating_before: null, rating_after: null, players: { id: 'p-opp', name: 'Опонент' } },
+        ],
+      });
+
+      const playedResult = calculatePlayerProfileData([wonMatch], targetId);
+      expect(playedResult.summary.singles.matchesPlayed).toBe(1);
+      expect(playedResult.summary.singles.winRate).toBe(100.0);
+      expect(playedResult.summary.singles.displayWinRate).toBe(100.0);
+
+      // Doubles remaining unplayed in playedResult
+      expect(playedResult.summary.doubles.matchesPlayed).toBe(0);
+      expect(playedResult.summary.doubles.winRate).toBe(50.0);
+      expect(playedResult.summary.doubles.displayWinRate).toBe(0.0);
     });
   });
 });

@@ -95,11 +95,25 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
     wins: 0,
     losses: 0,
     winRate: 50.0,
+    displayWinRate: 0.0,
     gamesWon: 0,
     gamesLost: 0,
     gameDifference: 0,
     form: [],
   };
+
+  const currentTopRival =
+    activeTab === 'singles'
+      ? (resolvedProfile?.singlesTopRival ?? null)
+      : (resolvedProfile?.doublesTopRival ?? resolvedProfile?.topRival ?? null);
+
+  const activeTitles = useMemo(() => {
+    if (!resolvedProfile) return [];
+    if (activeTab === 'doubles') {
+      return resolvedProfile.doublesTitles ?? resolvedProfile.titles.filter((t) => t.format === 'doubles');
+    }
+    return resolvedProfile.singlesTitles ?? resolvedProfile.titles.filter((t) => t.format === 'singles');
+  }, [resolvedProfile, activeTab]);
 
   const timeline = resolvedProfile?.timeline;
   const filteredTimeline = useMemo(() => {
@@ -242,7 +256,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
           >
             <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">Успеваемост</div>
             <div className="text-lg sm:text-xl font-bold mt-1 text-indigo-600 dark:text-indigo-400">
-              {activeSummary.winRate}%
+              {activeSummary.matchesPlayed === 0 ? '0%' : `${activeSummary.displayWinRate ?? activeSummary.winRate}%`}
             </div>
           </div>
           <div
@@ -260,54 +274,58 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
 
         {/* Specialty Analytics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-          {/* Favorite Partner */}
-          <div
-            data-testid="card-favorite-partner"
-            className="p-3.5 rounded-xl border border-gray-100 dark:border-gray-700/60 bg-gray-50/50 dark:bg-gray-800/50 flex flex-col justify-between"
-          >
-            <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">
-              <Users className="w-4 h-4 text-indigo-500" />
-              <span>Любим партньор</span>
+          {/* Favorite Partner - ONLY rendered on doubles tab */}
+          {activeTab === 'doubles' && (
+            <div
+              data-testid="card-favorite-partner"
+              className="p-3.5 rounded-xl border border-gray-100 dark:border-gray-700/60 bg-gray-50/50 dark:bg-gray-800/50 flex flex-col justify-between"
+            >
+              <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">
+                <Users className="w-4 h-4 text-indigo-500" />
+                <span>Любим партньор</span>
+              </div>
+              {(resolvedProfile?.doublesFavoritePartner ?? resolvedProfile?.favoritePartner) ? (
+                <div>
+                  <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                    {(resolvedProfile.doublesFavoritePartner ?? resolvedProfile.favoritePartner)!.partnerName}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {formatRecordSummary(
+                      (resolvedProfile.doublesFavoritePartner ?? resolvedProfile.favoritePartner)!.matchesTogether,
+                      (resolvedProfile.doublesFavoritePartner ?? resolvedProfile.favoritePartner)!.wins,
+                      (resolvedProfile.doublesFavoritePartner ?? resolvedProfile.favoritePartner)!.losses
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs text-gray-400 dark:text-gray-500 py-1">
+                  Няма изиграни мачове по двойки
+                </div>
+              )}
             </div>
-            {resolvedProfile?.favoritePartner ? (
-              <div>
-                <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                  {resolvedProfile.favoritePartner.partnerName}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  {formatRecordSummary(
-                    resolvedProfile.favoritePartner.matchesTogether,
-                    resolvedProfile.favoritePartner.wins,
-                    resolvedProfile.favoritePartner.losses
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="text-xs text-gray-400 dark:text-gray-500 py-1">
-                Няма изиграни мачове по двойки
-              </div>
-            )}
-          </div>
+          )}
 
-          {/* Top Rival */}
+          {/* Top Rival - Expands to sm:col-span-2 when activeTab is singles */}
           <div
             data-testid="card-top-rival"
-            className="p-3.5 rounded-xl border border-gray-100 dark:border-gray-700/60 bg-gray-50/50 dark:bg-gray-800/50 flex flex-col justify-between"
+            className={`p-3.5 rounded-xl border border-gray-100 dark:border-gray-700/60 bg-gray-50/50 dark:bg-gray-800/50 flex flex-col justify-between ${
+              activeTab === 'singles' ? 'sm:col-span-2' : ''
+            }`}
           >
             <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">
               <Swords className="w-4 h-4 text-purple-500" />
               <span>Най-чест съперник</span>
             </div>
-            {resolvedProfile?.topRival ? (
+            {currentTopRival ? (
               <div>
                 <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                  {resolvedProfile.topRival.rivalName}
+                  {currentTopRival.rivalName}
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                   {formatRecordSummary(
-                    resolvedProfile.topRival.encounters,
-                    resolvedProfile.topRival.wins,
-                    resolvedProfile.topRival.losses
+                    currentTopRival.encounters,
+                    currentTopRival.wins,
+                    currentTopRival.losses
                   )}
                 </div>
               </div>
@@ -318,20 +336,20 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
             )}
           </div>
 
-          {/* Championship Titles */}
-          {resolvedProfile && resolvedProfile.titles.length > 0 && (
+          {/* Championship Titles - Filtered by active format; completely hidden when empty */}
+          {activeTitles.length > 0 && (
             <div
               data-testid="card-championship-titles"
               className="sm:col-span-2 p-3.5 rounded-xl border border-amber-200/80 dark:border-amber-800/60 bg-amber-50/40 dark:bg-amber-950/20"
             >
               <div className="flex items-center gap-2 text-xs font-semibold text-amber-700 dark:text-amber-400 mb-2">
                 <Trophy className="w-4 h-4 text-amber-500" />
-                <span>🏆 Титли ({resolvedProfile.titles.length})</span>
+                <span>🏆 Титли ({activeTitles.length})</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {resolvedProfile.titles.map((title) => (
+                {activeTitles.map((title) => (
                   <div
-                    key={title.tournamentId}
+                    key={`${title.tournamentId}:${title.format}`}
                     className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg bg-amber-100/80 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-800/50"
                   >
                     <span>{title.tournamentName}</span>

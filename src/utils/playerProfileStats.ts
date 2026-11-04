@@ -18,6 +18,7 @@ export interface PlayerProfileSummary {
   wins: number;
   losses: number;
   winRate: number; // 0.0 - 100.0, rounded to 1 decimal place; strictly 50.0 when matchesPlayed === 0
+  displayWinRate: number; // 0.0 when matchesPlayed === 0, otherwise equal to winRate
   gamesWon: number;
   gamesLost: number;
   gameDifference: number; // gamesWon - gamesLost
@@ -75,14 +76,29 @@ export interface PlayerProfileData {
     singles: PlayerProfileSummary;
   };
   timeline: PlayerTimelineItem[]; // Chronological: newest first
-  partners: PlayerPartnerStat[]; // Ranked by partner hierarchy
-  rivals: PlayerRivalStat[]; // Ranked by rival hierarchy
-  titles: PlayerTournamentTitle[]; // Deduplicated tournament titles
-  favoritePartner: PlayerPartnerStat | null;
-  topRival: PlayerRivalStat | null;
-  // Compatibility convenience aliases
-  mainRival: PlayerRivalStat | null;
-  titlesCount: number;
+
+  // Doubles partners
+  doublesPartners: PlayerPartnerStat[]; // Ranked by partner hierarchy
+  doublesFavoritePartner: PlayerPartnerStat | null;
+
+  // Format-scoped rivals
+  doublesRivals: PlayerRivalStat[]; // Ranked by rival hierarchy (doubles only)
+  doublesTopRival: PlayerRivalStat | null;
+  singlesRivals: PlayerRivalStat[]; // Ranked by rival hierarchy (singles only)
+  singlesTopRival: PlayerRivalStat | null;
+
+  // Format-scoped tournament titles
+  doublesTitles: PlayerTournamentTitle[];
+  singlesTitles: PlayerTournamentTitle[];
+
+  // Backward compatibility fields (preserved for zero regression)
+  partners: PlayerPartnerStat[]; // Alias for doublesPartners
+  favoritePartner: PlayerPartnerStat | null; // Alias for doublesFavoritePartner
+  rivals: PlayerRivalStat[]; // All-formats combined rivals
+  topRival: PlayerRivalStat | null; // Top rival across all formats
+  mainRival: PlayerRivalStat | null; // Alias for topRival
+  titles: PlayerTournamentTitle[]; // All-formats deduplicated titles
+  titlesCount: number; // Total titles across formats
 }
 
 // Backward-compatible type aliases for alternative intake conventions
@@ -260,6 +276,7 @@ function createZeroSummary(): PlayerProfileSummary {
     wins: 0,
     losses: 0,
     winRate: 50.0,
+    displayWinRate: 0.0,
     gamesWon: 0,
     gamesLost: 0,
     gameDifference: 0,
@@ -319,11 +336,13 @@ function computeSummaryForMatches(
   }
 
   const matchesPlayed = wins + losses;
+  const winRate = calculateWinRate(wins, matchesPlayed);
   return {
     matchesPlayed,
     wins,
     losses,
-    winRate: calculateWinRate(wins, matchesPlayed),
+    winRate,
+    displayWinRate: matchesPlayed === 0 ? 0.0 : winRate,
     gamesWon,
     gamesLost,
     gameDifference: gamesWon - gamesLost,
@@ -422,6 +441,14 @@ export function calculatePlayerProfileData(
         singles: createZeroSummary(),
       },
       timeline: [],
+      doublesPartners: [],
+      doublesFavoritePartner: null,
+      doublesRivals: [],
+      doublesTopRival: null,
+      singlesRivals: [],
+      singlesTopRival: null,
+      doublesTitles: [],
+      singlesTitles: [],
       partners: [],
       rivals: [],
       titles: [],
@@ -453,8 +480,16 @@ export function calculatePlayerProfileData(
     { partnerId: string; partnerName: string; matchesTogether: number; wins: number; losses: number }
   >();
 
-  // Rivals aggregation (all formats)
+  // Rivals aggregation (all formats & format-scoped)
   const rivalMap = new Map<
+    string,
+    { rivalId: string; rivalName: string; encounters: number; wins: number; losses: number }
+  >();
+  const doublesRivalMap = new Map<
+    string,
+    { rivalId: string; rivalName: string; encounters: number; wins: number; losses: number }
+  >();
+  const singlesRivalMap = new Map<
     string,
     { rivalId: string; rivalName: string; encounters: number; wins: number; losses: number }
   >();
@@ -507,6 +542,7 @@ export function calculatePlayerProfileData(
     const opponents = Array.from(opponentsMap.values());
 
     for (const opp of opponents) {
+      // Global rival tracking
       const existing = rivalMap.get(opp.id) || {
         rivalId: opp.id,
         rivalName: opp.name,
@@ -518,6 +554,33 @@ export function calculatePlayerProfileData(
       if (isWinner) existing.wins += 1;
       else existing.losses += 1;
       rivalMap.set(opp.id, existing);
+
+      // Format-scoped rival tracking
+      if (format === 'doubles') {
+        const existingDoubles = doublesRivalMap.get(opp.id) || {
+          rivalId: opp.id,
+          rivalName: opp.name,
+          encounters: 0,
+          wins: 0,
+          losses: 0,
+        };
+        existingDoubles.encounters += 1;
+        if (isWinner) existingDoubles.wins += 1;
+        else existingDoubles.losses += 1;
+        doublesRivalMap.set(opp.id, existingDoubles);
+      } else if (format === 'singles') {
+        const existingSingles = singlesRivalMap.get(opp.id) || {
+          rivalId: opp.id,
+          rivalName: opp.name,
+          encounters: 0,
+          wins: 0,
+          losses: 0,
+        };
+        existingSingles.encounters += 1;
+        if (isWinner) existingSingles.wins += 1;
+        else existingSingles.losses += 1;
+        singlesRivalMap.set(opp.id, existingSingles);
+      }
     }
 
     // Tournament Titles: winning a final in a tournament
@@ -558,10 +621,10 @@ export function calculatePlayerProfileData(
     ...p,
     winRate: calculateWinRate(p.wins, p.matchesTogether),
   }));
-  const partners = sortPartners(partnersList);
-  const favoritePartner = partners.length > 0 ? partners[0] : null;
+  const doublesPartners = sortPartners(partnersList);
+  const doublesFavoritePartner = doublesPartners.length > 0 ? doublesPartners[0] : null;
 
-  // Calculate rivals with winRate & sort
+  // Calculate global rivals with winRate & sort
   const rivalsList: PlayerRivalStat[] = Array.from(rivalMap.values()).map((r) => ({
     ...r,
     winRate: calculateWinRate(r.wins, r.encounters),
@@ -569,38 +632,66 @@ export function calculatePlayerProfileData(
   const rivals = sortRivals(rivalsList);
   const topRival = rivals.length > 0 ? rivals[0] : null;
 
-  // Deduplicate titles by tournamentId (keep latest date) and sort
-  const titlesByTournamentId = new Map<string, PlayerTournamentTitle>();
+  // Calculate format-scoped doubles rivals
+  const doublesRivalsList: PlayerRivalStat[] = Array.from(doublesRivalMap.values()).map((r) => ({
+    ...r,
+    winRate: calculateWinRate(r.wins, r.encounters),
+  }));
+  const doublesRivals = sortRivals(doublesRivalsList);
+  const doublesTopRival = doublesRivals.length > 0 ? doublesRivals[0] : null;
+
+  // Calculate format-scoped singles rivals
+  const singlesRivalsList: PlayerRivalStat[] = Array.from(singlesRivalMap.values()).map((r) => ({
+    ...r,
+    winRate: calculateWinRate(r.wins, r.encounters),
+  }));
+  const singlesRivals = sortRivals(singlesRivalsList);
+  const singlesTopRival = singlesRivals.length > 0 ? singlesRivals[0] : null;
+
+  // Deduplicate titles by composite key `${tournamentId}:${format}` (keep latest date) and sort
+  const titlesByCompositeKey = new Map<string, PlayerTournamentTitle>();
   for (const title of rawTitles) {
-    const existing = titlesByTournamentId.get(title.tournamentId);
+    const key = `${title.tournamentId}:${title.format}`;
+    const existing = titlesByCompositeKey.get(key);
     if (!existing) {
-      titlesByTournamentId.set(title.tournamentId, title);
+      titlesByCompositeKey.set(key, title);
     } else {
       const existingTime = existing.date ? new Date(existing.date).getTime() : 0;
       const newTime = title.date ? new Date(title.date).getTime() : 0;
       if (newTime > existingTime) {
-        titlesByTournamentId.set(title.tournamentId, title);
+        titlesByCompositeKey.set(key, title);
       }
     }
   }
-  const titles = Array.from(titlesByTournamentId.values()).sort((a, b) => {
+  const sortTitlesComparator = (a: PlayerTournamentTitle, b: PlayerTournamentTitle) => {
     const timeA = a.date ? new Date(a.date).getTime() : 0;
     const timeB = b.date ? new Date(b.date).getTime() : 0;
     if (timeB !== timeA) return timeB - timeA;
     return a.tournamentName.localeCompare(b.tournamentName, 'bg');
-  });
+  };
+  const allTitles = Array.from(titlesByCompositeKey.values()).sort(sortTitlesComparator);
+  const doublesTitles = allTitles.filter((t) => t.format === 'doubles');
+  const singlesTitles = allTitles.filter((t) => t.format === 'singles');
 
   return {
     playerId,
     summary,
     timeline,
-    partners,
+    doublesPartners,
+    doublesFavoritePartner,
+    doublesRivals,
+    doublesTopRival,
+    singlesRivals,
+    singlesTopRival,
+    doublesTitles,
+    singlesTitles,
+    partners: doublesPartners,
+    favoritePartner: doublesFavoritePartner,
     rivals,
-    titles,
-    favoritePartner,
     topRival,
     mainRival: topRival,
-    titlesCount: titles.length,
+    titles: allTitles,
+    titlesCount: allTitles.length,
   };
 }
 

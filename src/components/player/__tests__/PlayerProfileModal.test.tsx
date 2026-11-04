@@ -13,6 +13,7 @@ const mockPlayerProfileData: PlayerProfileData = {
       wins: 7,
       losses: 3,
       winRate: 70.0,
+      displayWinRate: 70.0,
       gamesWon: 55,
       gamesLost: 40,
       gameDifference: 15,
@@ -23,6 +24,7 @@ const mockPlayerProfileData: PlayerProfileData = {
       wins: 4,
       losses: 2,
       winRate: 66.7,
+      displayWinRate: 66.7,
       gamesWon: 32,
       gamesLost: 24,
       gameDifference: 8,
@@ -33,6 +35,7 @@ const mockPlayerProfileData: PlayerProfileData = {
       wins: 3,
       losses: 1,
       winRate: 75.0,
+      displayWinRate: 75.0,
       gamesWon: 23,
       gamesLost: 16,
       gameDifference: 7,
@@ -64,6 +67,69 @@ const mockPlayerProfileData: PlayerProfileData = {
       tournamentName: undefined,
     },
   ],
+  doublesPartners: [
+    {
+      partnerId: 'p-2',
+      partnerName: 'Георги Иванов',
+      matchesTogether: 6,
+      wins: 4,
+      losses: 2,
+      winRate: 66.7,
+    },
+  ],
+  doublesFavoritePartner: {
+    partnerId: 'p-2',
+    partnerName: 'Георги Иванов',
+    matchesTogether: 6,
+    wins: 4,
+    losses: 2,
+    winRate: 66.7,
+  },
+  doublesRivals: [
+    {
+      rivalId: 'p-3',
+      rivalName: 'Петър Симеонов',
+      encounters: 5,
+      wins: 3,
+      losses: 2,
+      winRate: 60.0,
+    },
+  ],
+  doublesTopRival: {
+    rivalId: 'p-3',
+    rivalName: 'Петър Симеонов',
+    encounters: 5,
+    wins: 3,
+    losses: 2,
+    winRate: 60.0,
+  },
+  singlesRivals: [
+    {
+      rivalId: 'p-3',
+      rivalName: 'Петър Симеонов',
+      encounters: 1,
+      wins: 0,
+      losses: 1,
+      winRate: 0.0,
+    },
+  ],
+  singlesTopRival: {
+    rivalId: 'p-3',
+    rivalName: 'Петър Симеонов',
+    encounters: 1,
+    wins: 0,
+    losses: 1,
+    winRate: 0.0,
+  },
+  doublesTitles: [
+    {
+      tournamentId: 't-1',
+      tournamentName: 'Пролетен Турнир',
+      date: '2026-03-01T10:00:00Z',
+      format: 'doubles',
+    },
+  ],
+  singlesTitles: [],
   partners: [
     {
       partnerId: 'p-2',
@@ -251,6 +317,7 @@ describe('PlayerProfileModal Component', () => {
           wins: 0,
           losses: 0,
           winRate: 50.0,
+          displayWinRate: 0.0,
           gamesWon: 0,
           gamesLost: 0,
           gameDifference: 0,
@@ -261,6 +328,7 @@ describe('PlayerProfileModal Component', () => {
           wins: 0,
           losses: 0,
           winRate: 50.0,
+          displayWinRate: 0.0,
           gamesWon: 0,
           gamesLost: 0,
           gameDifference: 0,
@@ -271,6 +339,7 @@ describe('PlayerProfileModal Component', () => {
           wins: 0,
           losses: 0,
           winRate: 50.0,
+          displayWinRate: 0.0,
           gamesWon: 0,
           gamesLost: 0,
           gameDifference: 0,
@@ -503,6 +572,7 @@ describe('PlayerProfileModal Component', () => {
           wins: 0,
           losses: 0,
           winRate: 50.0,
+          displayWinRate: 0.0,
           gamesWon: 0,
           gamesLost: 0,
           gameDifference: 0,
@@ -513,6 +583,7 @@ describe('PlayerProfileModal Component', () => {
           wins: 0,
           losses: 0,
           winRate: 50.0,
+          displayWinRate: 0.0,
           gamesWon: 0,
           gamesLost: 0,
           gameDifference: 0,
@@ -523,6 +594,7 @@ describe('PlayerProfileModal Component', () => {
           wins: 0,
           losses: 0,
           winRate: 50.0,
+          displayWinRate: 0.0,
           gamesWon: 0,
           gamesLost: 0,
           gameDifference: 0,
@@ -530,6 +602,14 @@ describe('PlayerProfileModal Component', () => {
         },
       },
       timeline: [],
+      doublesPartners: [],
+      doublesFavoritePartner: null,
+      doublesRivals: [],
+      doublesTopRival: null,
+      singlesRivals: [],
+      singlesTopRival: null,
+      doublesTitles: [],
+      singlesTitles: [],
       partners: [],
       rivals: [],
       titles: [],
@@ -619,5 +699,223 @@ describe('PlayerProfileModal Component', () => {
     expect(within(screen.getByTestId('stat-losses')).getByText('0')).toBeInTheDocument();
     expect(within(screen.getByTestId('stat-winrate')).getByText('100%')).toBeInTheDocument();
     expect(screen.getByText('6:2')).toBeInTheDocument(); // perspective score
+  });
+
+  it('17. T-MODAL-01: AC-1: Partner Card Format Isolation and Rival Card Grid Expansion', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <PlayerProfileModal
+        isOpen={true}
+        onClose={vi.fn()}
+        playerId="p-1"
+        playerName="Иван Петров"
+        profileData={mockPlayerProfileData}
+      />
+    );
+
+    // Default 'doubles' tab: partner card must be present and rival card does not have sm:col-span-2
+    expect(screen.getByTestId('card-favorite-partner')).toBeInTheDocument();
+    const rivalCardDoubles = screen.getByTestId('card-top-rival');
+    expect(rivalCardDoubles.className).not.toContain('sm:col-span-2');
+
+    // Switch to 'Поединично' tab
+    const singlesTab = screen.getByRole('tab', { name: 'Поединично' });
+    await user.click(singlesTab);
+
+    // On singles tab: partner card must be completely omitted from the DOM
+    expect(screen.queryByTestId('card-favorite-partner')).not.toBeInTheDocument();
+
+    // Rival card must expand with sm:col-span-2 to maintain visual grid balance
+    const rivalCardSingles = screen.getByTestId('card-top-rival');
+    expect(rivalCardSingles).toHaveClass('sm:col-span-2');
+
+    // Switch back to 'По двойки' tab
+    const doublesTab = screen.getByRole('tab', { name: 'По двойки' });
+    await user.click(doublesTab);
+
+    // Partner card restored, rival card no longer sm:col-span-2
+    expect(screen.getByTestId('card-favorite-partner')).toBeInTheDocument();
+    expect(screen.getByTestId('card-top-rival').className).not.toContain('sm:col-span-2');
+  });
+
+  it('18. T-MODAL-02: AC-2: Format-Scoped Rivals in UI with Empty Fallback', async () => {
+    const user = userEvent.setup();
+    const formatRivalProfileData: PlayerProfileData = {
+      ...mockPlayerProfileData,
+      doublesRivals: [
+        {
+          rivalId: 'p-geo',
+          rivalName: 'Георги Двойков',
+          encounters: 3,
+          wins: 2,
+          losses: 1,
+          winRate: 66.7,
+        },
+      ],
+      doublesTopRival: {
+        rivalId: 'p-geo',
+        rivalName: 'Георги Двойков',
+        encounters: 3,
+        wins: 2,
+        losses: 1,
+        winRate: 66.7,
+      },
+      singlesRivals: [
+        {
+          rivalId: 'p-dim',
+          rivalName: 'Димитър Единичен',
+          encounters: 2,
+          wins: 1,
+          losses: 1,
+          winRate: 50.0,
+        },
+      ],
+      singlesTopRival: {
+        rivalId: 'p-dim',
+        rivalName: 'Димитър Единичен',
+        encounters: 2,
+        wins: 1,
+        losses: 1,
+        winRate: 50.0,
+      },
+    };
+
+    const { rerender } = render(
+      <PlayerProfileModal
+        isOpen={true}
+        onClose={vi.fn()}
+        playerId="p-1"
+        playerName="Иван Петров"
+        profileData={formatRivalProfileData}
+      />
+    );
+
+    // On 'doubles' tab: rival card displays doubles top rival
+    const rivalCardDoubles = screen.getByTestId('card-top-rival');
+    expect(within(rivalCardDoubles).getByText('Георги Двойков')).toBeInTheDocument();
+    expect(within(rivalCardDoubles).getByText('3 мача • 2 победи, 1 загуба')).toBeInTheDocument();
+
+    // Switch to 'Поединично' tab
+    const singlesTab = screen.getByRole('tab', { name: 'Поединично' });
+    await user.click(singlesTab);
+
+    // On 'singles' tab: rival card displays singles top rival
+    const rivalCardSingles = screen.getByTestId('card-top-rival');
+    expect(within(rivalCardSingles).getByText('Димитър Единичен')).toBeInTheDocument();
+    expect(within(rivalCardSingles).getByText('2 мача • 1 победа, 1 загуба')).toBeInTheDocument();
+
+    // Re-render with player who has 0 singles rivals
+    const noSinglesRivalProfile: PlayerProfileData = {
+      ...formatRivalProfileData,
+      singlesRivals: [],
+      singlesTopRival: null,
+    };
+
+    rerender(
+      <PlayerProfileModal
+        isOpen={true}
+        onClose={vi.fn()}
+        playerId="p-1"
+        playerName="Иван Петров"
+        profileData={noSinglesRivalProfile}
+      />
+    );
+
+    // On 'singles' tab with 0 singles rivals: displays empty fallback
+    expect(within(screen.getByTestId('card-top-rival')).getByText('Няма регистрирани съперници')).toBeInTheDocument();
+  });
+
+  it('19. T-MODAL-03: AC-3: Format-Scoped Championship Titles and Empty Card Suppression', async () => {
+    const user = userEvent.setup();
+
+    // mockPlayerProfileData has 1 doublesTitle and 0 singlesTitles
+    render(
+      <PlayerProfileModal
+        isOpen={true}
+        onClose={vi.fn()}
+        playerId="p-1"
+        playerName="Иван Петров"
+        profileData={mockPlayerProfileData}
+      />
+    );
+
+    // On doubles tab: titles card is visible with doubles title
+    const titlesCard = screen.getByTestId('card-championship-titles');
+    expect(titlesCard).toBeInTheDocument();
+    expect(within(titlesCard).getByText(/🏆 Титли \(1\)/)).toBeInTheDocument();
+    expect(within(titlesCard).getByText('Пролетен Турнир')).toBeInTheDocument();
+
+    // Switch to 'Поединично' tab
+    const singlesTab = screen.getByRole('tab', { name: 'Поединично' });
+    await user.click(singlesTab);
+
+    // On singles tab (0 singles titles): titles card is completely omitted from DOM
+    expect(screen.queryByTestId('card-championship-titles')).not.toBeInTheDocument();
+  });
+
+  it('20. T-MODAL-04: AC-4: Presentation Win Rate Renders Strictly "0%" for Zero Matches', async () => {
+    const user = userEvent.setup();
+    const zeroMatchesProfile: PlayerProfileData = {
+      ...mockPlayerProfileData,
+      summary: {
+        all: {
+          matchesPlayed: 0,
+          wins: 0,
+          losses: 0,
+          winRate: 50.0,
+          displayWinRate: 0.0,
+          gamesWon: 0,
+          gamesLost: 0,
+          gameDifference: 0,
+          form: [],
+        },
+        doubles: {
+          matchesPlayed: 0,
+          wins: 0,
+          losses: 0,
+          winRate: 50.0,
+          displayWinRate: 0.0,
+          gamesWon: 0,
+          gamesLost: 0,
+          gameDifference: 0,
+          form: [],
+        },
+        singles: {
+          matchesPlayed: 0,
+          wins: 0,
+          losses: 0,
+          winRate: 50.0,
+          displayWinRate: 0.0,
+          gamesWon: 0,
+          gamesLost: 0,
+          gameDifference: 0,
+          form: [],
+        },
+      },
+    };
+
+    render(
+      <PlayerProfileModal
+        isOpen={true}
+        onClose={vi.fn()}
+        playerId="p-zero"
+        playerName="Нов Играч"
+        profileData={zeroMatchesProfile}
+      />
+    );
+
+    // On doubles tab with 0 matches
+    const winRateCardDoubles = screen.getByTestId('stat-winrate');
+    expect(within(winRateCardDoubles).getByText('0%')).toBeInTheDocument();
+    expect(winRateCardDoubles.textContent).not.toContain('50');
+
+    // Switch to singles tab
+    const singlesTab = screen.getByRole('tab', { name: 'Поединично' });
+    await user.click(singlesTab);
+
+    const winRateCardSingles = screen.getByTestId('stat-winrate');
+    expect(within(winRateCardSingles).getByText('0%')).toBeInTheDocument();
+    expect(winRateCardSingles.textContent).not.toContain('50');
   });
 });
