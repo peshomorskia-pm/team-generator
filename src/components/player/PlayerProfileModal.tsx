@@ -4,12 +4,15 @@ import { Badge } from '../ui/Badge';
 import { FormBadge } from '../rankings/FormBadge';
 import {
   calculatePlayerProfileData,
+  formatDisplayDate,
+  formatRecordSummary,
+  resolveTimelineStageLabel,
   type PlayerProfileData,
 } from '../../utils/playerProfileStats';
 import type { MatchDetail } from '../../types/matches';
 import type { Tournament } from '../../types/tournament';
 
-export type PlayerProfileFormatTab = 'all' | 'doubles' | 'singles';
+export type PlayerProfileFormatTab = 'doubles' | 'singles';
 
 export interface PlayerProfileModalProps {
   /** Controls modal visibility */
@@ -43,33 +46,6 @@ export interface PlayerProfileModalProps {
   singlesRank?: number | null;
 }
 
-function formatDisplayDate(dateStr?: string): string {
-  if (!dateStr) return '';
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return dateStr;
-  return date.toLocaleDateString('bg-BG', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}
-
-function getStageLabel(stage?: string): string | undefined {
-  if (!stage) return undefined;
-  switch (stage) {
-    case 'final':
-      return 'Финал';
-    case 'semi_final':
-      return 'Полуфинал';
-    case 'quarter_final':
-      return '1/4-финал';
-    case 'group':
-      return 'Групова фаза';
-    default:
-      return stage;
-  }
-}
-
 export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
   isOpen,
   onClose,
@@ -85,14 +61,14 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
   const effectivePlayerId = playerId ?? player?.id ?? null;
   const effectivePlayerName = playerName ?? player?.name ?? 'Играч';
 
-  const [activeTab, setActiveTab] = useState<PlayerProfileFormatTab>('all');
+  const [activeTab, setActiveTab] = useState<PlayerProfileFormatTab>('doubles');
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
   const [prevPlayerId, setPrevPlayerId] = useState(effectivePlayerId);
 
   if (isOpen !== prevIsOpen || effectivePlayerId !== prevPlayerId) {
     setPrevIsOpen(isOpen);
     setPrevPlayerId(effectivePlayerId);
-    setActiveTab('all');
+    setActiveTab('doubles');
   }
 
   useEffect(() => {
@@ -119,16 +95,29 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
     wins: 0,
     losses: 0,
     winRate: 50.0,
+    displayWinRate: 0.0,
     gamesWon: 0,
     gamesLost: 0,
     gameDifference: 0,
     form: [],
   };
 
+  const currentTopRival =
+    activeTab === 'singles'
+      ? (resolvedProfile?.singlesTopRival ?? null)
+      : (resolvedProfile?.doublesTopRival ?? resolvedProfile?.topRival ?? null);
+
+  const activeTitles = useMemo(() => {
+    if (!resolvedProfile) return [];
+    if (activeTab === 'doubles') {
+      return resolvedProfile.doublesTitles ?? resolvedProfile.titles.filter((t) => t.format === 'doubles');
+    }
+    return resolvedProfile.singlesTitles ?? resolvedProfile.titles.filter((t) => t.format === 'singles');
+  }, [resolvedProfile, activeTab]);
+
   const timeline = resolvedProfile?.timeline;
   const filteredTimeline = useMemo(() => {
     if (!timeline) return [];
-    if (activeTab === 'all') return timeline;
     return timeline.filter((item) => item.format === activeTab);
   }, [timeline, activeTab]);
 
@@ -137,9 +126,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
   }
 
   const initial = (effectivePlayerName.trim().charAt(0) || 'И').toUpperCase();
-  const isUnranked = doublesRank == null && singlesRank == null;
   const totalMatchesPlayed = resolvedProfile?.summary.all.matchesPlayed ?? 0;
-  const showNewBadge = isUnranked && totalMatchesPlayed === 0;
 
   return (
     <div
@@ -155,7 +142,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
         aria-labelledby="player-profile-title"
       >
         {/* Header Section */}
-        <div className="flex items-start justify-between gap-3 pb-4 border-b border-gray-100 dark:border-gray-700">
+        <div className="flex items-center justify-between gap-3 pb-4 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <div
               data-testid="player-avatar"
@@ -163,24 +150,12 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
             >
               {initial}
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h2
-                  id="player-profile-title"
-                  className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate"
-                >
-                  {effectivePlayerName}
-                </h2>
-                {doublesRank != null && (
-                  <Badge variant="indigo">#{doublesRank} по двойки</Badge>
-                )}
-                {singlesRank != null && (
-                  <Badge variant="purple">#{singlesRank} поединично</Badge>
-                )}
-                {showNewBadge && <Badge variant="slate">Нов</Badge>}
-              </div>
-              <FormBadge form={activeSummary.form} maxItems={5} className="mt-1" />
-            </div>
+            <h2
+              id="player-profile-title"
+              className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate"
+            >
+              {effectivePlayerName}
+            </h2>
           </div>
 
           <button
@@ -199,19 +174,6 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
           aria-label="Формат на срещите"
           className="flex p-1 bg-gray-100 dark:bg-gray-700/50 rounded-xl gap-1 mt-4"
         >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'all'}
-            onClick={() => setActiveTab('all')}
-            className={`min-h-[38px] flex-1 text-center text-sm py-1.5 px-3 rounded-lg transition-all cursor-pointer ${
-              activeTab === 'all'
-                ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 font-semibold shadow-xs'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 font-medium'
-            }`}
-          >
-            Всички
-          </button>
           <button
             type="button"
             role="tab"
@@ -238,6 +200,25 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
           >
             Поединично
           </button>
+        </div>
+
+        {/* Sub-Header Format Context Bar */}
+        <div
+          data-testid="format-context-bar"
+          className="flex items-center justify-between gap-2 mt-4 px-0.5"
+        >
+          <div>
+            {activeTab === 'doubles' && doublesRank != null && (
+              <Badge variant="indigo">#{doublesRank} по двойки</Badge>
+            )}
+            {activeTab === 'singles' && singlesRank != null && (
+              <Badge variant="purple">#{singlesRank} поединично</Badge>
+            )}
+            {((activeTab === 'doubles' && doublesRank == null) ||
+              (activeTab === 'singles' && singlesRank == null)) &&
+              activeSummary.matchesPlayed === 0 && <Badge variant="slate">Нов</Badge>}
+          </div>
+          <FormBadge form={activeSummary.form} maxItems={5} />
         </div>
 
         {/* Dynamic 5-Metric Stat Grid */}
@@ -275,7 +256,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
           >
             <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">Успеваемост</div>
             <div className="text-lg sm:text-xl font-bold mt-1 text-indigo-600 dark:text-indigo-400">
-              {activeSummary.winRate}%
+              {activeSummary.matchesPlayed === 0 ? '0%' : `${activeSummary.displayWinRate ?? activeSummary.winRate}%`}
             </div>
           </div>
           <div
@@ -293,50 +274,59 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
 
         {/* Specialty Analytics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-          {/* Favorite Partner */}
-          <div
-            data-testid="card-favorite-partner"
-            className="p-3.5 rounded-xl border border-gray-100 dark:border-gray-700/60 bg-gray-50/50 dark:bg-gray-800/50 flex flex-col justify-between"
-          >
-            <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">
-              <Users className="w-4 h-4 text-indigo-500" />
-              <span>Любим партньор</span>
+          {/* Favorite Partner - ONLY rendered on doubles tab */}
+          {activeTab === 'doubles' && (
+            <div
+              data-testid="card-favorite-partner"
+              className="p-3.5 rounded-xl border border-gray-100 dark:border-gray-700/60 bg-gray-50/50 dark:bg-gray-800/50 flex flex-col justify-between"
+            >
+              <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">
+                <Users className="w-4 h-4 text-indigo-500" />
+                <span>Любим партньор</span>
+              </div>
+              {(resolvedProfile?.doublesFavoritePartner ?? resolvedProfile?.favoritePartner) ? (
+                <div>
+                  <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                    {(resolvedProfile.doublesFavoritePartner ?? resolvedProfile.favoritePartner)!.partnerName}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {formatRecordSummary(
+                      (resolvedProfile.doublesFavoritePartner ?? resolvedProfile.favoritePartner)!.matchesTogether,
+                      (resolvedProfile.doublesFavoritePartner ?? resolvedProfile.favoritePartner)!.wins,
+                      (resolvedProfile.doublesFavoritePartner ?? resolvedProfile.favoritePartner)!.losses
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs text-gray-400 dark:text-gray-500 py-1">
+                  Няма изиграни мачове по двойки
+                </div>
+              )}
             </div>
-            {resolvedProfile?.favoritePartner ? (
-              <div>
-                <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                  {resolvedProfile.favoritePartner.partnerName}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  {resolvedProfile.favoritePartner.matchesTogether} мача (
-                  {resolvedProfile.favoritePartner.wins}П - {resolvedProfile.favoritePartner.losses}З,{' '}
-                  {resolvedProfile.favoritePartner.winRate}%)
-                </div>
-              </div>
-            ) : (
-              <div className="text-xs text-gray-400 dark:text-gray-500 py-1">
-                Няма изиграни мачове по двойки
-              </div>
-            )}
-          </div>
+          )}
 
-          {/* Top Rival */}
+          {/* Top Rival - Expands to sm:col-span-2 when activeTab is singles */}
           <div
             data-testid="card-top-rival"
-            className="p-3.5 rounded-xl border border-gray-100 dark:border-gray-700/60 bg-gray-50/50 dark:bg-gray-800/50 flex flex-col justify-between"
+            className={`p-3.5 rounded-xl border border-gray-100 dark:border-gray-700/60 bg-gray-50/50 dark:bg-gray-800/50 flex flex-col justify-between ${
+              activeTab === 'singles' ? 'sm:col-span-2' : ''
+            }`}
           >
             <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">
               <Swords className="w-4 h-4 text-purple-500" />
               <span>Най-чест съперник</span>
             </div>
-            {resolvedProfile?.topRival ? (
+            {currentTopRival ? (
               <div>
                 <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                  {resolvedProfile.topRival.rivalName}
+                  {currentTopRival.rivalName}
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  {resolvedProfile.topRival.encounters} мача ({resolvedProfile.topRival.wins}П -{' '}
-                  {resolvedProfile.topRival.losses}З, {resolvedProfile.topRival.winRate}%)
+                  {formatRecordSummary(
+                    currentTopRival.encounters,
+                    currentTopRival.wins,
+                    currentTopRival.losses
+                  )}
                 </div>
               </div>
             ) : (
@@ -346,20 +336,20 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
             )}
           </div>
 
-          {/* Championship Titles */}
-          {resolvedProfile && resolvedProfile.titles.length > 0 && (
+          {/* Championship Titles - Filtered by active format; completely hidden when empty */}
+          {activeTitles.length > 0 && (
             <div
               data-testid="card-championship-titles"
               className="sm:col-span-2 p-3.5 rounded-xl border border-amber-200/80 dark:border-amber-800/60 bg-amber-50/40 dark:bg-amber-950/20"
             >
               <div className="flex items-center gap-2 text-xs font-semibold text-amber-700 dark:text-amber-400 mb-2">
                 <Trophy className="w-4 h-4 text-amber-500" />
-                <span>🏆 Титли ({resolvedProfile.titles.length})</span>
+                <span>🏆 Титли ({activeTitles.length})</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {resolvedProfile.titles.map((title) => (
+                {activeTitles.map((title) => (
                   <div
-                    key={title.tournamentId}
+                    key={`${title.tournamentId}:${title.format}`}
                     className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg bg-amber-100/80 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-800/50"
                   >
                     <span>{title.tournamentName}</span>
@@ -394,65 +384,73 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
             </div>
           ) : (
             <div className="space-y-2">
-              {filteredTimeline.map((item) => (
-                <div
-                  key={item.matchId}
-                  className="p-3 rounded-xl border border-gray-100 dark:border-gray-700/60 bg-gray-50/50 dark:bg-gray-800/50 hover:bg-gray-100/60 dark:hover:bg-gray-700/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2"
-                >
-                  {/* Left Column: Context, Stage, Date, Participants */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-gray-200/80 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                        {item.tournamentName || 'Приятелска среща'}
-                      </span>
-                      {item.stage && (
-                        <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60">
-                          {getStageLabel(item.stage)}
-                        </span>
-                      )}
-                      {item.date && (
-                        <span className="text-[11px] text-gray-400 dark:text-gray-500">
-                          {formatDisplayDate(item.date)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-gray-700 dark:text-gray-300">
-                      {item.format === 'doubles' ? (
-                        <>
-                          с <span className="font-medium">{item.partner?.name ?? 'Гост'}</span>{' '}
-                          срещу{' '}
-                          <span className="font-medium">
-                            {item.opponents.map((o) => o.name).join(', ')}
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          срещу{' '}
-                          <span className="font-medium">
-                            {item.opponents.map((o) => o.name).join(', ')}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
+              {filteredTimeline.map((item) => {
+                const stageLabel = resolveTimelineStageLabel(item.stage, item.groupName);
+                const tournamentBadge = item.tournamentName
+                  ? stageLabel
+                    ? `${item.tournamentName} • ${stageLabel}`
+                    : item.tournamentName
+                  : null;
 
-                  {/* Right Column: Outcome and Perspective Score */}
-                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
-                    <span
-                      className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                        item.isWinner
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
-                          : 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400'
-                      }`}
-                    >
-                      {item.isWinner ? 'Победа' : 'Загуба'}
-                    </span>
-                    <span className="font-mono font-bold text-sm sm:text-base text-gray-900 dark:text-white">
-                      {item.scoreDisplay}
-                    </span>
+                return (
+                  <div
+                    key={item.matchId}
+                    className="p-3 rounded-xl border border-gray-100 dark:border-gray-700/60 bg-gray-50/50 dark:bg-gray-800/50 hover:bg-gray-100/60 dark:hover:bg-gray-700/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                  >
+                    {/* Left Column: Context, Stage, Date, Participants */}
+                    <div className="flex-1 min-w-0">
+                      {(tournamentBadge || item.date) && (
+                        <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                          {tournamentBadge && (
+                            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-gray-200/80 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                              {tournamentBadge}
+                            </span>
+                          )}
+                          {item.date && (
+                            <span className="text-[11px] text-gray-400 dark:text-gray-500">
+                              {formatDisplayDate(item.date)}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <div className="text-xs text-gray-700 dark:text-gray-300">
+                        {item.format === 'doubles' ? (
+                          <>
+                            с <span className="font-medium">{item.partner?.name ?? 'Гост'}</span>{' '}
+                            срещу{' '}
+                            <span className="font-medium">
+                              {item.opponents.map((o) => o.name).join(', ')}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            срещу{' '}
+                            <span className="font-medium">
+                              {item.opponents.map((o) => o.name).join(', ')}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right Column: Outcome and Perspective Score */}
+                    <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                      <span
+                        className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                          item.isWinner
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
+                            : 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400'
+                        }`}
+                      >
+                        {item.isWinner ? 'Победа' : 'Загуба'}
+                      </span>
+                      <span className="font-mono font-bold text-sm sm:text-base text-gray-900 dark:text-white">
+                        {item.scoreDisplay}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

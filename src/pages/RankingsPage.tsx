@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Trophy, Search, Loader2, Users } from 'lucide-react';
 import { useRankings } from '../hooks/useRankings';
 import { useMatches } from '../hooks/useMatches';
+import { useTournaments } from '../hooks/useTournaments';
 import { RankingsTable } from '../components/rankings/RankingsTable';
 import { RankingsMobile } from '../components/rankings/RankingsMobile';
 import { PlayerProfileModal } from '../components/player/PlayerProfileModal';
@@ -27,6 +28,7 @@ export const RankingsPage: React.FC = () => {
 
   const [selectedProfilePlayer, setSelectedProfilePlayer] = useState<SelectedProfilePlayer | null>(null);
   const { matches } = useMatches();
+  const { tournaments } = useTournaments();
 
   const allPlayers = useMemo(() => rawRankings.map((r) => r.player), [rawRankings]);
 
@@ -162,6 +164,7 @@ export const RankingsPage: React.FC = () => {
         playerId={selectedProfilePlayer?.id ?? null}
         playerName={selectedProfilePlayer?.name}
         matches={matches}
+        tournaments={tournaments}
         doublesRank={selectedProfilePlayer ? doublesRankMap.get(selectedProfilePlayer.id) ?? null : null}
         singlesRank={selectedProfilePlayer ? singlesRankMap.get(selectedProfilePlayer.id) ?? null : null}
       />
