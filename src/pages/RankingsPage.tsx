@@ -1,9 +1,18 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Trophy, Search, Loader2, Users } from 'lucide-react';
 import { useRankings } from '../hooks/useRankings';
+import { useMatches } from '../hooks/useMatches';
+import { useTournaments } from '../hooks/useTournaments';
 import { RankingsTable } from '../components/rankings/RankingsTable';
 import { RankingsMobile } from '../components/rankings/RankingsMobile';
+import { PlayerProfileModal } from '../components/player/PlayerProfileModal';
 import { Alert } from '../components/ui/Alert';
+import { computePlayerSportsStats } from '../utils/standingsStats';
+
+export interface SelectedProfilePlayer {
+  id: string;
+  name: string;
+}
 
 export const RankingsPage: React.FC = () => {
   const {
@@ -16,6 +25,34 @@ export const RankingsPage: React.FC = () => {
     loading,
     error,
   } = useRankings();
+
+  const [selectedProfilePlayer, setSelectedProfilePlayer] = useState<SelectedProfilePlayer | null>(null);
+  const { matches } = useMatches();
+  const { tournaments } = useTournaments();
+
+  const allPlayers = useMemo(() => rawRankings.map((r) => r.player), [rawRankings]);
+
+  const singlesRankMap = useMemo(() => {
+    const stats = computePlayerSportsStats(allPlayers, matches, 'singles');
+    const map = new Map<string, number>();
+    for (const s of stats) {
+      if (s.matchesPlayed > 0) map.set(s.playerId, s.rank);
+    }
+    return map;
+  }, [allPlayers, matches]);
+
+  const doublesRankMap = useMemo(() => {
+    const stats = computePlayerSportsStats(allPlayers, matches, 'doubles');
+    const map = new Map<string, number>();
+    for (const s of stats) {
+      if (s.matchesPlayed > 0) map.set(s.playerId, s.rank);
+    }
+    return map;
+  }, [allPlayers, matches]);
+
+  const handleSelectPlayer = (playerId: string, playerName?: string) => {
+    setSelectedProfilePlayer({ id: playerId, name: playerName || '' });
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -110,15 +147,27 @@ export const RankingsPage: React.FC = () => {
         <>
           {/* Desktop Table */}
           <div className="hidden md:block">
-            <RankingsTable rankings={rankings} />
+            <RankingsTable rankings={rankings} onSelectPlayer={handleSelectPlayer} />
           </div>
 
           {/* Mobile Cards */}
           <div className="block md:hidden">
-            <RankingsMobile rankings={rankings} />
+            <RankingsMobile rankings={rankings} onSelectPlayer={handleSelectPlayer} />
           </div>
         </>
       )}
+
+      {/* Player Profile Modal */}
+      <PlayerProfileModal
+        isOpen={Boolean(selectedProfilePlayer)}
+        onClose={() => setSelectedProfilePlayer(null)}
+        playerId={selectedProfilePlayer?.id ?? null}
+        playerName={selectedProfilePlayer?.name}
+        matches={matches}
+        tournaments={tournaments}
+        doublesRank={selectedProfilePlayer ? doublesRankMap.get(selectedProfilePlayer.id) ?? null : null}
+        singlesRank={selectedProfilePlayer ? singlesRankMap.get(selectedProfilePlayer.id) ?? null : null}
+      />
     </div>
   );
 };

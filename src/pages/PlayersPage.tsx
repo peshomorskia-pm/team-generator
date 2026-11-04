@@ -1,8 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { UserPlus, Search, Pencil, Trash2, Users, Loader2 } from 'lucide-react';
 import { usePlayers } from '../hooks/usePlayers';
+import { useMatches } from '../hooks/useMatches';
+import { useTournaments } from '../hooks/useTournaments';
 import { PlayerModal } from '../components/player/PlayerModal';
 import { DeletePlayerModal } from '../components/player/DeletePlayerModal';
+import { PlayerProfileModal } from '../components/player/PlayerProfileModal';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
@@ -10,6 +13,12 @@ import { Alert } from '../components/ui/Alert';
 import { Card } from '../components/ui/Card';
 import type { PlayerRow } from '../types/database.types';
 import { sortPlayersByName } from '../utils/playerSort';
+import { computePlayerSportsStats } from '../utils/standingsStats';
+
+export interface SelectedProfilePlayer {
+  id: string;
+  name: string;
+}
 
 export const PlayersPage: React.FC = () => {
   const {
@@ -26,6 +35,28 @@ export const PlayersPage: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<PlayerRow | undefined>(undefined);
   const [deletingPlayer, setDeletingPlayer] = useState<PlayerRow | undefined>(undefined);
+  const [selectedProfilePlayer, setSelectedProfilePlayer] = useState<SelectedProfilePlayer | null>(null);
+
+  const { matches } = useMatches();
+  const { tournaments } = useTournaments();
+
+  const singlesRankMap = useMemo(() => {
+    const stats = computePlayerSportsStats(players, matches, 'singles');
+    const map = new Map<string, number>();
+    for (const s of stats) {
+      if (s.matchesPlayed > 0) map.set(s.playerId, s.rank);
+    }
+    return map;
+  }, [players, matches]);
+
+  const doublesRankMap = useMemo(() => {
+    const stats = computePlayerSportsStats(players, matches, 'doubles');
+    const map = new Map<string, number>();
+    for (const s of stats) {
+      if (s.matchesPlayed > 0) map.set(s.playerId, s.rank);
+    }
+    return map;
+  }, [players, matches]);
 
   const filteredPlayers = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -174,7 +205,17 @@ export const PlayersPage: React.FC = () => {
                   {filteredPlayers.map((player) => (
                     <tr
                       key={player.id}
-                      className="hover:bg-gray-50/60 dark:hover:bg-slate-700/40 transition-colors"
+                      onClick={() => setSelectedProfilePlayer({ id: player.id, name: player.name })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setSelectedProfilePlayer({ id: player.id, name: player.name });
+                        }
+                      }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Преглед на профила на ${player.name}`}
+                      className="cursor-pointer hover:bg-indigo-50/50 dark:hover:bg-slate-700/40 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-colors"
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
@@ -190,7 +231,10 @@ export const PlayersPage: React.FC = () => {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"
-                            onClick={() => setEditingPlayer(player)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingPlayer(player);
+                            }}
                             aria-label={`Редактирай ${player.name}`}
                             className="p-2 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
                           >
@@ -198,7 +242,10 @@ export const PlayersPage: React.FC = () => {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setDeletingPlayer(player)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeletingPlayer(player);
+                            }}
                             aria-label={`Изтрий ${player.name}`}
                             className="p-2 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
                           >
@@ -217,7 +264,17 @@ export const PlayersPage: React.FC = () => {
               {filteredPlayers.map((player) => (
                 <Card
                   key={player.id}
-                  className="p-4 flex items-center justify-between border border-gray-200 dark:border-slate-700"
+                  onClick={() => setSelectedProfilePlayer({ id: player.id, name: player.name })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedProfilePlayer({ id: player.id, name: player.name });
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Преглед на профила на ${player.name}`}
+                  className="p-4 flex items-center justify-between border border-gray-200 dark:border-slate-700 cursor-pointer hover:bg-indigo-50/50 dark:hover:bg-slate-700/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-sm shrink-0">
@@ -233,7 +290,10 @@ export const PlayersPage: React.FC = () => {
                   <div className="flex items-center gap-1 shrink-0 ml-2">
                     <button
                       type="button"
-                      onClick={() => setEditingPlayer(player)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingPlayer(player);
+                      }}
                       aria-label={`Редактирай ${player.name}`}
                       className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                     >
@@ -241,7 +301,10 @@ export const PlayersPage: React.FC = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setDeletingPlayer(player)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeletingPlayer(player);
+                      }}
                       aria-label={`Изтрий ${player.name}`}
                       className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                     >
@@ -271,6 +334,18 @@ export const PlayersPage: React.FC = () => {
         onClose={() => setDeletingPlayer(undefined)}
         onConfirm={handleDeletePlayer}
         playerName={deletingPlayer?.name ?? ''}
+      />
+
+      {/* Player Profile Modal */}
+      <PlayerProfileModal
+        isOpen={Boolean(selectedProfilePlayer)}
+        onClose={() => setSelectedProfilePlayer(null)}
+        playerId={selectedProfilePlayer?.id ?? null}
+        playerName={selectedProfilePlayer?.name}
+        matches={matches}
+        tournaments={tournaments}
+        doublesRank={selectedProfilePlayer ? doublesRankMap.get(selectedProfilePlayer.id) ?? null : null}
+        singlesRank={selectedProfilePlayer ? singlesRankMap.get(selectedProfilePlayer.id) ?? null : null}
       />
     </div>
   );
