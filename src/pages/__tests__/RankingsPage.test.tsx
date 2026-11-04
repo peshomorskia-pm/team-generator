@@ -14,6 +14,31 @@ vi.mock('../../lib/supabase', () => ({
   isSupabaseConfigured: vi.fn(() => true),
 }));
 
+vi.mock('../../hooks/useTournaments', () => ({
+  useTournaments: () => ({
+    tournaments: [
+      {
+        id: 't-100',
+        title: 'Купа на София',
+        date: '2026-03-01',
+        format: 'doubles',
+        status: 'completed',
+        winner_team_name: null,
+        notes: null,
+        created_at: '2026-03-01T00:00:00Z',
+        updated_at: '2026-03-01T00:00:00Z',
+      },
+    ],
+    loading: false,
+    error: null,
+    fetchTournaments: vi.fn(),
+    createTournament: vi.fn(),
+    updateTournament: vi.fn(),
+    deleteTournament: vi.fn(),
+    saveTournamentDraft: vi.fn(),
+  }),
+}));
+
 describe('RankingsPage Component', () => {
   const mockPlayers: PlayerRow[] = [
     {
@@ -187,9 +212,26 @@ describe('RankingsPage Component', () => {
     expect(screen.queryByTestId('rankings-podium')).not.toBeInTheDocument();
   });
 
-  it('opens PlayerProfileModal when a player row is clicked and closes on close button', async () => {
+  it('opens PlayerProfileModal when a player row is clicked, receives tournaments list, and closes on close button', async () => {
     const user = userEvent.setup();
-    setupSupabaseMock();
+    const mockTournamentMatch = {
+      id: 'm-t-1',
+      match_format: 'doubles',
+      tournament_id: 't-100',
+      group_name: 'Финал',
+      team_1_score: 6,
+      team_2_score: 4,
+      played_at: '2026-03-01T10:00:00Z',
+      created_at: '2026-03-01T10:00:00Z',
+      updated_at: '2026-03-01T10:00:00Z',
+      match_players: [
+        { id: 'mp-1', match_id: 'm-t-1', player_id: 'p-1', team_side: 'team_1', guest_name: null, rating_before: null, rating_after: null },
+        { id: 'mp-2', match_id: 'm-t-1', player_id: 'p-partner', team_side: 'team_1', guest_name: null, rating_before: null, rating_after: null, players: { id: 'p-partner', name: 'Партньор' } },
+        { id: 'mp-3', match_id: 'm-t-1', player_id: 'p-2', team_side: 'team_2', guest_name: null, rating_before: null, rating_after: null, players: { id: 'p-2', name: 'Димитър Кузманов' } },
+      ],
+    };
+
+    setupSupabaseMock(mockPlayers, [mockTournamentMatch]);
 
     render(<RankingsPage />);
     await screen.findByRole('table');
@@ -202,6 +244,9 @@ describe('RankingsPage Component', () => {
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Григор Димитров' })).toBeInTheDocument();
+
+    // Verify tournament title from useTournaments is rendered in timeline without warnings
+    expect(screen.getByText('Купа на София • Финал')).toBeInTheDocument();
 
     // Close button dismisses the modal
     const closeBtn = screen.getByRole('button', { name: 'Затвори' });

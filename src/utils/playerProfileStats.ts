@@ -113,6 +113,71 @@ export function isMatchCompletedAndValid(match: MatchDetail): boolean {
 }
 
 /**
+ * Formats ISO dates into Bulgarian display date (e.g. "01.03.2026 г.")
+ */
+export function formatDisplayDate(dateStr?: string): string {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return dateStr;
+  return date.toLocaleDateString('bg-BG', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
+/**
+ * Formats partner and rival chemistry records with Bulgarian pluralization.
+ */
+export function formatRecordSummary(matches: number, wins: number, losses: number): string {
+  const matchWord = matches === 1 ? 'мач' : 'мача';
+  const winWord = wins === 1 ? 'победа' : 'победи';
+  const lossWord = losses === 1 ? 'загуба' : 'загуби';
+  return `${matches} ${matchWord} • ${wins} ${winWord}, ${losses} ${lossWord}`;
+}
+
+/**
+ * Resolves tournament title with fallback "Турнир ({date})" or "Турнир", strictly never raw UUID.
+ */
+export function resolveTournamentName(
+  tournamentId?: string | null,
+  tournamentsMap?: Map<string, Tournament>,
+  dateStr?: string
+): string | undefined {
+  if (!tournamentId) return undefined;
+  const directTitle = tournamentsMap?.get(tournamentId)?.title?.trim();
+  if (directTitle) return directTitle;
+  const formattedDate = formatDisplayDate(dateStr);
+  return formattedDate ? `Турнир (${formattedDate})` : 'Турнир';
+}
+
+/**
+ * Resolves stage label for timeline rows, retaining group titles (e.g. "Група А").
+ */
+export function resolveTimelineStageLabel(stage?: string, groupName?: string): string | undefined {
+  if (groupName && groupName.trim()) {
+    const trimmed = groupName.trim();
+    if (/^(полуфинал|semi[-_]?final)/i.test(trimmed)) return 'Полуфинал';
+    if (/^(финал|final)/i.test(trimmed)) return 'Финал';
+    if (/^(1\/4-финал|quarter[-_]?final)/i.test(trimmed)) return '1/4-финал';
+    return trimmed;
+  }
+  if (!stage) return undefined;
+  switch (stage) {
+    case 'final':
+      return 'Финал';
+    case 'semi_final':
+      return 'Полуфинал';
+    case 'quarter_final':
+      return '1/4-финал';
+    case 'group':
+      return 'Групова фаза';
+    default:
+      return stage;
+  }
+}
+
+/**
  * Normalizes Bulgarian & English group/stage names.
  */
 export function resolveMatchStage(groupName?: string | null): string | undefined {
@@ -405,7 +470,8 @@ export function calculatePlayerProfileData(
     const outcome = getMatchOutcome(match);
     const isWinner = outcome.winner === playerSide;
     const stage = resolveMatchStage(match.group_name);
-    const tournamentName = match.tournament_id ? tournaments.get(match.tournament_id)?.title : undefined;
+    const tournamentDate = date || (match.tournament_id ? tournaments.get(match.tournament_id)?.date : undefined);
+    const tournamentName = resolveTournamentName(match.tournament_id, tournaments, tournamentDate);
 
     // Teammate / Partner
     let partner: PlayerParticipant | undefined;
@@ -456,7 +522,7 @@ export function calculatePlayerProfileData(
 
     // Tournament Titles: winning a final in a tournament
     if (stage === 'final' && isWinner && match.tournament_id) {
-      const tName = tournamentName || tournaments.get(match.tournament_id)?.title || match.tournament_id;
+      const tName = tournamentName || 'Турнир';
       rawTitles.push({
         tournamentId: match.tournament_id,
         tournamentName: tName,

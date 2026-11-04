@@ -154,24 +154,8 @@ describe('PlayerProfileModal Component', () => {
     );
   });
 
-  it('3. renders player name and initial avatar correctly', () => {
-    render(
-      <PlayerProfileModal
-        isOpen={true}
-        onClose={vi.fn()}
-        playerId="p-1"
-        playerName="Иван Петров"
-        profileData={mockPlayerProfileData}
-      />
-    );
-
-    const avatar = screen.getByTestId('player-avatar');
-    expect(avatar).toBeInTheDocument();
-    expect(avatar).toHaveTextContent('И');
-    expect(screen.getByText('Иван Петров')).toBeInTheDocument();
-  });
-
-  it('4. renders doubles and singles standing rank badges', () => {
+  // T-UI-01 (Clean Header)
+  it('3. T-UI-01: renders clean top header containing ONLY avatar, player name h2, and close button', () => {
     render(
       <PlayerProfileModal
         isOpen={true}
@@ -184,11 +168,81 @@ describe('PlayerProfileModal Component', () => {
       />
     );
 
-    expect(screen.getByText('#1 по двойки')).toBeInTheDocument();
-    expect(screen.getByText('#3 поединично')).toBeInTheDocument();
+    const avatar = screen.getByTestId('player-avatar');
+    expect(avatar).toBeInTheDocument();
+    expect(avatar).toHaveTextContent('И');
+
+    const heading = screen.getByRole('heading', { name: 'Иван Петров' });
+    expect(heading).toBeInTheDocument();
+
+    const closeBtn = screen.getByRole('button', { name: 'Затвори' });
+    expect(closeBtn).toBeInTheDocument();
+
+    // Verify top header container does NOT contain rank badges or form strip
+    const headerContainer = heading.closest<HTMLElement>('div.border-b');
+    expect(headerContainer).not.toBeNull();
+    if (headerContainer) {
+      expect(within(headerContainer).queryByText('#1 по двойки')).not.toBeInTheDocument();
+      expect(within(headerContainer).queryByText('#3 поединично')).not.toBeInTheDocument();
+      expect(within(headerContainer).queryByText('Нов')).not.toBeInTheDocument();
+    }
   });
 
-  it('5. renders "Нов" badge when player is unranked with 0 matches', () => {
+  // T-UI-02 (Two Tabs & Default Doubles)
+  it('4. T-UI-02: tablist contains strictly 2 tabs (По двойки, Поединично) with По двойки default active and Всички absent', () => {
+    render(
+      <PlayerProfileModal
+        isOpen={true}
+        onClose={vi.fn()}
+        playerId="p-1"
+        playerName="Иван Петров"
+        profileData={mockPlayerProfileData}
+      />
+    );
+
+    const tablist = screen.getByRole('tablist', { name: 'Формат на срещите' });
+    const tabs = within(tablist).getAllByRole('tab');
+    expect(tabs).toHaveLength(2);
+
+    const doublesTab = within(tablist).getByRole('tab', { name: 'По двойки' });
+    const singlesTab = within(tablist).getByRole('tab', { name: 'Поединично' });
+    expect(doublesTab).toBeInTheDocument();
+    expect(singlesTab).toBeInTheDocument();
+
+    expect(doublesTab).toHaveAttribute('aria-selected', 'true');
+    expect(singlesTab).toHaveAttribute('aria-selected', 'false');
+
+    expect(within(tablist).queryByText('Всички')).toBeNull();
+  });
+
+  // T-UI-03 (Sub-Header Format Context Bar)
+  it('5. T-UI-03: renders sub-header format context bar updating on tab switch and showing Нов when unranked', async () => {
+    const user = userEvent.setup();
+
+    const { rerender } = render(
+      <PlayerProfileModal
+        isOpen={true}
+        onClose={vi.fn()}
+        playerId="p-1"
+        playerName="Иван Петров"
+        profileData={mockPlayerProfileData}
+        doublesRank={1}
+        singlesRank={3}
+      />
+    );
+
+    const contextBar = screen.getByTestId('format-context-bar');
+    expect(within(contextBar).getByText('#1 по двойки')).toBeInTheDocument();
+    expect(within(contextBar).queryByText('#3 поединично')).not.toBeInTheDocument();
+
+    // Switch to Поединично
+    const singlesTab = screen.getByRole('tab', { name: 'Поединично' });
+    await user.click(singlesTab);
+
+    expect(within(contextBar).getByText('#3 поединично')).toBeInTheDocument();
+    expect(within(contextBar).queryByText('#1 по двойки')).not.toBeInTheDocument();
+
+    // Re-render with unranked player with 0 matches
     const emptyProfileData: PlayerProfileData = {
       ...mockPlayerProfileData,
       summary: {
@@ -224,12 +278,9 @@ describe('PlayerProfileModal Component', () => {
         },
       },
       timeline: [],
-      favoritePartner: null,
-      topRival: null,
-      titles: [],
     };
 
-    render(
+    rerender(
       <PlayerProfileModal
         isOpen={true}
         onClose={vi.fn()}
@@ -241,10 +292,66 @@ describe('PlayerProfileModal Component', () => {
       />
     );
 
-    expect(screen.getByText('Нов')).toBeInTheDocument();
+    const updatedContextBar = screen.getByTestId('format-context-bar');
+    expect(within(updatedContextBar).getByText('Нов')).toBeInTheDocument();
   });
 
-  it('6. invokes onClose when 44px close button is clicked', async () => {
+  // T-UI-04 (Natural Bulgarian Partner & Rival Copy)
+  it('6. T-UI-04: renders natural Bulgarian copy for Favorite Partner and Top Rival cards', () => {
+    render(
+      <PlayerProfileModal
+        isOpen={true}
+        onClose={vi.fn()}
+        playerId="p-1"
+        playerName="Иван Петров"
+        profileData={mockPlayerProfileData}
+      />
+    );
+
+    const partnerCard = screen.getByTestId('card-favorite-partner');
+    expect(within(partnerCard).getByText('Любим партньор')).toBeInTheDocument();
+    expect(within(partnerCard).getByText('Георги Иванов')).toBeInTheDocument();
+    expect(within(partnerCard).getByText('6 мача • 4 победи, 2 загуби')).toBeInTheDocument();
+
+    const rivalCard = screen.getByTestId('card-top-rival');
+    expect(within(rivalCard).getByText('Най-чест съперник')).toBeInTheDocument();
+    expect(within(rivalCard).getByText('Петър Симеонов')).toBeInTheDocument();
+    expect(within(rivalCard).getByText('5 мача • 3 победи, 2 загуби')).toBeInTheDocument();
+
+    // Verify cryptic regex /\d+П\s*-\s*\d+З/ does not appear in dialog
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.textContent).not.toMatch(/\d+П\s*-\s*\d+З/);
+  });
+
+  // T-UI-05 (Timeline Badges & Friendly Streamlining)
+  it('7. T-UI-05: renders single merged tournament badge, no badge for friendly matches, and eliminates Приятелска среща', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <PlayerProfileModal
+        isOpen={true}
+        onClose={vi.fn()}
+        playerId="p-1"
+        playerName="Иван Петров"
+        profileData={mockPlayerProfileData}
+      />
+    );
+
+    // On default doubles tab: tournament match m-1 has stage: 'final'
+    expect(screen.getByText('Пролетен Турнир • Финал')).toBeInTheDocument();
+
+    // Switch to singles tab: match m-2 has no tournamentName (friendly match)
+    const singlesTab = screen.getByRole('tab', { name: 'Поединично' });
+    await user.click(singlesTab);
+
+    const timelineHeading = screen.getByText('История на мачовете');
+    const timelineSection = timelineHeading.closest<HTMLElement>('div.mt-6')!;
+    expect(within(timelineSection).getByText('4:6, 3:6')).toBeInTheDocument();
+    expect(within(timelineSection).queryByText('Приятелска среща')).toBeNull();
+    expect(within(timelineSection).queryByText(/•/)).toBeNull();
+  });
+
+  it('8. invokes onClose when 44px close button is clicked', async () => {
     const user = userEvent.setup();
     const handleClose = vi.fn();
 
@@ -265,7 +372,7 @@ describe('PlayerProfileModal Component', () => {
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
 
-  it('7. invokes onClose when Escape key is pressed', () => {
+  it('9. invokes onClose when Escape key is pressed', () => {
     const handleClose = vi.fn();
 
     render(
@@ -282,7 +389,7 @@ describe('PlayerProfileModal Component', () => {
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
 
-  it('8. invokes onClose when clicking on backdrop', () => {
+  it('10. invokes onClose when clicking on backdrop', () => {
     const handleClose = vi.fn();
 
     render(
@@ -300,7 +407,7 @@ describe('PlayerProfileModal Component', () => {
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
 
-  it('9. does not trigger onClose when clicking inside the dialog card', () => {
+  it('11. does not trigger onClose when clicking inside the dialog card', () => {
     const handleClose = vi.fn();
 
     render(
@@ -318,30 +425,7 @@ describe('PlayerProfileModal Component', () => {
     expect(handleClose).not.toHaveBeenCalled();
   });
 
-  it('10. defaults to "Всички" tab and renders aggregate summary stats', () => {
-    render(
-      <PlayerProfileModal
-        isOpen={true}
-        onClose={vi.fn()}
-        playerId="p-1"
-        playerName="Иван Петров"
-        profileData={mockPlayerProfileData}
-      />
-    );
-
-    const allTab = screen.getByRole('tab', { name: 'Всички' });
-    expect(allTab).toHaveAttribute('aria-selected', 'true');
-
-    expect(within(screen.getByTestId('stat-matches')).getByText('10')).toBeInTheDocument();
-    expect(within(screen.getByTestId('stat-wins')).getByText('7')).toBeInTheDocument();
-    expect(within(screen.getByTestId('stat-losses')).getByText('3')).toBeInTheDocument();
-    expect(within(screen.getByTestId('stat-winrate')).getByText('70%')).toBeInTheDocument();
-    expect(within(screen.getByTestId('stat-gamediff')).getByText('+15')).toBeInTheDocument();
-  });
-
-  it('11. switches to "По двойки" tab and updates metrics and timeline', async () => {
-    const user = userEvent.setup();
-
+  it('12. defaults to "По двойки" tab and renders doubles summary stats', () => {
     render(
       <PlayerProfileModal
         isOpen={true}
@@ -353,9 +437,8 @@ describe('PlayerProfileModal Component', () => {
     );
 
     const doublesTab = screen.getByRole('tab', { name: 'По двойки' });
-    await user.click(doublesTab);
-
     expect(doublesTab).toHaveAttribute('aria-selected', 'true');
+
     expect(within(screen.getByTestId('stat-matches')).getByText('6')).toBeInTheDocument();
     expect(within(screen.getByTestId('stat-wins')).getByText('4')).toBeInTheDocument();
     expect(within(screen.getByTestId('stat-losses')).getByText('2')).toBeInTheDocument();
@@ -367,7 +450,7 @@ describe('PlayerProfileModal Component', () => {
     expect(screen.queryByText('4:6, 3:6')).not.toBeInTheDocument();
   });
 
-  it('12. switches to "Поединично" tab and updates metrics and timeline', async () => {
+  it('13. switches to "Поединично" tab and updates metrics and timeline', async () => {
     const user = userEvent.setup();
 
     render(
@@ -393,32 +476,6 @@ describe('PlayerProfileModal Component', () => {
     // Verify timeline only shows singles match
     expect(screen.getByText('4:6, 3:6')).toBeInTheDocument();
     expect(screen.queryByText('6:4, 6:3')).not.toBeInTheDocument();
-  });
-
-  it('13. renders Favorite Partner and Top Rival cards with stats', () => {
-    render(
-      <PlayerProfileModal
-        isOpen={true}
-        onClose={vi.fn()}
-        playerId="p-1"
-        playerName="Иван Петров"
-        profileData={mockPlayerProfileData}
-      />
-    );
-
-    const partnerCard = screen.getByTestId('card-favorite-partner');
-    expect(within(partnerCard).getByText('Любим партньор')).toBeInTheDocument();
-    expect(within(partnerCard).getByText('Георги Иванов')).toBeInTheDocument();
-    expect(
-      within(partnerCard).getByText(/6 мача \(4П - 2З, 66\.7%\)/)
-    ).toBeInTheDocument();
-
-    const rivalCard = screen.getByTestId('card-top-rival');
-    expect(within(rivalCard).getByText('Най-чест съперник')).toBeInTheDocument();
-    expect(within(rivalCard).getByText('Петър Симеонов')).toBeInTheDocument();
-    expect(
-      within(rivalCard).getByText(/5 мача \(3П - 2З, 60%\)/)
-    ).toBeInTheDocument();
   });
 
   it('14. renders tournament championship titles card when titles exist', () => {
@@ -504,7 +561,7 @@ describe('PlayerProfileModal Component', () => {
     const rawMatches: MatchDetail[] = [
       {
         id: 'raw-1',
-        match_format: 'singles',
+        match_format: 'doubles',
         team_1_score: 6,
         team_2_score: 2,
         played_at: '2026-03-01T12:00:00Z',
@@ -523,6 +580,16 @@ describe('PlayerProfileModal Component', () => {
           },
           {
             id: 'mp-2',
+            match_id: 'raw-1',
+            player_id: 'p-teammate',
+            team_side: 'team_1',
+            guest_name: null,
+            rating_before: null,
+            rating_after: null,
+            players: { id: 'p-teammate', name: 'Партньор' },
+          },
+          {
+            id: 'mp-3',
             match_id: 'raw-1',
             player_id: 'p-opp',
             team_side: 'team_2',
@@ -545,7 +612,7 @@ describe('PlayerProfileModal Component', () => {
       />
     );
 
-    // Should compute 1 match, 1 win, 0 losses, 100% win rate
+    // Should compute 1 match, 1 win, 0 losses, 100% win rate for doubles (default tab)
     expect(screen.getByText('Динамичен Играч')).toBeInTheDocument();
     expect(within(screen.getByTestId('stat-matches')).getByText('1')).toBeInTheDocument();
     expect(within(screen.getByTestId('stat-wins')).getByText('1')).toBeInTheDocument();

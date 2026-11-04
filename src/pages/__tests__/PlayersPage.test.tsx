@@ -20,6 +20,30 @@ vi.mock('../../hooks/useMatches', () => ({
     clearAlert: vi.fn(),
   }),
 }));
+vi.mock('../../hooks/useTournaments', () => ({
+  useTournaments: () => ({
+    tournaments: [
+      {
+        id: 't-200',
+        title: 'Варна Оупън',
+        date: '2026-03-01',
+        format: 'doubles',
+        status: 'completed',
+        winner_team_name: null,
+        notes: null,
+        created_at: '2026-03-01T00:00:00Z',
+        updated_at: '2026-03-01T00:00:00Z',
+      },
+    ],
+    loading: false,
+    error: null,
+    fetchTournaments: vi.fn(),
+    createTournament: vi.fn(),
+    updateTournament: vi.fn(),
+    deleteTournament: vi.fn(),
+    saveTournamentDraft: vi.fn(),
+  }),
+}));
 
 describe('PlayersPage', () => {
   const samplePlayers: PlayerRow[] = [

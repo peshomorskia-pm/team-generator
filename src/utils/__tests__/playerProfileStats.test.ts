@@ -7,6 +7,10 @@ import {
   resolveMatchStage,
   sortPartners,
   sortRivals,
+  formatDisplayDate,
+  formatRecordSummary,
+  resolveTournamentName,
+  resolveTimelineStageLabel,
   PlayerPartnerStat,
   PlayerRivalStat,
 } from '../playerProfileStats';
@@ -649,6 +653,111 @@ describe('playerProfileStats engine', () => {
       const res2 = computePlayerProfileStats(targetId, [match]);
 
       expect(res1).toEqual(res2);
+    });
+  });
+
+  describe('14. Tournament Title Fallback & Localization Helpers', () => {
+    // T-UT-01 (Tournament Title Fallback)
+    it('T-UT-01: resolves tournamentName to fallback "Турнир (15.06.2026 г.)" and strictly never raw UUID', () => {
+      const match = createMockMatch({
+        id: 'm-uuid-missing',
+        tournament_id: 'missing-uuid-1',
+        played_at: '2026-06-15T10:00:00Z',
+        team_1_score: 6,
+        team_2_score: 4,
+        match_players: [
+          { id: 'mp-1', match_id: 'm-uuid-missing', player_id: targetId, team_side: 'team_1', guest_name: null, rating_before: null, rating_after: null },
+          { id: 'mp-2', match_id: 'm-uuid-missing', player_id: 'p-opp', team_side: 'team_2', guest_name: null, rating_before: null, rating_after: null },
+        ],
+      });
+
+      const tournamentsMap = new Map<string, Tournament>();
+      const result = calculatePlayerProfileData([match], targetId, tournamentsMap);
+
+      expect(result.timeline).toHaveLength(1);
+      expect(result.timeline[0].tournamentName).toBe('Турнир (15.06.2026 г.)');
+      expect(result.timeline[0].tournamentName).not.toContain('missing-uuid-1');
+    });
+
+    // T-UT-02 (Championship Title Fallback)
+    it('T-UT-02: resolves championship title to "Турнир (15.06.2026 г.)" when tournament ID is missing from map', () => {
+      const finalMatch = createMockMatch({
+        id: 'm-final-missing-uuid',
+        tournament_id: 'missing-uuid-2',
+        group_name: 'Финал',
+        played_at: '2026-06-15T10:00:00Z',
+        team_1_score: 6,
+        team_2_score: 4,
+        match_players: [
+          { id: 'mp-1', match_id: 'm-final-missing-uuid', player_id: targetId, team_side: 'team_1', guest_name: null, rating_before: null, rating_after: null },
+          { id: 'mp-2', match_id: 'm-final-missing-uuid', player_id: 'p-opp', team_side: 'team_2', guest_name: null, rating_before: null, rating_after: null },
+        ],
+      });
+
+      const tournamentsMap = new Map<string, Tournament>();
+      const result = calculatePlayerProfileData([finalMatch], targetId, tournamentsMap);
+
+      expect(result.titles).toHaveLength(1);
+      expect(result.titles[0].tournamentName).toBe('Турнир (15.06.2026 г.)');
+      expect(result.titles[0].tournamentName).not.toContain('missing-uuid-2');
+    });
+
+    // T-UT-03 (Friendly Match Omission)
+    it('T-UT-03: sets tournamentName to undefined for matches without tournament_id (friendly match)', () => {
+      const friendlyMatch = createMockMatch({
+        id: 'm-friendly',
+        tournament_id: null,
+        played_at: '2026-06-15T10:00:00Z',
+        team_1_score: 6,
+        team_2_score: 4,
+        match_players: [
+          { id: 'mp-1', match_id: 'm-friendly', player_id: targetId, team_side: 'team_1', guest_name: null, rating_before: null, rating_after: null },
+          { id: 'mp-2', match_id: 'm-friendly', player_id: 'p-opp', team_side: 'team_2', guest_name: null, rating_before: null, rating_after: null },
+        ],
+      });
+
+      const result = calculatePlayerProfileData([friendlyMatch], targetId);
+
+      expect(result.timeline).toHaveLength(1);
+      expect(result.timeline[0].tournamentName).toBeUndefined();
+    });
+
+    // T-UT-04 (Bulgarian Record Pluralization Helper)
+    it('T-UT-04: formats partner and rival records with correct Bulgarian natural pluralization', () => {
+      expect(formatRecordSummary(1, 1, 0)).toBe('1 мач • 1 победа, 0 загуби');
+      expect(formatRecordSummary(6, 4, 2)).toBe('6 мача • 4 победи, 2 загуби');
+      expect(formatRecordSummary(2, 0, 2)).toBe('2 мача • 0 победи, 2 загуби');
+      expect(formatRecordSummary(0, 0, 0)).toBe('0 мача • 0 победи, 0 загуби');
+    });
+
+    it('formatDisplayDate formats ISO date strings correctly', () => {
+      expect(formatDisplayDate('2026-06-15T10:00:00Z')).toBe('15.06.2026 г.');
+      expect(formatDisplayDate(undefined)).toBe('');
+      expect(formatDisplayDate('')).toBe('');
+      expect(formatDisplayDate('invalid-date')).toBe('invalid-date');
+    });
+
+    it('resolveTournamentName returns direct title when found, fallback with date, or undefined', () => {
+      const map = new Map<string, Tournament>();
+      map.set('t-known', createMockTournament({ id: 't-known', title: 'Summer Open' }));
+
+      expect(resolveTournamentName('t-known', map, '2026-06-15T10:00:00Z')).toBe('Summer Open');
+      expect(resolveTournamentName('t-unknown', map, '2026-06-15T10:00:00Z')).toBe('Турнир (15.06.2026 г.)');
+      expect(resolveTournamentName('t-unknown', map)).toBe('Турнир');
+      expect(resolveTournamentName(null, map)).toBeUndefined();
+      expect(resolveTournamentName(undefined, map)).toBeUndefined();
+    });
+
+    it('resolveTimelineStageLabel handles stages and custom group names properly', () => {
+      expect(resolveTimelineStageLabel('final')).toBe('Финал');
+      expect(resolveTimelineStageLabel('semi_final')).toBe('Полуфинал');
+      expect(resolveTimelineStageLabel('quarter_final')).toBe('1/4-финал');
+      expect(resolveTimelineStageLabel('group')).toBe('Групова фаза');
+      expect(resolveTimelineStageLabel(undefined, 'Група А')).toBe('Група А');
+      expect(resolveTimelineStageLabel('group', 'Група Б')).toBe('Група Б');
+      expect(resolveTimelineStageLabel('semi_final', 'Полуфинал 1')).toBe('Полуфинал');
+      expect(resolveTimelineStageLabel('final', 'Финал')).toBe('Финал');
+      expect(resolveTimelineStageLabel(undefined, undefined)).toBeUndefined();
     });
   });
 });
