@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import { RankingsMobile } from '../RankingsMobile';
 import type { RankingStats } from '../../../types/rankings';
 
@@ -97,5 +97,44 @@ describe('RankingsMobile Component', () => {
 
     const formBadges = screen.getAllByLabelText('Форма от последните 5 мача');
     expect(formBadges).toHaveLength(2);
+  });
+
+  it('calls onSelectPlayer when a card is clicked', () => {
+    const handleSelect = vi.fn();
+    render(<RankingsMobile rankings={mockRankings} onSelectPlayer={handleSelect} />);
+
+    const card = screen.getByRole('button', { name: 'Преглед на профила на Григор Димитров' });
+    fireEvent.click(card);
+
+    expect(handleSelect).toHaveBeenCalledTimes(1);
+    expect(handleSelect).toHaveBeenCalledWith('p-1', 'Григор Димитров');
+  });
+
+  it('calls onSelectPlayer when Enter key is pressed on a card', () => {
+    const handleSelect = vi.fn();
+    render(<RankingsMobile rankings={mockRankings} onSelectPlayer={handleSelect} />);
+
+    const card = screen.getByRole('button', { name: 'Преглед на профила на Григор Димитров' });
+    fireEvent.keyDown(card, { key: 'Enter' });
+
+    expect(handleSelect).toHaveBeenCalledTimes(1);
+    expect(handleSelect).toHaveBeenCalledWith('p-1', 'Григор Димитров');
+  });
+
+  it('calls onSelectPlayer when Space key is pressed on a card and prevents default', () => {
+    const handleSelect = vi.fn();
+    render(<RankingsMobile rankings={mockRankings} onSelectPlayer={handleSelect} />);
+
+    const card = screen.getByRole('button', { name: 'Преглед на профила на Димитър Кузманов' });
+    fireEvent.keyDown(card, { key: ' ' });
+
+    expect(handleSelect).toHaveBeenCalledTimes(1);
+    expect(handleSelect).toHaveBeenCalledWith('p-2', 'Димитър Кузманов');
+  });
+
+  it('maintains backward compatibility when onSelectPlayer is not provided', () => {
+    render(<RankingsMobile rankings={mockRankings} />);
+
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 });

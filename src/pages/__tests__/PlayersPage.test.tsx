@@ -6,6 +6,20 @@ import * as usePlayersHook from '../../hooks/usePlayers';
 import type { PlayerRow } from '../../types/database.types';
 
 vi.mock('../../hooks/usePlayers');
+vi.mock('../../hooks/useMatches', () => ({
+  useMatches: () => ({
+    matches: [],
+    loading: false,
+    error: null,
+    alert: null,
+    fetchMatches: vi.fn(),
+    createMatch: vi.fn(),
+    updateMatch: vi.fn(),
+    deleteMatch: vi.fn(),
+    bulkCreateMatches: vi.fn(),
+    clearAlert: vi.fn(),
+  }),
+}));
 
 describe('PlayersPage', () => {
   const samplePlayers: PlayerRow[] = [
@@ -161,11 +175,10 @@ describe('PlayersPage', () => {
     });
 
     it('renders players in alphabetical order by name in desktop table', () => {
-      render(<PlayersPage />);
+      const { container } = render(<PlayersPage />);
 
-      const tableRows = screen.getAllByRole('row');
-      // Row 0 is the table header, rows 1-4 are players
-      const playerNamesInTable = tableRows.slice(1).map((row) => {
+      const tableRows = container.querySelectorAll('tbody tr');
+      const playerNamesInTable = Array.from(tableRows).map((row) => {
         return row.querySelector('td span.font-medium')?.textContent;
       });
 
@@ -285,6 +298,56 @@ describe('PlayersPage', () => {
       await waitFor(() => {
         expect(deletePlayerMock).toHaveBeenCalledWith('p-1');
       });
+    });
+  });
+
+  describe('PlayerProfileModal navigation and action button event isolation', () => {
+    it('opens PlayerProfileModal when a desktop player table row is clicked', async () => {
+      const user = userEvent.setup();
+      render(<PlayersPage />);
+
+      const desktopRows = screen.getAllByRole('button', { name: 'Преглед на профила на Христо Стоичков' });
+      await user.click(desktopRows[0]);
+
+      const dialog = await screen.findByRole('dialog');
+      expect(dialog).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Христо Стоичков' })).toBeInTheDocument();
+    });
+
+    it('opens PlayerProfileModal when a mobile player card is clicked', async () => {
+      const user = userEvent.setup();
+      render(<PlayersPage />);
+
+      const mobileCards = screen.getAllByRole('button', { name: 'Преглед на профила на Димитър Бербатов' });
+      await user.click(mobileCards[1]);
+
+      const dialog = await screen.findByRole('dialog');
+      expect(dialog).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Димитър Бербатов' })).toBeInTheDocument();
+    });
+
+    it('isolates edit button click so PlayerProfileModal does not open when opening edit modal', async () => {
+      const user = userEvent.setup();
+      render(<PlayersPage />);
+
+      const editBtn = screen.getAllByLabelText('Редактирай Христо Стоичков')[0];
+      await user.click(editBtn);
+
+      expect(screen.getByRole('heading', { name: 'Редактиране на играч' })).toBeInTheDocument();
+      expect(screen.queryByTestId('player-avatar')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Формат на срещите')).not.toBeInTheDocument();
+    });
+
+    it('isolates delete button click so PlayerProfileModal does not open when opening delete modal', async () => {
+      const user = userEvent.setup();
+      render(<PlayersPage />);
+
+      const deleteBtn = screen.getAllByLabelText('Изтрий Христо Стоичков')[0];
+      await user.click(deleteBtn);
+
+      expect(screen.getByRole('heading', { name: 'Изтриване на играч' })).toBeInTheDocument();
+      expect(screen.queryByTestId('player-avatar')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Формат на срещите')).not.toBeInTheDocument();
     });
   });
 });
